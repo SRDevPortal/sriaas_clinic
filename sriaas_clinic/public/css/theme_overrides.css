@@ -1,0 +1,52 @@
+/* ---------- Global Theme Variables ---------- */
+:root {
+  /* Bootstrap / ERPNext primaries */
+  --bs-primary: #009688;
+  --primary: #009688;
+  --brand-primary: #009688;
+
+  /* Useful accents */
+  --link-color: #009688;
+  --button-bg: #009688;
+  --button-color: #fff;
+}
+
+/* ---------- Layout: make Desk full-width but keep default padding ---------- */
+.navbar,
+.navbar .container,
+.page-head,
+.page-head .container,
+.page-container,
+.page-content,
+.container.page-body,
+.layout-main,
+.layout-main-section,
+.layout-main .container {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* Keep Bootstrap’s default horizontal gutter */
+:where(.container, .row) {
+  --bs-gutter-x: 1.5rem;
+}
+
+/* ---------- Page Head (title bar, breadcrumbs, actions) ---------- */
+.page-head .btn,
+.page-head .navbar-nav .nav-link {
+  background-color: #e0f2f1 !important; /* light teal */
+}
+
+/* ---------- Buttons & Links ---------- */
+.btn-primary,
+.btn.btn-primary {
+  background-color: #009688 !important;
+  border-color: #009688 !important;
+  color: #fff !important;
+}
+.btn-primary:hover {
+  background-color: #00796b !important;
+  border-color: #00796b !important;
+}

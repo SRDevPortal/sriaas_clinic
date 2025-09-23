@@ -1,6 +1,6 @@
 # sriaas_clinic/setup/runner.py
 from .utils import ensure_module_def, reload_local_json_doctypes
-from . import masters, patient, customer, encounter, practitioner, drug_prescription, sales_invoice, sales_invoice, item_package, ui
+from . import masters, patient, customer, encounter, practitioner, drug_prescription, sales_invoice, item_package, payment_entry, ui
 
 def setup_all():
     # Make sure Module Def exists
@@ -38,6 +38,9 @@ def setup_all():
 
     # Item Package customizations
     item_package.apply()
+
+    # Payment Entry customizations
+    payment_entry.apply()
 
     # UI customizations (desk, workspace, tweaks, hide flags, status etc)
     ui.apply()

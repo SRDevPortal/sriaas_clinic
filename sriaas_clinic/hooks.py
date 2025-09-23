@@ -59,6 +59,13 @@ doc_events = {
     "Item": {
         "validate": "sriaas_clinic.api.item_package_weight.calculate_pkg_weights",
     },
+    "Patient Encounter": {
+        "before_save": "sriaas_clinic.api.encounter_flow.handlers.before_save_patient_encounter",
+        "on_update":   "sriaas_clinic.api.encounter_flow.handlers.create_billing_on_save",
+    },
+    "Sales Invoice": {
+        "on_submit": "sriaas_clinic.api.encounter_flow.handlers.link_pending_payment_entries",
+    },
 }
 
 app_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"

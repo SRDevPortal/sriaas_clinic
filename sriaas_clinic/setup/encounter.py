@@ -114,17 +114,25 @@ def _setup_draft_invoice_tab():
              "depends_on":'eval:doc.sr_encounter_type=="Order"',"mandatory_depends_on":'eval:doc.sr_encounter_type=="Order"'},
             
             {"fieldname":"sr_items_list_sb","label":"Items List","fieldtype":"Section Break","collapsible":0,"insert_after":"sr_delivery_type"},
+            
             {"fieldname":"sr_pe_order_items","label":"Order Items","fieldtype":"Table","options":"SR Order Item","insert_after":"sr_items_list_sb"},
             
             {"fieldname":"sr_advance_payment_sb","label":"Advance Payment","fieldtype":"Section Break","collapsible":0,"insert_after":"sr_pe_order_items"},
-            {"fieldname":"sr_pe_mode_of_payment","label":"Mode of Payment","fieldtype":"Link","options":"Mode of Payment","insert_after":"sr_advance_payment_sb"},
+            
+            {"fieldname":"sr_pe_mode_of_payment","label":"Mode of Payment","fieldtype":"Link","options":"Mode of Payment", "insert_after":"sr_advance_payment_sb"},
+            
             {"fieldname":"sr_advance_payment_cb","fieldtype": "Column Break","insert_after": "sr_pe_mode_of_payment"},
-            {"fieldname":"sr_pe_paid_amount","label":"Paid Amount","fieldtype":"Currency","insert_after":"sr_advance_payment_cb"},
+            
+            {"fieldname":"sr_pe_paid_amount","label":"Paid Amount","fieldtype":"Currency","insert_after":"sr_advance_payment_cb"},            
             
             {"fieldname":"sr_payment_receipt_sb","label":"Payment Receipt","fieldtype":"Section Break","collapsible":0,"insert_after":"sr_pe_paid_amount"},
+            
             {"fieldname":"sr_pe_payment_reference_no","label":"Payment Reference No","fieldtype":"Data","insert_after":"sr_payment_receipt_sb"},
+            
             {"fieldname":"sr_pe_payment_proof","label":"Payment Proof","fieldtype":"Attach Image","insert_after":"sr_pe_payment_reference_no"},
+            
             {"fieldname":"sr_payment_receipt_cb","fieldtype": "Column Break","insert_after": "sr_pe_payment_proof"},
+            
             {"fieldname":"sr_pe_payment_reference_date","label":"Payment Reference Date","fieldtype":"Date","insert_after":"sr_payment_receipt_cb"},
             
         ]

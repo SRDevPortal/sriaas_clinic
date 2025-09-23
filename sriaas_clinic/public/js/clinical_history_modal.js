@@ -64,7 +64,6 @@ function _css_block() {
 function _build_header(patient, encounter) {
   return `
   <div class="header">
-    <h2 style="margin:0 0 6px;">Patient Clinical History</h2>
     <div class="meta"><b>Patient Name:</b> ${_esc(patient.patient_name || patient.first_name || patient.name)}</div>
     <div class="meta"><b>Gender:</b> ${_esc(patient.sex || patient.gender || "-")}
       &nbsp;&nbsp; <b>Mobile:</b> ${_esc(patient.mobile || patient.mobile_no || patient.sr_mobile_no || "-")}</div>

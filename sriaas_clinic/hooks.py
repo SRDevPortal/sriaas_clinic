@@ -68,29 +68,33 @@ doc_events = {
     },
 }
 
-app_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
-web_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
-
 doctype_js = {
     "Patient": [
         "public/js/patient_invoices.js",
         "public/js/patient_payments.js",
-        "public/js/patient_pex_launcher.js",        
+        "public/js/patient_pex_launcher.js",
+        # "public/js/patient_clinical_history.js",
         "public/js/clinical_history_modal.js",
     ],
     "Healthcare Practitioner": [
         "public/js/healthcare_practitioner.js",
     ],
     "Patient Encounter": [
+        "public/js/pe_draft_invoice.js",
+        "public/js/pe_order_item.js",
         "public/js/pe_practitioner_filters.js",
-        "public/js/clinical_history_modal.js",
         "public/js/pe_medication_filters.js",
         "public/js/pe_template_medication.js",
         "public/js/pe_manual_medication.js",
+        # "public/js/pe_clinical_history.js",
+        "public/js/clinical_history_modal.js",
     ],
     "Item": "public/js/item_package_weight.js",
     "Payment Entry": "public/js/payment_entry_outstanding_dialog.js",
 }
+
+app_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
+web_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
 
 # Apps
 # ------------------

@@ -46,12 +46,10 @@ doc_events = {
     },
     "Address": {
         "before_save": "sriaas_clinic.api.address.ensure_address_has_customer_link",
+        "before_validate": "sriaas_clinic.api.address.validate_state",
     },
     "Contact": {
         "before_save": "sriaas_clinic.api.contact.normalize_phoneish_fields",
-    },
-    "CRM Lead": {
-        "before_save": "sriaas_clinic.api.crm_lead.normalize_phoneish_fields",
     },
     "Healthcare Practitioner": {
         "before_validate": "sriaas_clinic.api.practitioner.compose_full_name",
@@ -66,6 +64,9 @@ doc_events = {
     "Sales Invoice": {
         "on_submit": "sriaas_clinic.api.encounter_flow.handlers.link_pending_payment_entries",
     },
+    "CRM Lead": {
+        "before_save": "sriaas_clinic.api.crm_lead.normalize_phoneish_fields",
+    },
 }
 
 doctype_js = {
@@ -75,6 +76,9 @@ doctype_js = {
         "public/js/patient_pex_launcher.js",
         # "public/js/patient_clinical_history.js",
         "public/js/clinical_history_modal.js",
+    ],
+    "Address": [
+        "public/js/address_state_link.js",
     ],
     "Healthcare Practitioner": [
         "public/js/healthcare_practitioner.js",
@@ -91,10 +95,18 @@ doctype_js = {
     ],
     "Item": "public/js/item_package_weight.js",
     "Payment Entry": "public/js/payment_entry_outstanding_dialog.js",
+    "CRM Lead": [
+        "public/js/crm_lead_pex_launcher.js",
+        "public/js/crm_lead_disposition_filter.js",
+    ],
 }
 
 app_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
 web_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
+
+app_include_js = [
+    "/assets/sriaas_clinic/js/patient_quick_entry_patch.js",
+]
 
 # Apps
 # ------------------

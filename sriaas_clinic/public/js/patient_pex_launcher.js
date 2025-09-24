@@ -1,6 +1,8 @@
+// Patient: Add PEX launcher
 frappe.ui.form.on('Patient', {
     refresh(frm) {
-        const html_field = frm.get_field('sr_pex_launcher_html');  // your HTML field
+        // Mount only if the HTML field exists
+        const html_field = frm.get_field('sr_pex_launcher_html');
         if (!html_field) return;
 
         const $wrapper = html_field.$wrapper;

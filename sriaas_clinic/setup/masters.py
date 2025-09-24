@@ -15,6 +15,11 @@ def apply():
     _ensure_sr_delivery_type()
     _ensure_sr_lead_source()
     _ensure_sr_practitioner_pathy()
+    _ensure_sr_state()
+    _ensure_sr_lead_disposition()
+    _ensure_sr_lead_pipeline()
+
+# Note: If you want to add more masters, create similar functions here and call them in apply()
 
 def _ensure_sr_patient_disable_reason():
     """Create SR Patient Disable Reason master."""
@@ -290,3 +295,226 @@ def _ensure_sr_practitioner_pathy():
             {"role": "All", "read": 1},
         ],
     }).insert(ignore_permissions=True)
+
+def _ensure_sr_state():
+    """Ensure SR State Doctype exists and seed all Indian states + UTs"""
+    if frappe.db.exists("DocType", "SR State"):
+        return
+
+    frappe.get_doc({
+        "doctype":"DocType",
+        "name":"SR State",
+        "module":MODULE_DEF_NAME,
+        "custom":1,
+        "is_submittable":0,
+        "track_changes":1,
+        "naming_rule":"By fieldname",
+        "autoname":"field:sr_state_name",
+        "title_field":"sr_state_name",
+        "fields": [
+            {
+                "fieldname": "sr_state_name",
+                "label": "State Name",
+                "fieldtype": "Data",
+                "reqd": 1,
+                "unique": 1,
+                "in_list_view": 1
+            },
+            {
+                "fieldname": "sr_country",
+                "label": "Country",
+                "fieldtype": "Link",
+                "options": "Country",
+                "default": "India",
+                "in_list_view": 1
+            },
+            {
+                "fieldname": "sr_abbr",
+                "label": "Abbreviation",
+                "fieldtype": "Data"
+            },
+            {
+                "fieldname": "sr_is_union_territory",
+                "label": "Union Territory",
+                "fieldtype": "Check",
+                "default": 0
+            }
+        ],
+        "permissions": [
+            {
+                "role": "System Manager",
+                "read": 1, "write": 1,
+                "create": 1, "delete": 1
+            },
+            {
+                "role": "All",
+                "read": 1
+            }
+        ],
+    }).insert(ignore_permissions=True)
+
+    # States + UTs
+    states = [
+        ("Andhra Pradesh", False), ("Arunachal Pradesh", False),
+        ("Assam", False), ("Bihar", False), ("Chhattisgarh", False),
+        ("Goa", False), ("Gujarat", False), ("Haryana", False),
+        ("Himachal Pradesh", False), ("Jharkhand", False), ("Karnataka", False),
+        ("Kerala", False), ("Madhya Pradesh", False), ("Maharashtra", False),
+        ("Manipur", False), ("Meghalaya", False), ("Mizoram", False),
+        ("Nagaland", False), ("Odisha", False), ("Punjab", False),
+        ("Rajasthan", False), ("Sikkim", False), ("Tamil Nadu", False),
+        ("Telangana", False), ("Tripura", False), ("Uttar Pradesh", False),
+        ("Uttarakhand", False), ("West Bengal", False),
+        # UTs
+        ("Andaman and Nicobar Islands", True),
+        ("Chandigarh", True),
+        ("Dadra and Nagar Haveli and Daman and Diu", True),
+        ("Delhi", True),
+        ("Jammu and Kashmir", True),
+        ("Ladakh", True),
+        ("Lakshadweep", True),
+        ("Puducherry", True),
+    ]
+
+    # Insert data if missing
+    for state, is_ut in states:
+        if not frappe.db.exists("SR State", state):
+            frappe.get_doc({
+                "doctype": "SR State",
+                "sr_state_name": state,
+                "sr_country": "India",
+                "sr_is_union_territory": 1 if is_ut else 0
+            }).insert(ignore_permissions=True)
+
+    frappe.db.commit()
+    frappe.logger().info("✅ SR State Doctype and data seeded")
+
+def _ensure_sr_lead_disposition():
+    """Create SR Lead Disposition master."""
+    if frappe.db.exists("DocType", "SR Lead Disposition"):
+        return
+
+    frappe.get_doc({
+        "doctype": "DocType",
+        "name": "SR Lead Disposition",
+        "module": MODULE_DEF_NAME,
+        "custom": 0,
+        "istable": 0,
+        "issingle": 0,
+        "editable_grid": 0,
+        "track_changes": 1,
+        "allow_rename": 0,
+        "allow_import": 1,
+
+        # Naming / title
+        "naming_rule": "By fieldname",
+        "autoname": "field:sr_disposition_name",
+        "title_field": "sr_disposition_name",
+
+        # Layout
+        "field_order": [
+            "sr_disposition_name",
+            "sr_lead_status",
+            "is_active",
+            "description"
+        ],
+
+        "fields": [
+            {
+                "fieldname": "sr_disposition_name",
+                "label": "Disposition Name",
+                "fieldtype": "Data",
+                "reqd": 1,
+                "unique": 1,
+                "in_list_view": 1,
+                "in_standard_filter": 1
+            },
+            {
+                "fieldname": "sr_lead_status",
+                "label": "CRM Lead Status",
+                "fieldtype": "Link",
+                "options": "CRM Lead Status",
+                "in_standard_filter": 1
+            },
+            {
+                "fieldname": "is_active",
+                "label": "Is Active",
+                "fieldtype": "Check",
+                "default": "1"
+            },
+            {
+                "fieldname": "description",
+                "label": "Description",
+                "fieldtype": "Small Text"
+            },
+        ],
+
+        # Useful list view & search tuning (optional)
+        "search_fields": "sr_disposition_name,sr_lead_status",
+        "show_name_in_global_search": 1,
+
+        # Permissions (adjust to your roles)
+        "permissions": [
+            { "role": "System Manager", "read":1, "write":1, "create":1, "delete":1, "print":1, "email":1, "export":1 },
+            { "role": "Healthcare Administrator", "read":1, "write":1, "create":1, "delete":1 },
+        ],
+    }).insert(ignore_permissions=True)
+
+def _ensure_sr_lead_pipeline():
+    """Create SR Lead Pipeline master."""
+    if frappe.db.exists("DocType", "SR Lead Pipeline"):
+        return
+
+    frappe.get_doc({
+        "doctype": "DocType",
+        "name": "SR Lead Pipeline",
+        "module": MODULE_DEF_NAME,
+        "custom": 0,
+        "istable": 0,
+        "issingle": 0,
+        "editable_grid": 0,
+        "track_changes": 1,
+        "allow_rename": 0,
+        "allow_import": 1,
+
+        # Naming
+        "naming_rule": "By fieldname",
+        "autoname": "field:sr_pipeline_name",
+        "title_field": "sr_pipeline_name",
+
+        # Layout
+        "field_order": ["sr_pipeline_name", "is_active", "description"],
+        "fields": [
+            {
+                "fieldname": "sr_pipeline_name",
+                "label": "Pipeline Name",
+                "fieldtype": "Data",
+                "reqd": 1,
+                "unique": 1,
+                "in_list_view": 1,
+                "in_standard_filter": 1,
+            },
+            {
+                "fieldname": "is_active",
+                "label": "Is Active",
+                "fieldtype": "Check",
+                "default": "1",
+            },
+            {
+                "fieldname": "description",
+                "label": "Description",
+                "fieldtype": "Small Text",
+            },
+        ],
+
+        "search_fields": "sr_pipeline_name",
+        "show_name_in_global_search": 1,
+
+        # Permissions (adjust if needed)
+        "permissions": [
+            {"role": "System Manager", "read":1, "write":1, "create":1, "delete":1, "print":1, "email":1, "export":1},
+            {"role": "Healthcare Administrator", "read":1, "write":1, "create":1, "delete":1},
+        ],
+    }).insert(ignore_permissions=True)
+
+# End of sriaas_clinic/setup/masters.py

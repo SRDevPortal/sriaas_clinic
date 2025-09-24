@@ -28,7 +28,7 @@ def _make_patient_fields():
             {"fieldname": "sr_payments_tab","label":"Payments","fieldtype":"Tab Break","insert_after":"sr_sales_invoice_list"},
             {"fieldname": "sr_payment_entry_list","label":"Payment Entries","fieldtype":"Table","options":"SR Patient Payment View","read_only":1,"insert_after":"sr_payments_tab"},
 
-            {"fieldname": "sr_pex_tab","label":"Patient Encounters","fieldtype":"Tab Break","insert_after":"sr_payment_entry_list"},
+            {"fieldname": "sr_pex_tab","label":"PEX","fieldtype":"Tab Break","insert_after":"sr_payment_entry_list"},
             {"fieldname": "sr_pex_launcher_html","label":"PE Launcher","fieldtype":"HTML","read_only":1,"insert_after":"sr_pex_tab"},
             {"fieldname": "sr_last_created_pe","label":"Last Created Patient Encounter","fieldtype":"Link","options":"Patient Encounter","insert_after":"sr_pex_launcher_html"},
 

@@ -1,9 +1,12 @@
 # sriaas_clinic/setup/runner.py
 from .utils import ensure_module_def, reload_local_json_doctypes
 from . import (
-    masters, patient, customer, encounter, practitioner, 
-    drug_prescription, sales_invoice, item_package, 
-    payment_entry, ui, print_formats
+    masters,
+    patient, customer, address,
+    encounter, practitioner, drug_prescription,
+    sales_invoice, item_package, payment_entry,
+    crm_lead,
+    print_formats, ui
 )
 
 def setup_all():
@@ -32,6 +35,9 @@ def setup_all():
     # Customer fields/customizations
     customer.apply()
 
+    # Address customizations (State dropdown)
+    address.apply()
+
     # Patient Encounter customizations
     encounter.apply()
 
@@ -50,8 +56,11 @@ def setup_all():
     # Payment Entry customizations
     payment_entry.apply()
 
-    # UI customizations (desk, workspace, tweaks, hide flags, status etc)
-    ui.apply()
+    # CRM Lead custom fields
+    crm_lead.apply()
 
     # Print Formats (Patient Encounter New etc.)
     print_formats.apply()
+
+    # UI customizations (desk, workspace, tweaks, hide flags, status etc)
+    ui.apply()

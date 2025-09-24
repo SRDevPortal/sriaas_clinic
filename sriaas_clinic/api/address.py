@@ -67,3 +67,33 @@ def mirror_links_to_customer(doc, method=None):
     )
     for c in set(contact_names):
         _append_customer_link_if_missing(frappe.get_doc("Contact", c), customer, do_save=True)
+
+def validate_state(doc, method=None):
+    """Require an Indian state; accept either the link field or the legacy text.
+    If only text is provided (e.g. Patient Quick Entry), auto-map it to SR State.
+    """
+    country = (doc.country or "").strip().lower()
+
+    # If India and sr_state_link is empty but legacy text has a value,
+    # try to resolve it to SR State by name.
+    if country == "india" and not doc.get("sr_state_link") and (doc.state or "").strip():
+        # Try exact name in SR State.sr_state_name
+        match = frappe.db.get_value("SR State",
+                                    {"sr_state_name": doc.state.strip()},
+                                    "name")
+        if not match:
+            # also try by docname (in case name == state name)
+            match = frappe.db.get_value("SR State", doc.state.strip(), "name")
+
+        if match:
+            doc.sr_state_link = match
+
+    # If still missing for India, block save
+    if country == "india" and not doc.get("sr_state_link"):
+        frappe.throw("State/Province is required for addresses in India.")
+
+    # Keep legacy text in sync (some core reports still read it)
+    if doc.get("sr_state_link"):
+        # Use the SR State's title/name so the text looks nice
+        state_name = frappe.db.get_value("SR State", doc.sr_state_link, "sr_state_name") or doc.sr_state_link
+        doc.state = state_name

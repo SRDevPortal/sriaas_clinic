@@ -62,6 +62,7 @@ doc_events = {
         "on_update":   "sriaas_clinic.api.encounter_flow.handlers.create_billing_on_save",
     },
     "Sales Invoice": {
+        "before_save": "sriaas_clinic.api.sales_invoice_cost.before_save",
         "on_submit": "sriaas_clinic.api.encounter_flow.handlers.link_pending_payment_entries",
     },
     "CRM Lead": {
@@ -107,6 +108,13 @@ web_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
 app_include_js = [
     "/assets/sriaas_clinic/js/patient_quick_entry_patch.js",
 ]
+
+# Load list behavior for Sales Invoice
+list_js = {
+    "Sales Invoice": "public/js/sales_invoice_list.js"
+}
+
+# doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 
 # Apps
 # ------------------

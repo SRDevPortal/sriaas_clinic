@@ -5,11 +5,17 @@ from .utils import create_cf_with_module, upsert_property_setter
 DT = "Sales Invoice"
 RIGHT_COL_CB = "column_break1"
 
+PARENT = "Sales Invoice"
+CHILD = "Sales Invoice Item"
+
 def apply():
     _make_invoice_fields()
     _setup_payment_history_section()
     _setup_order_tracking_tab()
     _hide_invoice_fields()
+    if frappe.db.exists("DocType", PARENT) and frappe.db.exists("DocType", CHILD):
+        _parent_fields()
+        _child_fields()
 
 def _lead_source_dt() -> str:
     if frappe.db.exists("DocType", "SR Lead Source"):
@@ -109,3 +115,75 @@ def _hide_invoice_fields():
     if meta.get_field("contact_mobile"):
         upsert_property_setter(DT, "contact_mobile", "in_list_view", "1", "Check")  # show in list
         upsert_property_setter(DT, "contact_mobile", "in_standard_filter", "1", "Check")  # show in filters
+
+def _parent_fields():
+    create_cf_with_module({
+        PARENT: [
+            # Cost summary (parent)
+            {
+                "fieldname": "sr_cost_section",
+                "label": "Cost (Admin)",
+                "fieldtype": "Section Break",
+                "insert_after": "disable_rounded_total",
+            },
+            {
+                "fieldname": "sr_total_cost",
+                "label": "Total Cost",
+                "fieldtype": "Currency",
+                "read_only": 1,
+                "insert_after": "sr_cost_section",
+            },
+            {
+                "fieldname": "sr_cost_pct_overall",
+                "label": "Cost % Overall",
+                "fieldtype": "Percent",
+                "read_only": 1,
+                "insert_after": "sr_total_cost",
+                "description": "Total Cost / Grand Total * 100",
+            },
+            {
+                "fieldname": "sr_cost_col_break",
+                "fieldtype": "Column Break",
+                "insert_after": "sr_cost_pct_overall",
+            },
+            {
+                "fieldname": "sr_margin_overall",
+                "label": "Margin %",
+                "fieldtype": "Percent",
+                "read_only": 1,
+                "insert_after": "sr_cost_col_break",
+                "description": "(Grand Total - Total Cost) / Grand Total * 100",
+            },
+        ]
+    })
+
+def _child_fields():
+    create_cf_with_module({
+        CHILD: [
+            # Per-row cost fields
+            {
+                "fieldname": "sr_cost_price",
+                "label": "Cost Price",
+                "fieldtype": "Currency",
+                "read_only": 1,
+                "insert_after": "rate",
+            },
+            {
+                "fieldname": "sr_cost_amount",
+                "label": "Cost Amount",
+                "fieldtype": "Currency",
+                "read_only": 1,
+                "insert_after": "sr_cost_price",
+                "description": "qty * sr_cost_price",
+            },
+            {
+                "fieldname": "sr_cost_pct",
+                "label": "Cost %",
+                "fieldtype": "Percent",
+                "read_only": 1,
+                "insert_after": "sr_cost_amount",
+                "description": "Cost Price / Rate * 100",
+            },
+        ]
+    })
+  

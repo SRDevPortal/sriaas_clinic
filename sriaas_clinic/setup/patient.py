@@ -15,7 +15,8 @@ def _make_patient_fields():
             {"fieldname": "sr_medical_department","label": "Department","fieldtype": "Link","options": "Medical Department","insert_after": "patient_name","reqd": 1,"in_list_view": 1,"in_standard_filter": 1,"allow_in_quick_entry": 1},
             
             {"fieldname": "sr_patient_id","label": "Patient ID","fieldtype": "Data","insert_after": "sr_medical_department","read_only": 1,"unique": 1,"in_list_view": 1,"in_standard_filter": 1,"search_index": 1},
-            {"fieldname": "sr_practo_id","label": "Practo ID","fieldtype": "Data","insert_after": "sr_patient_id","in_standard_filter": 1},
+            
+            {"fieldname": "sr_practo_id","label": "Practo ID","fieldtype": "Data", "insert_after": "sr_patient_id","in_standard_filter": 1},
             
             {"fieldname": "sr_patient_age","label":"Patient Age","fieldtype":"Data","insert_after":"age_html","allow_in_quick_entry":1},
             
@@ -49,5 +50,7 @@ def _apply_patient_ui_customizations():
     upsert_property_setter(DT, "status", "in_standard_filter", "1", "Select")
     upsert_property_setter(DT, "age", "hidden", "1", "Check")
     upsert_property_setter(DT, "age", "in_list_view", "0", "Check")
+    upsert_property_setter(DT, "uid", "in_list_view", "0", "Check")
+    upsert_property_setter(DT, "sr_practo_id", "in_list_view", "0", "Check")
     upsert_property_setter(DT, "age", "in_standard_filter", "0", "Check")
     set_label(DT, "status", "Patient Status")

@@ -7,21 +7,17 @@ def _load(relpath: str) -> str:
     with open(os.path.join(app_path, relpath), "r", encoding="utf-8") as f:
         return f.read()
 
-def apply():
-    """Create/Update 'Patient Encounter New' Print Format (Jinja)"""
-    name = "Patient Encounter New"
-    html = _load("print_formats/patient_encounter_new.html")
-
+def _upsert_pf(name: str, doctype: str, relpath: str):
+    html = _load(relpath)
     payload = {
-        "doc_type": "Patient Encounter",
-        "module": MODULE_DEF_NAME,     # << use Module Def, not package
+        "doc_type": doctype,
+        "module": MODULE_DEF_NAME,
         "custom_format": 1,
         "print_format_type": "Jinja",
         "disabled": 0,
         "standard": "No",
         "html": html,
     }
-
     if frappe.db.exists("Print Format", name):
         pf = frappe.get_doc("Print Format", name)
         pf.update(payload)
@@ -29,8 +25,13 @@ def apply():
     else:
         pf = frappe.get_doc({"doctype": "Print Format", "name": name, **payload})
         pf.insert(ignore_permissions=True)
-    
-    # set this as default for Patient Encounter
-    upsert_property_setter("Patient Encounter", None, "default_print_format", name, "Data", module=MODULE_DEF_NAME)
 
-    frappe.clear_cache(doctype="Patient Encounter")
+    # set as default for this doctype
+    upsert_property_setter(doctype, None, "default_print_format", name, "Data", module=MODULE_DEF_NAME)
+    frappe.clear_cache(doctype=doctype)
+
+def apply():
+    # Patient Encounter
+    _upsert_pf("Patient Encounter New", "Patient Encounter", "print_formats/patient_encounter_new.html")
+    # Sales Invoice
+    _upsert_pf("Sales Invoice New", "Sales Invoice", "print_formats/sales_invoice_new.html")

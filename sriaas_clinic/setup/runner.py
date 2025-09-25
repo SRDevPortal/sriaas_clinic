@@ -4,6 +4,7 @@ from . import (
     masters,
     patient, customer, address,
     encounter, practitioner, drug_prescription,
+    item_price,
     sales_invoice, item_package, payment_entry,
     crm_lead,
     print_formats, ui
@@ -46,6 +47,9 @@ def setup_all():
 
     # Drug Prescription customizations
     drug_prescription.apply()
+
+    # Item Price customizations (Cost Price field)
+    item_price.apply()
 
     # Sales Invoice customizations
     sales_invoice.apply()

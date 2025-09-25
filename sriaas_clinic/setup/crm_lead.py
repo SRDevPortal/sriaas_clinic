@@ -66,7 +66,7 @@ def _make_crm_lead_fields():
                 "label": "PEX Launcher",
                 "fieldtype": "HTML",
                 "insert_after": "sr_lead_pex_tab",
-                "read_only": 1,
+                "read_only": 0,
             },
 
             # TAB: Meta Details

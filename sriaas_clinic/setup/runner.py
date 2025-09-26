@@ -2,7 +2,7 @@
 from .utils import ensure_module_def, reload_local_json_doctypes
 from . import (
     masters,
-    patient, customer, address,
+    patient, customer,
     encounter, practitioner, drug_prescription,
     item_price,
     sales_invoice, item_package, payment_entry,
@@ -35,9 +35,6 @@ def setup_all():
 
     # Customer fields/customizations
     customer.apply()
-
-    # Address customizations (State dropdown)
-    address.apply()
 
     # Patient Encounter customizations
     encounter.apply()

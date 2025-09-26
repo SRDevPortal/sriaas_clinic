@@ -9,7 +9,7 @@ def apply():
     _ensure_sr_sales_type()
     _ensure_sr_encounter_status()
     _ensure_sr_order_item()
-    _ensure_sr_instructions()
+    _ensure_sr_instruction()
     _ensure_sr_medication_template_item()
     _ensure_sr_medication_template()
     _ensure_sr_delivery_type()
@@ -168,7 +168,7 @@ def _ensure_sr_order_item():
         "permissions":[]
     }).insert(ignore_permissions=True)
 
-def _ensure_sr_instructions():
+def _ensure_sr_instruction():
     """Create SR Instruction master."""
     if frappe.db.exists("DocType", "SR Instruction"):
         return

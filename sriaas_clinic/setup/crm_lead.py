@@ -29,6 +29,7 @@ def _make_crm_lead_fields():
                 "label": "Country",
                 "fieldtype": "Link",
                 "options": "Country",
+                "in_list_view": 1,
                 "in_standard_filter": 1,
                 "insert_after": "email",
             },
@@ -51,6 +52,8 @@ def _make_crm_lead_fields():
                 "label": "Pipeline",
                 "fieldtype": "Link",
                 "options": "SR Lead Pipeline",
+                "in_list_view": 1,
+                "in_standard_filter": 1,
                 "insert_after": "sr_lead_personal_cb3",
             },
 
@@ -218,22 +221,16 @@ def _apply_crm_lead_ui_customizations():
     if not frappe.db.exists("DocType", DT):
         return
 
-    # 1) Retarget Lead Source link to your custom SR Lead Source master
-    #    Common built-in fieldnames in lead doctypes are usually 'source' or 'lead_source'.
-    #    We'll update both safely; only the existing one will take effect.
-    upsert_property_setter(DT, "source", "options", "SR Lead Source", "Link")
-    upsert_property_setter(DT, "lead_source", "options", "SR Lead Source", "Link")
-
-    # 2) (Optional) Rename label to 'Lead Source' consistently
-    upsert_property_setter(DT, "source", "label", "Lead Source", "Data")
-    upsert_property_setter(DT, "lead_source", "label", "Lead Source", "Data")
-
-    # 4) (Optional) Show Lead Source in list view
-    upsert_property_setter(DT, "source", "in_list_view", "1", "Check")
-    upsert_property_setter(DT, "lead_source", "in_list_view", "1", "Check")
+    upsert_property_setter(DT, "first_name", "reqd", "0", "Check")
 
     upsert_property_setter(DT, "mobile_no", "reqd", "1", "Check")
-    upsert_property_setter(DT, "phone", "insert_after", "mobile_no", "Data")
+    upsert_property_setter(DT, "mobile_no", "in_list_view", "1", "Check")
+    upsert_property_setter(DT, "mobile_no", "in_standard_filter", "1", "Check")
+
+    upsert_property_setter(DT, "source", "label", "Lead Source", "Data")
+    upsert_property_setter(DT, "source", "options", "SR Lead Source", "Link")
+    upsert_property_setter(DT, "source", "in_list_view", "1", "Check")
+    upsert_property_setter(DT, "source", "in_standard_filter", "1", "Check")
 
     # 5) Hide unwanted flags/fieldss
     targets = (

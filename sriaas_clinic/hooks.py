@@ -45,8 +45,8 @@ doc_events = {
         "after_save": "sriaas_clinic.api.address.mirror_links_to_customer",
     },
     "Address": {
-        "before_save": "sriaas_clinic.api.address.ensure_address_has_customer_link",
         "before_validate": "sriaas_clinic.api.address.validate_state",
+        "before_save": "sriaas_clinic.api.address.ensure_address_has_customer_link",
     },
     "Contact": {
         "before_save": "sriaas_clinic.api.contact.normalize_phoneish_fields",
@@ -77,9 +77,6 @@ doctype_js = {
         "public/js/patient_pex_launcher.js",
         # "public/js/patient_clinical_history.js",
         "public/js/clinical_history_modal.js",
-    ],
-    "Address": [
-        "public/js/address_state_link.js",
     ],
     "Healthcare Practitioner": [
         "public/js/healthcare_practitioner.js",
@@ -113,8 +110,6 @@ app_include_js = [
 list_js = {
     "Sales Invoice": "public/js/sales_invoice_list.js"
 }
-
-# doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 
 # Apps
 # ------------------

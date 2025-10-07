@@ -6,14 +6,11 @@ AGENT_ROLE   = "Agent"
 TL_ROLE      = "Team Leader"
 LEAD_DOCTYPE = "CRM Lead"
 
+
 # ------------------------------ helpers ---------------------------------
 
 def _has_role(user: str, role: str) -> bool:
     return role in frappe.get_roles(user)
-
-def _is_super(user: str) -> bool:
-    # treat these as global bypass
-    return user == "Administrator" or _has_role(user, "System Manager")
 
 def _current_assignees(lead_name: str) -> set[str]:
     """Return users with an OPEN ToDo assignment on this lead."""
@@ -65,11 +62,6 @@ def crm_lead_pqc(user: str) -> str:
     """
     user = user or frappe.session.user
 
-    # 🔓 Admin / System Manager: see everything
-    if _is_super(user):
-        return ""
-
-    # existing logic…
     if _has_role(user, TL_ROLE):
         return ""
 
@@ -81,14 +73,14 @@ def crm_lead_pqc(user: str) -> str:
             "and t.status='Open' "
             f"and t.allocated_to={frappe.db.escape(user)})"
         )
-        pipeline_cond = _allowed_pipelines_sql(user)
-        return f"({assignment_cond}) AND ({pipeline_cond})"
+        return f"({assignment_cond}) and ({_allowed_pipelines_sql(user)})"
 
     return "1=0"
 
 
 # --------------------------- has_permission -----------------------------
-def crm_lead_has_permission(doc, user: str | None = None, ptype: str | None = None) -> bool:
+
+def crm_lead_has_permission(doc, user: str) -> bool:
     """
     Team Leader: always True.
     Agent: True only when:
@@ -97,27 +89,34 @@ def crm_lead_has_permission(doc, user: str | None = None, ptype: str | None = No
          If the agent has no 'SR Lead Pipeline' permissions at all, deny.
     Others: False.
     """
-    user = user or frappe.session.user
-
-    # 🔓 Admin / System Manager: allow
-    if _is_super(user):
-        return True
-
     if _has_role(user, TL_ROLE):
         return True
 
     if _has_role(user, AGENT_ROLE):
+        # must be assigned
         if user not in _current_assignees(doc.name):
             return False
+
+        # must have pipeline permission AND doc pipeline must be in the allowed set
         from frappe.core.doctype.user_permission.user_permission import get_user_permissions
-        raw = (get_user_permissions(user) or {}).get("SR Lead Pipeline") or []
-        allowed = {
-            v if isinstance(v, str) else (v.get("doc") or v.get("value") or v.get("name") or "")
-            for v in raw
-        }
+        perms = get_user_permissions(user) or {}
+        raw_vals = perms.get("SR Lead Pipeline") or []
+
+        # normalize to a clean set[str]
+        allowed: set[str] = set()
+        for v in raw_vals:
+            if isinstance(v, str):
+                allowed.add(v)
+            elif isinstance(v, dict):
+                # different frappe versions/shapes
+                allowed.add(v.get("doc") or v.get("value") or v.get("name") or "")
+
         allowed.discard("")
+
+        # no user-permission rows -> deny
         if not allowed:
             return False
+
         pipeline = getattr(doc, "sr_lead_pipeline", None) or getattr(doc, "pipeline", None)
         return pipeline in allowed
 

@@ -1,8 +1,20 @@
-# sriaas_clinic/setup/masters.py
+# apps/sriaas_clinic/sriaas_clinic/setup/masters.py
 import frappe
-from .utils import MODULE_DEF_NAME
+from .utils import MODULE_DEF_NAME, ensure_module_def, reload_local_json_doctypes
+
+# List doctypes you ship as JSON here (folder names under doctype/)
+JSON_DOCTYPES = [
+    # "sr_patient_disable_reason","sr_patient_invoice_view" ...
+]
 
 def apply():
+    # Make sure Module Def existss
+    ensure_module_def()
+    # ensure_module_def("SRIAAS Clinic", "sriaas_clinic")
+
+    # Reload any JSON Doctypes you ship with the app (if changed)
+    reload_local_json_doctypes(JSON_DOCTYPES)
+
     _ensure_sr_patient_disable_reason()
     _ensure_sr_patient_invoice_view()
     _ensure_sr_patient_payment_view()
@@ -18,8 +30,8 @@ def apply():
     _ensure_sr_state()
     _ensure_sr_lead_disposition()
     _ensure_sr_lead_pipeline()
-
-# Note: If you want to add more masters, create similar functions here and call them in apply()
+    # _ensure_shiprocket_settings()
+    # _ensure_sr_lead_duplicate()
 
 def _ensure_sr_patient_disable_reason():
     """Create SR Patient Disable Reason master."""
@@ -387,7 +399,7 @@ def _ensure_sr_state():
             }).insert(ignore_permissions=True)
 
     frappe.db.commit()
-    frappe.logger().info("✅ SR State Doctype and data seeded")
+    frappe.logger().info("SR State Doctype and data seeded")
 
 def _ensure_sr_lead_disposition():
     """Create SR Lead Disposition master."""
@@ -477,12 +489,10 @@ def _ensure_sr_lead_pipeline():
         "allow_rename": 0,
         "allow_import": 1,
 
-        # Naming
         "naming_rule": "By fieldname",
         "autoname": "field:sr_pipeline_name",
         "title_field": "sr_pipeline_name",
 
-        # Layout
         "field_order": ["sr_pipeline_name", "is_active", "description"],
         "fields": [
             {
@@ -510,11 +520,52 @@ def _ensure_sr_lead_pipeline():
         "search_fields": "sr_pipeline_name",
         "show_name_in_global_search": 1,
 
-        # Permissions (adjust if needed)
         "permissions": [
             {"role": "System Manager", "read":1, "write":1, "create":1, "delete":1, "print":1, "email":1, "export":1},
             {"role": "Healthcare Administrator", "read":1, "write":1, "create":1, "delete":1},
         ],
     }).insert(ignore_permissions=True)
+
+# def _ensure_shiprocket_settings():
+#     """Create Shiprocket Settings master."""
+#     if frappe.db.exists("DocType", "Shiprocket Settings"):
+#         return
+
+#     frappe.get_doc({
+#         "doctype": "DocType",
+#         "name": "Shiprocket Settings",
+#         "module": MODULE_DEF_NAME,
+#         "is_single": 1,
+#         "fields": [
+#             { "fieldname": "api_email", "fieldtype": "Data", "label": "API Email", "options": "Email", "reqd": 1 },
+#             { "fieldname": "api_password", "fieldtype": "Password", "label": "API Password", "reqd": 1 },
+#             { "fieldname": "pickup_location", "fieldtype": "Data", "label": "Pickup Location", "reqd": 1, "description": "e.g., warehouse_abc" },
+#             { "fieldname": "enable_sync", "fieldtype": "Check", "label": "Enable Sync", "default": "0", "reqd": 1 }
+#         ],
+#         "permissions": [
+#             { "role": "System Manager", "read": 1, "write": 1 },
+#             { "role": "Administrator", "read": 1, "write": 1 }
+#         ]
+#     }).insert(ignore_permissions=True)
+
+# def _ensure_sr_lead_duplicate():
+#     if frappe.db.exists("DocType", "SR Lead Duplicate"):
+#         return
+
+#     d = frappe.new_doc("DocType")
+#     d.update({
+#         "name": "SR Lead Duplicate",
+#         "module": MODULE_DEF_NAME,
+#         "istable": 1,
+#         "custom": 1,
+#         "fields": [
+#             {"fieldname": "duplicate_lead", "label": "Duplicate Lead", "fieldtype": "Link", "options": "CRM Lead", "in_list_view": 1, "reqd": 1},
+#             {"fieldname": "dup_created_on", "label": "Created On", "fieldtype": "Datetime", "in_list_view": 1},
+#             {"fieldname": "dup_status", "label": "Status", "fieldtype": "Data", "in_list_view": 1},
+#             {"fieldname": "dup_source", "label": "Source", "fieldtype": "Data", "in_list_view": 1},
+#             {"fieldname": "dup_notes", "label": "Notes", "fieldtype": "Small Text"},
+#         ]
+#     })
+#     d.insert(ignore_permissions=True)
 
 # End of sriaas_clinic/setup/masters.py

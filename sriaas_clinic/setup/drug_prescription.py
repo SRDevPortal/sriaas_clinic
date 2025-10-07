@@ -31,7 +31,7 @@ def _make_drug_prescription_fields():
         ]
     })
 
-   # In case the field already exists, enforce these props
+    # In case the field already exists, enforce these props
     # upsert_property_setter(DT, "sr_medication_name_print", "read_only", "1", "Check")
     # upsert_property_setter(DT, "sr_medication_name_print", "in_list_view", "1", "Check")
     # upsert_property_setter(DT, "sr_medication_name_print", "in_standard_filter", "0", "Check")

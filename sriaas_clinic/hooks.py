@@ -63,11 +63,57 @@ doc_events = {
     },
     "Sales Invoice": {
         "before_save": "sriaas_clinic.api.sales_invoice_cost.before_save",
-        "on_submit": "sriaas_clinic.api.encounter_flow.handlers.link_pending_payment_entries",
+        "on_submit": [
+            "sriaas_clinic.api.encounter_flow.handlers.link_pending_payment_entries",
+            # "sriaas_clinic.api.integrations.shiprocket.create_shiprocket_order",
+            # "sriaas_clinic.api.integrations.n8n_shiprocket.send_to_n8n_on_submit",
+        ]
     },
     "CRM Lead": {
         "before_save": "sriaas_clinic.api.crm_lead.normalize_phoneish_fields",
+        # "validate": "sriaas_clinic.api.lead_dedupe.on_validate",
+        # "after_insert": "sriaas_clinic.api.lead_dedupe.on_after_insert",
+        # "on_update": "sriaas_clinic.api.lead_dedupe.on_update",
+        # "on_trash": "sriaas_clinic.api.lead_dedupe.on_trash",
+        "after_insert": "sriaas_clinic.api.crm_lead_assignment.after_insert",
+        "on_update":    "sriaas_clinic.api.crm_lead_assignment.on_update",
     },
+    # Protect assignment/unassignment rights & keep shares tidy
+    "ToDo": {
+        "on_trash": "sriaas_clinic.api.assign_guard.todo_on_trash",
+    },
+    # Department -> auto-create 3 groups
+    "Medical Department": {
+        "after_insert": "sriaas_clinic.api.medical_department.after_insert",
+        # optional rename propagation:
+        # "on_rename": "sriaas_clinic.api.medical_department.on_rename",
+    },
+    # User <-> User Group sync (dept/segments)
+    "User": {
+        "after_insert": "sriaas_clinic.api.user_department_membership.after_insert",
+        "on_update":    "sriaas_clinic.api.user_department_membership.on_update",
+        "after_save":    "sriaas_clinic.api.user_department_membership.after_save",
+    },
+    "User Group": {
+        # parent-level diff of child members to reflect back into User checkboxes
+        "before_save": "sriaas_clinic.api.user_group_backlink.user_group_before_save",
+    },
+}
+
+# Exactly ONE entry per doctype here (duplicates will override!)
+permission_query_conditions = {
+    "CRM Lead": "sriaas_clinic.api.crm_lead_access.crm_lead_pqc",
+}
+
+has_permission = {
+    "CRM Lead": "sriaas_clinic.api.crm_lead_access.crm_lead_has_permission",
+}
+
+# Keep your assignment authorization guards
+override_whitelisted_methods = {
+    "frappe.desk.form.assign_to.add":    "sriaas_clinic.api.assign_guard.add",
+    "frappe.desk.form.assign_to.remove": "sriaas_clinic.api.assign_guard.remove",
+    "frappe.desk.form.assign_to.clear":  "sriaas_clinic.api.assign_guard.clear",
 }
 
 doctype_js = {
@@ -75,7 +121,6 @@ doctype_js = {
         "public/js/patient_invoices.js",
         "public/js/patient_payments.js",
         "public/js/patient_pex_launcher.js",
-        # "public/js/patient_clinical_history.js",
         "public/js/clinical_history_modal.js",
     ],
     "Healthcare Practitioner": [
@@ -88,7 +133,6 @@ doctype_js = {
         "public/js/pe_medication_filters.js",
         "public/js/pe_template_medication.js",
         "public/js/pe_manual_medication.js",
-        # "public/js/pe_clinical_history.js",
         "public/js/clinical_history_modal.js",
     ],
     "Item": "public/js/item_package_weight.js",
@@ -106,7 +150,6 @@ app_include_js = [
     "/assets/sriaas_clinic/js/patient_quick_entry_patch.js",
 ]
 
-# Load list behavior for Sales Invoice
 list_js = {
     "Sales Invoice": "public/js/sales_invoice_list.js"
 }

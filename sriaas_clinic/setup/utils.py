@@ -1,4 +1,5 @@
-# sriaas_clinic/setup/utils.py
+# apps/sriaas_clinic/sriaas_clinic/setup/utils.py
+import json
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields as _ccf
 
@@ -38,28 +39,6 @@ def create_cf_with_module(mapping: dict, module: str = MODULE_DEF_NAME):
             f.setdefault("module", module)
     _ccf(mapping, ignore_validate=True)
 
-# def upsert_property_setter(doctype, fieldname, prop, value, property_type, module: str = MODULE_DEF_NAME):
-#     """Idempotent PS with module tagging."""
-#     name = f"{doctype}-{fieldname}-{prop}"
-#     if frappe.db.exists("Property Setter", name):
-#         ps = frappe.get_doc("Property Setter", name)
-#         ps.value = value
-#         ps.property_type = property_type
-#         ps.module = module
-#         ps.save(ignore_permissions=True)
-#     else:
-#         frappe.get_doc({
-#             "doctype": "Property Setter",
-#             "doctype_or_field": "DocField",
-#             "doc_type": doctype,
-#             "field_name": fieldname,
-#             "property": prop,
-#             "value": value,
-#             "property_type": property_type,
-#             "name": name,
-#             "module": module,
-#         }).insert(ignore_permissions=True)
-
 def upsert_property_setter(doctype, fieldname, prop, value, property_type, module: str = MODULE_DEF_NAME):
     """Idempotent Property Setter with module tagging.
        If fieldname is falsy (None/""), create a DocType-level PS; else DocField-level.
@@ -92,3 +71,30 @@ def set_label(dt: str, fieldname: str, new_label: str):
     if not frappe.get_meta(dt).get_field(fieldname):
         return
     upsert_property_setter(dt, fieldname, "label", new_label, "Data")
+
+def ensure_field_before(doctype: str, fieldname: str, before: str):
+    meta = frappe.get_meta(doctype)
+    fields = [df.fieldname for df in meta.fields]
+    if fieldname not in fields or before not in fields:
+        return
+    fields.remove(fieldname)
+    idx = fields.index(before)
+    fields.insert(idx, fieldname)
+    # WRITE JSON, not comma-string
+    upsert_property_setter(doctype, None, "field_order", json.dumps(fields), "Text")
+    frappe.clear_cache(doctype=doctype)
+
+def ensure_field_after(doctype: str, fieldname: str, after: str):
+    meta = frappe.get_meta(doctype)
+    fields = [df.fieldname for df in meta.fields]
+    if fieldname not in fields or after not in fields:
+        return
+    fields.remove(fieldname)
+    idx = fields.index(after)
+    fields.insert(idx + 1, fieldname)
+    upsert_property_setter(doctype, None, "field_order", json.dumps(fields), "Text")
+    frappe.clear_cache(doctype=doctype)
+
+def set_full_field_order(doctype: str, ordered_fieldnames: list[str]):
+    upsert_property_setter(doctype, None, "field_order", json.dumps(ordered_fieldnames), "Text")
+    frappe.clear_cache(doctype=doctype)

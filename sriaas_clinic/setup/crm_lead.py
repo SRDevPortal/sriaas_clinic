@@ -1,7 +1,7 @@
-# sriaas_clinic/setup/crm_lead.py
+# apps/sriaas_clinic/sriaas_clinic/setup/crm_lead.py
 
 import frappe
-from .utils import create_cf_with_module, upsert_property_setter
+from .utils import create_cf_with_module, upsert_property_setter, ensure_field_after, ensure_field_before, set_full_field_order
 
 DT = "CRM Lead"
 
@@ -34,6 +34,13 @@ def _make_crm_lead_fields():
                 "insert_after": "email",
             },
             {"fieldname": "sr_lead_personal_cb2","fieldtype": "Column Break","insert_after": "mobile_no"},
+            # {
+            #     "fieldname": "sr_lead_department",
+            #     "label": "Department",
+            #     "fieldtype": "Link",
+            #     "options": "Medical Department",
+            #     "insert_after": "sr_lead_personal_cb2",
+            # },
             {
                 "fieldname": "sr_lead_message",
                 "label": "Message",
@@ -208,6 +215,93 @@ def _make_crm_lead_fields():
                 "read_only": 1,
                 "insert_after": "sr_meta_facebook_sb",
             },
+
+            # ---- Section: Interakt Tracking ----
+            {
+                "fieldname": "sr_meta_interakt_sb",
+                "label": "Interakt Tracking",
+                "fieldtype": "Section Break",
+                "insert_after": "sr_fbclid",
+            },
+            {
+                "fieldname": "sr_w_source_id",
+                "label": "W Source_id",
+                "fieldtype": "Data",
+                "read_only": 1,
+                "insert_after": "sr_meta_interakt_sb",
+            },
+            {
+                "fieldname": "sr_w_source_url",
+                "label": "W Source_url",
+                "fieldtype": "Data",
+                "read_only": 1,
+                "insert_after": "sr_w_source_id",
+            },
+            {
+                "fieldname": "sr_w_ctwa_clid",
+                "label": "W Ctwa_clid",
+                "fieldtype": "Data",
+                "read_only": 1,
+                "insert_after": "sr_w_source_url",
+            },
+            {
+                "fieldname": "sr_w_team_id",
+                "label": "W Team_id",
+                "fieldtype": "Data",
+                "read_only": 1,
+                "insert_after": "sr_w_ctwa_clid",
+            },
+            # DEDUPE SECTION/TABLE (after your Meta Details or wherever you prefer)
+            {
+                "fieldname": "sr_dedupe_tab",
+                "label": "Duplicates",
+                "fieldtype": "Tab Break",
+                "insert_after": "sr_w_team_id",
+            },
+            {
+                "fieldname": "sr_dedupe_sec",
+                "label": "Duplicates",
+                "fieldtype": "Section Break",
+                "insert_after": "sr_dedupe_tab",
+            },
+            {
+                "fieldname": "sr_is_latest",
+                "label": "Is Latest for Mobile",
+                "fieldtype": "Check",
+                "default": "1",            # harmless; your doc_events will overwrite correctly
+                "read_only": 1,
+                "insert_after": "sr_dedupe_sec",
+                "in_list_view": 0,
+                "in_standard_filter": 0,   # <— hide from the filter panel
+            },
+            {
+                "fieldname": "sr_duplicate_count",
+                "label": "Duplicate Count",
+                "fieldtype": "Int",
+                "default": 0,
+                "read_only": 1,
+                "insert_after": "sr_is_latest",
+                "in_list_view": 0,
+                "in_standard_filter": 0,
+            },
+            {
+                "fieldname": "sr_primary_lead",
+                "label": "Primary (Latest) Lead",
+                "fieldtype": "Link",
+                "options": "CRM Lead",
+                "read_only": 1,
+                "insert_after": "sr_duplicate_count",
+            },
+            {
+                "fieldname": "sr_is_archived",
+                "label": "Archived (Hidden)",
+                "fieldtype": "Check",
+                "default": "0",
+                "read_only": 1,
+                "insert_after": "sr_primary_lead",
+                "in_list_view": 0,
+                "in_standard_filter": 0    # <— also hidden
+            },
         ]
     })
 
@@ -232,6 +326,11 @@ def _apply_crm_lead_ui_customizations():
     upsert_property_setter(DT, "source", "in_list_view", "1", "Check")
     upsert_property_setter(DT, "source", "in_standard_filter", "1", "Check")
 
+    ensure_field_after(DT, "status", "sr_lead_pipeline")
+    ensure_field_after(DT, "lead_name", "last_name")
+    ensure_field_after(DT, "phone", "mobile_no")
+    ensure_field_after(DT, "gender", "phone")
+
     # 5) Hide unwanted flags/fieldss
     targets = (
         "organization",
@@ -244,6 +343,8 @@ def _apply_crm_lead_ui_customizations():
         "annual_revenue",
         "image",
         "converted",
+        "salutation",
+        "products",
     )
     for f in targets:
         cfname = frappe.db.get_value("Custom Field", {"dt": DT, "fieldname": f}, "name")

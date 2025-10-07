@@ -1,4 +1,4 @@
-# sriaas_clinic/install.py
+# apps/sriaas_clinic/sriaas_clinic/install.py
 from .setup.runner import setup_all
 
 def after_install():

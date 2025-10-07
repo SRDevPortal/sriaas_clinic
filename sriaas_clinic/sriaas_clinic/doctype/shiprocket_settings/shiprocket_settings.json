@@ -1,0 +1,78 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-09-26 18:46:00.651299",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "api_email",
+  "api_password",
+  "pickup_location",
+  "n8n_webhook_url",
+  "n8n_secret",
+  "enable_sync"
+ ],
+ "fields": [
+  {
+   "fieldname": "api_email",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "API Email",
+   "reqd": 1
+  },
+  {
+   "fieldname": "api_password",
+   "fieldtype": "Password",
+   "in_list_view": 1,
+   "label": "API Password",
+   "reqd": 1
+  },
+  {
+   "description": "e.g., warehouse_abc",
+   "fieldname": "pickup_location",
+   "fieldtype": "Data",
+   "label": "Pickup Location"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_sync",
+   "fieldtype": "Check",
+   "label": "Enable Sync"
+  },
+  {
+   "fieldname": "n8n_webhook_url",
+   "fieldtype": "Data",
+   "label": "n8n Webhook URL"
+  },
+  {
+   "fieldname": "n8n_secret",
+   "fieldtype": "Password",
+   "label": "n8n Secret"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2025-09-29 14:02:03.612668",
+ "modified_by": "Administrator",
+ "module": "Sriaas Clinic",
+ "name": "Shiprocket Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

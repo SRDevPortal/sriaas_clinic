@@ -5,22 +5,30 @@ import frappe
 TL = "Team Leader"
 AG = "Agent"
 
-# These 3 become read-only after the first save for normal users
+# Locked after the first save for normal users
 ALWAYS_LOCK = {"source", "sr_lead_pipeline", "mobile_no"}
 # Agents can never change this
-AGENT_LOCK  = {"lead_owner"}
+AGENT_LOCK = {"lead_owner"}
 
 PRIVILEGED_USERS = {"Administrator"}
 PRIVILEGED_ROLES = {"System Manager"}
 
-def _has_role(user: str, role: str) -> bool:
-    return role in frappe.get_roles(user)
+def _roles(user: str) -> set[str]:
+    # Normalize to a set of role names
+    try:
+        return set(frappe.get_roles(user) or [])
+    except Exception:
+        return set()
 
 def _is_privileged(user: str) -> bool:
+    # 1) explicit usernames
     if user in PRIVILEGED_USERS:
         return True
-    roles = set(frappe.get_roles(user))
-    return bool(roles & PRIVILEGED_ROLES)
+    # 2) role-based
+    return bool(_roles(user) & PRIVILEGED_ROLES)
+
+def _has_role(user: str, role: str) -> bool:
+    return role in _roles(user)
 
 def _changed(doc, field: str) -> bool:
     """Did this field actually change? (on insert: treat non-empty as change)"""
@@ -35,34 +43,32 @@ def guard_restricted_fields(doc, method=None):
     if doc.doctype != "CRM Lead":
         return
 
-    # Allow programmatic bypass (patches, data loads, etc.)
+    # Programmatic bypass for scripts/migrations
     if getattr(frappe.flags, "sr_bypass_field_guard", False):
         return
 
-    user = frappe.session.user
+    user = frappe.session.user or "Guest"
 
-    # ---- BYPASS for Admin / System Manager ----
+    # ---- Absolute bypass for Admin / System Manager ----
+    # Put this BEFORE any other checks.
     if _is_privileged(user):
         return
 
     is_tl = _has_role(user, TL)
     is_agent = _has_role(user, AG)
 
-    blocked = set()
+    blocked: set[str] = set()
 
-    # 1) For the 3 locked fields:
-    #    - Team Leader can set them only on INSERT
-    #    - Everyone else blocked on INSERT
-    #    - After first save, blocked for everyone (except privileged bypass above)
+    # 1) Locked fields: TL can set only on INSERT; later edits blocked for everyone
     for f in ALWAYS_LOCK:
         if _changed(doc, f):
             if doc.is_new():
                 if not is_tl:
-                    blocked.add(f)
+                    blocked.add(f)        # agents/others can't set on create
             else:
-                blocked.add(f)
+                blocked.add(f)            # no edits after first save
 
-    # 2) Agents cannot change lead_owner ever
+    # 2) Agents can never change lead_owner
     if is_agent and _changed(doc, "lead_owner"):
         blocked.add("lead_owner")
 

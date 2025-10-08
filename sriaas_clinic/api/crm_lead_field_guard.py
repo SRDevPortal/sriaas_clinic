@@ -2,36 +2,47 @@
 from __future__ import annotations
 import frappe
 
-TL_ROLE = "Team Leader"
-AGENT_ROLE = "Agent"
+TL = "Team Leader"
+AG = "Agent"
 
-# never editable by anyone (by requirement)
-RESTRICTED_ALWAYS = {"source", "sr_lead_pipeline", "mobile_no"}
-# additional fields agents can't change
-RESTRICTED_FOR_AGENT = {"lead_owner"}
+ALWAYS_LOCK = {"source", "sr_lead_pipeline", "mobile_no"}  # locked after first save
+AGENT_LOCK  = {"lead_owner"}                                # agents never change
 
-def _has_role(user: str, role: str) -> bool:
-    return role in frappe.get_roles(user)
+def _has_role(user, role): return role in frappe.get_roles(user)
 
-def _changed(doc, field: str) -> bool:
-    if doc.is_new():
-        return False
-    old = frappe.db.get_value(doc.doctype, doc.name, field)
-    return (doc.get(field) or "") != (old or "")
+def _changed(doc, field):
+    if doc.is_new():   # let "create" path be decided below
+        return field in doc.as_dict()  # any value present is considered a change on insert
+    prev = frappe.db.get_value(doc.doctype, doc.name, field)
+    return (doc.get(field) or "") != (prev or "")
 
 def guard_restricted_fields(doc, method=None):
-    """Block edits to specific fields based on role (runs on validate)."""
     if doc.doctype != "CRM Lead":
         return
 
     user = frappe.session.user
-    blocked = set(RESTRICTED_ALWAYS)
-    if _has_role(user, AGENT_ROLE):
-        blocked |= RESTRICTED_FOR_AGENT
+    is_tl = _has_role(user, TL)
+    is_agent = _has_role(user, AG)
 
-    touched = [f for f in blocked if _changed(doc, f)]
-    if touched:
+    blocked = set()
+
+    # 1) For the three locked fields:
+    #    - allow TL ONLY on insert
+    #    - block everyone else or any later edits
+    for f in ALWAYS_LOCK:
+        if _changed(doc, f):
+            if doc.is_new():
+                if not is_tl:
+                    blocked.add(f)       # agent or others cannot set on create
+            else:
+                blocked.add(f)           # no one edits after first save
+
+    # 2) Agents cannot change lead_owner ever
+    if is_agent and _changed(doc, "lead_owner"):
+        blocked.add("lead_owner")
+
+    if blocked:
         frappe.throw(
-            "You are not allowed to change: " + ", ".join(sorted(touched)),
+            "You are not allowed to change: " + ", ".join(sorted(blocked)),
             title="Not permitted",
         )

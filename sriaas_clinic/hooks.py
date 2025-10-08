@@ -141,6 +141,7 @@ doctype_js = {
     "CRM Lead": [
         "public/js/crm_lead_pex_launcher.js",
         "public/js/crm_lead_disposition_filter.js",
+        "public/js/crm_lead_lock_fields.js",
     ],
 }
 

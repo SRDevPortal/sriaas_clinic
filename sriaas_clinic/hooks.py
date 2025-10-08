@@ -75,8 +75,9 @@ doc_events = {
         # "after_insert": "sriaas_clinic.api.lead_dedupe.on_after_insert",
         # "on_update": "sriaas_clinic.api.lead_dedupe.on_update",
         # "on_trash": "sriaas_clinic.api.lead_dedupe.on_trash",
+        "validate": "sriaas_clinic.api.crm_lead_field_guard.guard_restricted_fields",
         "after_insert": "sriaas_clinic.api.crm_lead_assignment.after_insert",
-        "on_update":    "sriaas_clinic.api.crm_lead_assignment.on_update",
+        "on_update": "sriaas_clinic.api.crm_lead_assignment.on_update",
     },
     # Protect assignment/unassignment rights & keep shares tidy
     "ToDo": {

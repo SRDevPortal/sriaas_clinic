@@ -315,16 +315,23 @@ def _apply_crm_lead_ui_customizations():
     if not frappe.db.exists("DocType", DT):
         return
 
+    upsert_property_setter(DT, "status", "in_standard_filter", "1", "Check")
     upsert_property_setter(DT, "first_name", "reqd", "0", "Check")
-
     upsert_property_setter(DT, "mobile_no", "reqd", "1", "Check")
     upsert_property_setter(DT, "mobile_no", "in_list_view", "1", "Check")
     upsert_property_setter(DT, "mobile_no", "in_standard_filter", "1", "Check")
-
     upsert_property_setter(DT, "source", "label", "Lead Source", "Data")
     upsert_property_setter(DT, "source", "options", "SR Lead Source", "Link")
     upsert_property_setter(DT, "source", "in_list_view", "1", "Check")
     upsert_property_setter(DT, "source", "in_standard_filter", "1", "Check")
+
+    # make the three fields non-editable by both roles (permlevel=1, nobody gets write)
+    upsert_property_setter(DT, "source", "permlevel", "1", "Int")
+    upsert_property_setter(DT, "sr_lead_pipeline", "permlevel", "1", "Int")
+    upsert_property_setter(DT, "mobile_no", "permlevel", "1", "Int")
+
+    # put lead_owner on its own level so ONLY Team Leader can be given write
+    upsert_property_setter(DT, "lead_owner", "permlevel", "2", "Int")
 
     ensure_field_after(DT, "status", "sr_lead_pipeline")
     ensure_field_after(DT, "lead_name", "last_name")

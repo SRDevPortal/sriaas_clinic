@@ -97,19 +97,8 @@ def _apply_crm_lead_ui_customizations():
     # IMPORTANT: Do NOT set global locks here (no permlevel=1 / set_only_once)
     # Lead Owner permlevel can be set via Role Permissions Manager (recommended).
 
-    # make the three fields non-editable by both roles (permlevel=1, nobody gets write)
-    # upsert_property_setter(DT, "source", "permlevel", "0", "Int")
-    # upsert_property_setter(DT, "sr_lead_pipeline", "permlevel", "0", "Int")
-    # upsert_property_setter(DT, "mobile_no", "permlevel", "0", "Int")
-
-    # allow typing at creation + lock after first save
-    # for f in ("source", "sr_lead_pipeline", "mobile_no"):
-    #     upsert_property_setter(DT, f, "in_create", "1", "Check")
-        # upsert_property_setter(DT, f, "set_only_once", "1", "Check")
-
-    # put lead_owner on its own level so ONLY Team Leader can be given write
-    # upsert_property_setter(DT, "lead_owner", "permlevel", "2", "Int")
-    # upsert_property_setter(DT, "lead_owner", "permlevel", "2", "Int")
+    # put lead_owner on its own perm level so only roles with Level=2 Write can edit it
+    upsert_property_setter(DT, "lead_owner", "permlevel", "2", "Int")
 
     # 5) Hide unwanted flags/fieldss
     targets = (

@@ -5,16 +5,15 @@ import frappe
 TL = "Team Leader"
 AG = "Agent"
 
-# Locked after the first save for normal users
+# Locked after first save for TL/Agent
 ALWAYS_LOCK = {"source", "sr_lead_pipeline", "mobile_no"}
 # Agents can never change this
-AGENT_LOCK = {"lead_owner"}
+AGENT_LOCK  = {"lead_owner"}
 
 PRIVILEGED_USERS = {"Administrator"}
 PRIVILEGED_ROLES = {"System Manager"}
 
 def _roles(user: str) -> set[str]:
-    # Normalize to a set of role names
     try:
         return set(frappe.get_roles(user) or [])
     except Exception:
@@ -34,7 +33,7 @@ def _changed(doc, field: str) -> bool:
     """Did this field actually change? (on insert: treat non-empty as change)"""
     if doc.is_new():
         val = doc.get(field)
-        return val not in (None, "", [])  # treat set values as 'changed' on insert
+        return val not in (None, "", [])
     prev = frappe.db.get_value(doc.doctype, doc.name, field)
     return (doc.get(field) or "") != (prev or "")
 
@@ -43,32 +42,35 @@ def guard_restricted_fields(doc, method=None):
     if doc.doctype != "CRM Lead":
         return
 
-    # Programmatic bypass for scripts/migrations
+    # programmatic bypass (patches, normalizers, imports)
     if getattr(frappe.flags, "sr_bypass_field_guard", False):
         return
 
     user = frappe.session.user or "Guest"
 
     # ---- Absolute bypass for Admin / System Manager ----
-    # Put this BEFORE any other checks.
+    # Unrestricted for Admin/System Manager
     if _is_privileged(user):
         return
 
-    is_tl = _has_role(user, TL)
+    is_tl    = _has_role(user, TL)
     is_agent = _has_role(user, AG)
 
     blocked: set[str] = set()
 
-    # 1) Locked fields: TL can set only on INSERT; later edits blocked for everyone
+    # Three locked fields:
+    # - TL can set on INSERT only
+    # - Later edits blocked for TL/Agent
+    # - Agents blocked even on insert
     for f in ALWAYS_LOCK:
         if _changed(doc, f):
             if doc.is_new():
                 if not is_tl:
-                    blocked.add(f)        # agents/others can't set on create
+                    blocked.add(f)
             else:
-                blocked.add(f)            # no edits after first save
+                blocked.add(f)
 
-    # 2) Agents can never change lead_owner
+    # Agents cannot change lead_owner
     if is_agent and _changed(doc, "lead_owner"):
         blocked.add("lead_owner")
 

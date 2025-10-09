@@ -23,7 +23,6 @@ def normalize_phoneish_fields(doc, method=None):
         "sr_mobile_no", "sr_whatsapp_no",
     )
 
-    # --- bypass the guard while we normalize ---
     prev_flag = getattr(frappe.flags, "sr_bypass_field_guard", False)
     frappe.flags.sr_bypass_field_guard = True
     try:

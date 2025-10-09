@@ -70,38 +70,38 @@ doc_events = {
         ]
     },
     "CRM Lead": {
+        # normalize phone-like values without tripping guard
         "before_save": "sriaas_clinic.api.crm_lead.normalize_phoneish_fields",
         # "validate": "sriaas_clinic.api.lead_dedupe.on_validate",
         # "after_insert": "sriaas_clinic.api.lead_dedupe.on_after_insert",
         # "on_update": "sriaas_clinic.api.lead_dedupe.on_update",
         # "on_trash": "sriaas_clinic.api.lead_dedupe.on_trash",
-        "validate": "sriaas_clinic.api.crm_lead_field_guard.guard_restricted_fields",
-        "after_insert": "sriaas_clinic.api.crm_lead_assignment.after_insert",
-        "on_update": "sriaas_clinic.api.crm_lead_assignment.on_update",
+        # block illegal edits depending on role + new/existing state
+        "validate":"sriaas_clinic.api.crm_lead_field_guard.guard_restricted_fields",
+        # keep Assignment + DocShare in sync with lead_owner
+        "after_insert":"sriaas_clinic.api.crm_lead_assignment.after_insert",
+        "on_update":"sriaas_clinic.api.crm_lead_assignment.on_update",
     },
     # Protect assignment/unassignment rights & keep shares tidy
     "ToDo": {
         "on_trash": "sriaas_clinic.api.assign_guard.todo_on_trash",
     },
-    # Department -> auto-create 3 groups
     "Medical Department": {
         "after_insert": "sriaas_clinic.api.medical_department.after_insert",
-        # optional rename propagation:
         # "on_rename": "sriaas_clinic.api.medical_department.on_rename",
     },
-    # User <-> User Group sync (dept/segments)
+    # User Group sync (dept/segments)
     "User": {
         "after_insert": "sriaas_clinic.api.user_department_membership.after_insert",
         "on_update":    "sriaas_clinic.api.user_department_membership.on_update",
-        "after_save":    "sriaas_clinic.api.user_department_membership.after_save",
+        "after_save":   "sriaas_clinic.api.user_department_membership.after_save",
     },
     "User Group": {
-        # parent-level diff of child members to reflect back into User checkboxes
         "before_save": "sriaas_clinic.api.user_group_backlink.user_group_before_save",
     },
 }
 
-# Exactly ONE entry per doctype here (duplicates will override!)
+# Exactly ONE entry per doctype
 permission_query_conditions = {
     "CRM Lead": "sriaas_clinic.api.crm_lead_access.crm_lead_pqc",
 }
@@ -136,8 +136,12 @@ doctype_js = {
         "public/js/pe_manual_medication.js",
         "public/js/clinical_history_modal.js",
     ],
-    "Item": "public/js/item_package_weight.js",
-    "Payment Entry": "public/js/payment_entry_outstanding_dialog.js",
+    "Item": [
+        "public/js/item_package_weight.js",
+    ],
+    "Payment Entry": [
+        "public/js/payment_entry_outstanding_dialog.js",
+    ],
     "CRM Lead": [
         "public/js/crm_lead_pex_launcher.js",
         "public/js/crm_lead_disposition_filter.js",

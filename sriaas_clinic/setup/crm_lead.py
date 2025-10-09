@@ -1,7 +1,7 @@
 # apps/sriaas_clinic/sriaas_clinic/setup/crm_lead.py
 
 import frappe
-from .utils import create_cf_with_module, upsert_property_setter, ensure_field_after, ensure_field_before, set_full_field_order
+from .utils import create_cf_with_module, upsert_property_setter, ensure_field_after
 
 DT = "CRM Lead"
 
@@ -16,292 +16,55 @@ def _make_crm_lead_fields():
 
     create_cf_with_module({
         DT: [
-            {
-                "fieldname": "sr_lead_disposition",
-                "label": "Lead Disposition",
-                "fieldtype": "Link",
-                "options": "SR Lead Disposition",
-                "insert_after": "status",
-                "depends_on": "eval: !!doc.status",
-            },
-            {
-                "fieldname": "sr_lead_country",
-                "label": "Country",
-                "fieldtype": "Link",
-                "options": "Country",
-                "in_list_view": 1,
-                "in_standard_filter": 1,
-                "insert_after": "email",
-            },
+            {"fieldname": "sr_lead_disposition","label": "Lead Disposition","fieldtype": "Link","options": "SR Lead Disposition","insert_after": "status","depends_on": "eval: !!doc.status",},
+            {"fieldname": "sr_lead_country","label": "Country","fieldtype": "Link","options": "Country","in_list_view": 1,"in_standard_filter": 1,"insert_after": "email",},
             {"fieldname": "sr_lead_personal_cb2","fieldtype": "Column Break","insert_after": "mobile_no"},
-            # {
-            #     "fieldname": "sr_lead_department",
-            #     "label": "Department",
-            #     "fieldtype": "Link",
-            #     "options": "Medical Department",
-            #     "insert_after": "sr_lead_personal_cb2",
-            # },
-            {
-                "fieldname": "sr_lead_message",
-                "label": "Message",
-                "fieldtype": "Small Text",
-                "insert_after": "sr_lead_personal_cb2",
-            },
-            {
-                "fieldname": "sr_lead_notes",
-                "label": "Notes",
-                "fieldtype": "Small Text",
-                "insert_after": "sr_lead_message",
-            },
+            # {"fieldname": "sr_lead_department","label": "Department","fieldtype": "Link","options": "Medical Department","insert_after": "sr_lead_personal_cb2",},
+            {"fieldname": "sr_lead_message","label": "Message","fieldtype": "Small Text","insert_after": "sr_lead_personal_cb2",},
+            {"fieldname": "sr_lead_notes","label": "Notes","fieldtype": "Small Text","insert_after": "sr_lead_message",},
             {"fieldname": "sr_lead_personal_cb3","fieldtype": "Column Break","insert_after": "sr_lead_notes"},
-            {
-                "fieldname": "sr_lead_pipeline",
-                "label": "Pipeline",
-                "fieldtype": "Link",
-                "options": "SR Lead Pipeline",
-                "in_list_view": 1,
-                "in_standard_filter": 1,
-                "insert_after": "sr_lead_personal_cb3",
-            },
+            {"fieldname": "sr_lead_pipeline","label": "Pipeline","fieldtype": "Link","options": "SR Lead Pipeline","in_list_view": 1,"in_standard_filter": 1,"insert_after": "sr_lead_personal_cb3",},
 
-             # TAB: PEX (after Meta Details)
-            {
-                "fieldname": "sr_lead_pex_tab",
-                "label": "PEX",
-                "fieldtype": "Tab Break",
-                "insert_after": "status_change_log",
-            },
-            {
-                "fieldname": "sr_lead_pex_launcher_html",
-                "label": "PEX Launcher",
-                "fieldtype": "HTML",
-                "insert_after": "sr_lead_pex_tab",
-                "read_only": 0,
-            },
+            # PEX
+            {"fieldname": "sr_lead_pex_tab","label":"PEX","fieldtype":"Tab Break","insert_after":"status_change_log"},
+            {"fieldname": "sr_lead_pex_launcher_html","label":"PEX Launcher","fieldtype":"HTML","insert_after":"sr_lead_pex_tab","read_only":0},
 
-            # TAB: Meta Details
-            {
-                "fieldname": "sr_meta_tab",
-                "label": "Meta Details",
-                "fieldtype": "Tab Break",
-                "insert_after": "sr_lead_pex_launcher_html",
-            },
-            # ---- Section: General Tracking ----
-            {
-                "fieldname": "sr_meta_general_sb",
-                "label": "General Tracking",
-                "fieldtype": "Section Break",
-                "insert_after": "sr_meta_tab",
-            },
-            # Col 1
-            {
-                "fieldname": "sr_ip_address",
-                "label": "IP Address",
-                "fieldtype": "Data",
-                "read_only": 1,
-                "insert_after": "sr_meta_general_sb",
-            },
-            {
-                "fieldname": "sr_vpn_status",
-                "label": "VPN Status",
-                "fieldtype": "Data",
-                "read_only": 1,
-                "insert_after": "sr_ip_address",
-            },
-            {
-                "fieldname": "sr_landing_page",
-                "label": "Landing Page",
-                "fieldtype": "Data",
-                "read_only": 1,
-                "insert_after": "sr_vpn_status",
-            },
-            # Col 2
-            {
-                "fieldname": "sr_meta_general_cb2",
-                "label": "",
-                "fieldtype": "Column Break",
-                "insert_after": "sr_landing_page",
-            },
-            {
-                "fieldname": "sr_remote_location",
-                "label": "Remote Location",
-                "fieldtype": "Data",
-                "read_only": 1,
-                "insert_after": "sr_meta_general_cb2",
-            },
-            {
-                "fieldname": "sr_user_agent",
-                "label": "User Agent",
-                "fieldtype": "Data",
-                "read_only": 1,
-                "insert_after": "sr_remote_location",
-            },
-            # ---- Section: Google Tracking ----
-            {
-                "fieldname": "sr_meta_google_sb",
-                "label": "Google Tracking",
-                "fieldtype": "Section Break",
-                "insert_after": "sr_user_agent",
-            },
-            # Col 1
-            {
-                "fieldname": "sr_utm_source",
-                "label": "UTM Source",
-                "fieldtype": "Data",
-                "read_only": 1,
-                "insert_after": "sr_meta_google_sb",
-            },
-            {
-                "fieldname": "sr_utm_campaign",
-                "label": "UTM Campaign",
-                "fieldtype": "Data",
-                "read_only": 1,
-                "insert_after": "sr_utm_source",
-            },
-            {
-                "fieldname": "sr_utm_campaign_id",
-                "label": "UTM Campaign ID",
-                "fieldtype": "Data",
-                "read_only": 1,
-                "insert_after": "sr_utm_campaign",
-            },
-            {
-                "fieldname": "sr_gclid",
-                "label": "GCLID",
-                "fieldtype": "Data",
-                "read_only": 1,
-                "insert_after": "sr_utm_campaign_id",
-            },
-            # Col 2
-            {
-                "fieldname": "sr_meta_google_cb2",
-                "label": "",
-                "fieldtype": "Column Break",
-                "insert_after": "sr_gclid",
-            },
-            {
-                "fieldname": "sr_utm_medium",
-                "label": "UTM Medium",
-                "fieldtype": "Data",
-                "read_only": 1,
-                "insert_after": "sr_meta_google_cb2",
-            },
-            {
-                "fieldname": "sr_utm_term",
-                "label": "UTM Term",
-                "fieldtype": "Data",
-                "read_only": 1,
-                "insert_after": "sr_utm_medium",
-            },
-            {
-                "fieldname": "sr_utm_adgroup_id",
-                "label": "UTM Ad Group ID",
-                "fieldtype": "Data",
-                "read_only": 1,
-                "insert_after": "sr_utm_term",
-            },
+            # Meta Details
+            {"fieldname": "sr_meta_tab","label":"Meta Details","fieldtype":"Tab Break","insert_after":"sr_lead_pex_launcher_html"},
+            {"fieldname": "sr_meta_general_sb","label":"General Tracking","fieldtype":"Section Break","insert_after":"sr_meta_tab"},
+            {"fieldname": "sr_ip_address","label":"IP Address","fieldtype":"Data","read_only":1,"insert_after":"sr_meta_general_sb"},
+            {"fieldname": "sr_vpn_status","label":"VPN Status","fieldtype":"Data","read_only":1,"insert_after":"sr_ip_address"},
+            {"fieldname": "sr_landing_page","label":"Landing Page","fieldtype":"Data","read_only":1,"insert_after":"sr_vpn_status"},
+            {"fieldname": "sr_meta_general_cb2","fieldtype":"Column Break","insert_after":"sr_landing_page"},
+            {"fieldname": "sr_remote_location","label":"Remote Location","fieldtype":"Data","read_only":1,"insert_after":"sr_meta_general_cb2"},
+            {"fieldname": "sr_user_agent","label":"User Agent","fieldtype":"Data","read_only":1,"insert_after":"sr_remote_location"},
 
-            # ---- Section: Facebook Tracking ----
-            {
-                "fieldname": "sr_meta_facebook_sb",
-                "label": "Facebook Tracking",
-                "fieldtype": "Section Break",
-                "insert_after": "sr_utm_adgroup_id",
-            },
-            {
-                "fieldname": "sr_fbclid",
-                "label": "FBCLID",
-                "fieldtype": "Data",
-                "read_only": 1,
-                "insert_after": "sr_meta_facebook_sb",
-            },
+            {"fieldname": "sr_meta_google_sb","label":"Google Tracking","fieldtype":"Section Break","insert_after":"sr_user_agent"},
+            {"fieldname": "sr_utm_source","label":"UTM Source","fieldtype":"Data","read_only":1,"insert_after":"sr_meta_google_sb"},
+            {"fieldname": "sr_utm_campaign","label":"UTM Campaign","fieldtype":"Data","read_only":1,"insert_after":"sr_utm_source"},
+            {"fieldname": "sr_utm_campaign_id","label":"UTM Campaign ID","fieldtype":"Data","read_only":1,"insert_after":"sr_utm_campaign"},
+            {"fieldname": "sr_gclid","label":"GCLID","fieldtype":"Data","read_only":1,"insert_after":"sr_utm_campaign_id"},
+            {"fieldname": "sr_meta_google_cb2","fieldtype":"Column Break","insert_after":"sr_gclid"},
+            {"fieldname": "sr_utm_medium","label":"UTM Medium","fieldtype":"Data","read_only":1,"insert_after":"sr_meta_google_cb2"},
+            {"fieldname": "sr_utm_term","label":"UTM Term","fieldtype":"Data","read_only":1,"insert_after":"sr_utm_medium"},
+            {"fieldname": "sr_utm_adgroup_id","label":"UTM Ad Group ID","fieldtype":"Data","read_only":1,"insert_after":"sr_utm_term"},
 
-            # ---- Section: Interakt Tracking ----
-            {
-                "fieldname": "sr_meta_interakt_sb",
-                "label": "Interakt Tracking",
-                "fieldtype": "Section Break",
-                "insert_after": "sr_fbclid",
-            },
-            {
-                "fieldname": "sr_w_source_id",
-                "label": "W Source_id",
-                "fieldtype": "Data",
-                "read_only": 1,
-                "insert_after": "sr_meta_interakt_sb",
-            },
-            {
-                "fieldname": "sr_w_source_url",
-                "label": "W Source_url",
-                "fieldtype": "Data",
-                "read_only": 1,
-                "insert_after": "sr_w_source_id",
-            },
-            {
-                "fieldname": "sr_w_ctwa_clid",
-                "label": "W Ctwa_clid",
-                "fieldtype": "Data",
-                "read_only": 1,
-                "insert_after": "sr_w_source_url",
-            },
-            {
-                "fieldname": "sr_w_team_id",
-                "label": "W Team_id",
-                "fieldtype": "Data",
-                "read_only": 1,
-                "insert_after": "sr_w_ctwa_clid",
-            },
-            # DEDUPE SECTION/TABLE (after your Meta Details or wherever you prefer)
-            {
-                "fieldname": "sr_dedupe_tab",
-                "label": "Duplicates",
-                "fieldtype": "Tab Break",
-                "insert_after": "sr_w_team_id",
-            },
-            {
-                "fieldname": "sr_dedupe_sec",
-                "label": "Duplicates",
-                "fieldtype": "Section Break",
-                "insert_after": "sr_dedupe_tab",
-            },
-            {
-                "fieldname": "sr_is_latest",
-                "label": "Is Latest for Mobile",
-                "fieldtype": "Check",
-                "default": "1",            # harmless; your doc_events will overwrite correctly
-                "read_only": 1,
-                "insert_after": "sr_dedupe_sec",
-                "in_list_view": 0,
-                "in_standard_filter": 0,   # <— hide from the filter panel
-            },
-            {
-                "fieldname": "sr_duplicate_count",
-                "label": "Duplicate Count",
-                "fieldtype": "Int",
-                "default": 0,
-                "read_only": 1,
-                "insert_after": "sr_is_latest",
-                "in_list_view": 0,
-                "in_standard_filter": 0,
-            },
-            {
-                "fieldname": "sr_primary_lead",
-                "label": "Primary (Latest) Lead",
-                "fieldtype": "Link",
-                "options": "CRM Lead",
-                "read_only": 1,
-                "insert_after": "sr_duplicate_count",
-            },
-            {
-                "fieldname": "sr_is_archived",
-                "label": "Archived (Hidden)",
-                "fieldtype": "Check",
-                "default": "0",
-                "read_only": 1,
-                "insert_after": "sr_primary_lead",
-                "in_list_view": 0,
-                "in_standard_filter": 0    # <— also hidden
-            },
+            {"fieldname": "sr_meta_facebook_sb","label":"Facebook Tracking","fieldtype":"Section Break","insert_after":"sr_utm_adgroup_id"},
+            {"fieldname": "sr_fbclid","label":"FBCLID","fieldtype":"Data","read_only":1,"insert_after":"sr_meta_facebook_sb"},
+
+            {"fieldname": "sr_meta_interakt_sb","label":"Interakt Tracking","fieldtype":"Section Break","insert_after":"sr_fbclid"},
+            {"fieldname": "sr_w_source_id","label":"W Source_id","fieldtype":"Data","read_only":1,"insert_after":"sr_meta_interakt_sb"},
+            {"fieldname": "sr_w_source_url","label":"W Source_url","fieldtype":"Data","read_only":1,"insert_after":"sr_w_source_id"},
+            {"fieldname": "sr_w_ctwa_clid","label":"W Ctwa_clid","fieldtype":"Data","read_only":1,"insert_after":"sr_w_source_url"},
+            {"fieldname": "sr_w_team_id","label":"W Team_id","fieldtype":"Data","read_only":1,"insert_after":"sr_w_ctwa_clid"},
+
+            # Dedupe
+            {"fieldname": "sr_dedupe_tab","label":"Duplicates","fieldtype":"Tab Break","insert_after":"sr_w_team_id"},
+            {"fieldname": "sr_dedupe_sec","label":"Duplicates","fieldtype":"Section Break","insert_after":"sr_dedupe_tab"},
+            {"fieldname": "sr_is_latest","label":"Is Latest for Mobile","fieldtype":"Check","default":"1","read_only":1,"insert_after":"sr_dedupe_sec","in_list_view":0,"in_standard_filter":0},
+            {"fieldname": "sr_duplicate_count","label":"Duplicate Count","fieldtype":"Int","default":0,"read_only":1,"insert_after":"sr_is_latest","in_list_view":0,"in_standard_filter":0},
+            {"fieldname": "sr_primary_lead","label":"Primary (Latest) Lead","fieldtype":"Link","options":"CRM Lead","read_only":1,"insert_after":"sr_duplicate_count"},
+            {"fieldname": "sr_is_archived","label":"Archived (Hidden)","fieldtype":"Check","default":"0","read_only":1,"insert_after":"sr_primary_lead","in_list_view":0,"in_standard_filter":0},
         ]
     })
 
@@ -315,6 +78,7 @@ def _apply_crm_lead_ui_customizations():
     if not frappe.db.exists("DocType", DT):
         return
 
+    # Standard label/filters
     upsert_property_setter(DT, "status", "in_standard_filter", "1", "Check")
     upsert_property_setter(DT, "first_name", "reqd", "0", "Check")
     upsert_property_setter(DT, "mobile_no", "reqd", "1", "Check")
@@ -330,19 +94,22 @@ def _apply_crm_lead_ui_customizations():
     ensure_field_after(DT, "phone", "mobile_no")
     ensure_field_after(DT, "gender", "phone")
 
+    # IMPORTANT: Do NOT set global locks here (no permlevel=1 / set_only_once)
+    # Lead Owner permlevel can be set via Role Permissions Manager (recommended).
+
     # make the three fields non-editable by both roles (permlevel=1, nobody gets write)
-    upsert_property_setter(DT, "source", "permlevel", "1", "Int")
-    upsert_property_setter(DT, "sr_lead_pipeline", "permlevel", "1", "Int")
-    upsert_property_setter(DT, "mobile_no", "permlevel", "1", "Int")
+    # upsert_property_setter(DT, "source", "permlevel", "0", "Int")
+    # upsert_property_setter(DT, "sr_lead_pipeline", "permlevel", "0", "Int")
+    # upsert_property_setter(DT, "mobile_no", "permlevel", "0", "Int")
 
     # allow typing at creation + lock after first save
-    for f in ("source", "sr_lead_pipeline", "mobile_no"):
-        upsert_property_setter(DT, f, "in_create", "1", "Check")
-        upsert_property_setter(DT, f, "set_only_once", "1", "Check")
+    # for f in ("source", "sr_lead_pipeline", "mobile_no"):
+    #     upsert_property_setter(DT, f, "in_create", "1", "Check")
+        # upsert_property_setter(DT, f, "set_only_once", "1", "Check")
 
     # put lead_owner on its own level so ONLY Team Leader can be given write
-    upsert_property_setter(DT, "lead_owner", "permlevel", "2", "Int")
-    upsert_property_setter(DT, "lead_owner", "permlevel", "2", "Int")
+    # upsert_property_setter(DT, "lead_owner", "permlevel", "2", "Int")
+    # upsert_property_setter(DT, "lead_owner", "permlevel", "2", "Int")
 
     # 5) Hide unwanted flags/fieldss
     targets = (

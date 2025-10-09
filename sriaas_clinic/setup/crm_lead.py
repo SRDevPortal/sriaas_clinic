@@ -36,8 +36,8 @@ def _make_crm_lead_fields():
             {"fieldname": "sr_vpn_status","label":"VPN Status","fieldtype":"Data","read_only":1,"insert_after":"sr_ip_address"},
             {"fieldname": "sr_landing_page","label":"Landing Page","fieldtype":"Data","read_only":1,"insert_after":"sr_vpn_status"},
             {"fieldname": "sr_meta_general_cb2","fieldtype":"Column Break","insert_after":"sr_landing_page"},
-            {"fieldname": "sr_remote_location","label":"Remote Location","fieldtype":"Data","read_only":1,"insert_after":"sr_meta_general_cb2"},
-            {"fieldname": "sr_user_agent","label":"User Agent","fieldtype":"Data","read_only":1,"insert_after":"sr_remote_location"},
+            {"fieldname": "sr_remote_location","label":"Remote Location","fieldtype":"Small Text","read_only":1,"insert_after":"sr_meta_general_cb2"},
+            {"fieldname": "sr_user_agent","label":"User Agent","fieldtype":"Small Text","read_only":1,"insert_after":"sr_remote_location"},
 
             {"fieldname": "sr_meta_google_sb","label":"Google Tracking","fieldtype":"Section Break","insert_after":"sr_user_agent"},
             {"fieldname": "sr_utm_source","label":"UTM Source","fieldtype":"Data","read_only":1,"insert_after":"sr_meta_google_sb"},

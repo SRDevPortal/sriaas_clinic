@@ -8,7 +8,7 @@ frappe.ui.form.on('CRM Lead', {
 
     // lock field unless: it's new AND TL is creating
     const lock = (f) => frm.set_df_property(f, 'read_only', !(is_new && is_tl));
-    ['source','sr_lead_pipeline','mobile_no'].forEach(lock);
+    ['sr_lead_pipeline','sr_lead_platform','source','mobile_no'].forEach(lock);
 
     // 'lead_owner' is enforced server-side; TL permissions at permlevel 2 via RPM
   }

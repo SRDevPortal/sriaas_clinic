@@ -6,7 +6,7 @@ TL = "Team Leader"
 AG = "Agent"
 
 # Locked after first save for TL/Agent
-ALWAYS_LOCK = {"source", "sr_lead_pipeline", "mobile_no"}
+ALWAYS_LOCK = {"sr_lead_pipeline", "sr_lead_platform", "source", "mobile_no"}
 # Agents can never change this
 AGENT_LOCK  = {"lead_owner"}
 

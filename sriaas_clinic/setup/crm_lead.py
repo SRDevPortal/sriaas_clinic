@@ -16,14 +16,12 @@ def _make_crm_lead_fields():
 
     create_cf_with_module({
         DT: [
-            {"fieldname": "sr_lead_disposition","label": "Lead Disposition","fieldtype": "Link","options": "SR Lead Disposition","insert_after": "status","depends_on": "eval: !!doc.status",},
-            {"fieldname": "sr_lead_country","label": "Country","fieldtype": "Link","options": "Country","in_list_view": 1,"in_standard_filter": 1,"insert_after": "email",},
+            {"fieldname": "sr_lead_disposition","label": "Lead Disposition","fieldtype": "Link","options": "SR Lead Disposition","insert_after": "status","depends_on": "eval: !!doc.status"},
+            {"fieldname": "sr_lead_country","label": "Country","fieldtype": "Link","options": "Country","in_list_view": 1,"in_standard_filter": 1,"insert_after": "email"},
             {"fieldname": "sr_lead_personal_cb2","fieldtype": "Column Break","insert_after": "mobile_no"},
-            # {"fieldname": "sr_lead_department","label": "Department","fieldtype": "Link","options": "Medical Department","insert_after": "sr_lead_personal_cb2",},
-            {"fieldname": "sr_lead_message","label": "Message","fieldtype": "Small Text","insert_after": "sr_lead_personal_cb2",},
-            {"fieldname": "sr_lead_notes","label": "Notes","fieldtype": "Small Text","insert_after": "sr_lead_message",},
-            {"fieldname": "sr_lead_personal_cb3","fieldtype": "Column Break","insert_after": "sr_lead_notes"},
-            {"fieldname": "sr_lead_pipeline","label": "Pipeline","fieldtype": "Link","options": "SR Lead Pipeline","in_list_view": 1,"in_standard_filter": 1,"insert_after": "sr_lead_personal_cb3",},
+            # {"fieldname": "sr_lead_department","label": "Department","fieldtype": "Link","options": "Medical Department","insert_after": "sr_lead_personal_cb2"},
+            {"fieldname": "sr_lead_message","label": "Message","fieldtype": "Small Text","insert_after": "sr_lead_personal_cb2"},
+            {"fieldname": "sr_lead_notes","label": "Notes","fieldtype": "Small Text","insert_after": "sr_lead_message"},
 
             # PEX
             {"fieldname": "sr_lead_pex_tab","label":"PEX","fieldtype":"Tab Break","insert_after":"status_change_log"},
@@ -65,6 +63,13 @@ def _make_crm_lead_fields():
             {"fieldname": "sr_duplicate_count","label":"Duplicate Count","fieldtype":"Int","default":0,"read_only":1,"insert_after":"sr_is_latest","in_list_view":0,"in_standard_filter":0},
             {"fieldname": "sr_primary_lead","label":"Primary (Latest) Lead","fieldtype":"Link","options":"CRM Lead","read_only":1,"insert_after":"sr_duplicate_count"},
             {"fieldname": "sr_is_archived","label":"Archived (Hidden)","fieldtype":"Check","default":"0","read_only":1,"insert_after":"sr_primary_lead","in_list_view":0,"in_standard_filter":0},
+
+            {"fieldname": "sr_lead_details_tab", "label": "Lead Details", "fieldtype": "Tab Break", "insert_after": "sr_is_archived"},
+            {"fieldname": "sr_lead_details_sb", "label": "", "fieldtype": "Section Break", "insert_after": "sr_lead_details_tab"},
+            {"fieldname": "sr_lead_details_cb1", "fieldtype": "Column Break", "insert_after": "sr_lead_details_sb"},
+            {"fieldname": "sr_lead_pipeline","label": "Pipeline","fieldtype": "Link","options": "SR Lead Pipeline","in_list_view": 1,"in_standard_filter": 1,"insert_after": "sr_lead_details_cb1"},
+            {"fieldname": "sr_lead_details_cb2", "fieldtype": "Column Break", "insert_after": "sr_lead_pipeline"},
+            {"fieldname": "sr_lead_platform", "label": "Platform", "fieldtype": "Data", "in_list_view": 1, "insert_after": "sr_lead_details_cb2"},
         ]
     })
 
@@ -79,23 +84,34 @@ def _apply_crm_lead_ui_customizations():
         return
 
     # Standard label/filters
+    # upsert_property_setter(DT, "status", "label", "Lead Status", "Data")
     upsert_property_setter(DT, "status", "in_standard_filter", "1", "Check")
     upsert_property_setter(DT, "first_name", "reqd", "0", "Check")
     upsert_property_setter(DT, "mobile_no", "reqd", "1", "Check")
     upsert_property_setter(DT, "mobile_no", "in_list_view", "1", "Check")
     upsert_property_setter(DT, "mobile_no", "in_standard_filter", "1", "Check")
-    upsert_property_setter(DT, "source", "label", "Lead Source", "Data")
+    # upsert_property_setter(DT, "source", "label", "Lead Source", "Data")
     upsert_property_setter(DT, "source", "options", "SR Lead Source", "Link")
     upsert_property_setter(DT, "source", "in_list_view", "1", "Check")
     upsert_property_setter(DT, "source", "in_standard_filter", "1", "Check")
 
-    upsert_property_setter(DT, "sr_remote_location", "fieldtype", "Small Text", "Data")
-    upsert_property_setter(DT, "sr_user_agent", "fieldtype", "Small Text", "Data")
+    # upsert_property_setter(DT, "sr_remote_location", "fieldtype", "Small Text", "Data")
+    # upsert_property_setter(DT, "sr_user_agent", "fieldtype", "Small Text", "Data")
 
-    ensure_field_after(DT, "status", "sr_lead_pipeline")
+    upsert_property_setter(DT, "person_tab", "label", "Patient Details", "Data")
+
+    ensure_field_after(DT, "middle_name", "first_name")
     ensure_field_after(DT, "lead_name", "last_name")
     ensure_field_after(DT, "phone", "mobile_no")
     ensure_field_after(DT, "gender", "phone")
+
+    ensure_field_after(DT, "sr_lead_pipeline", "sr_lead_details_cb1")
+    ensure_field_after(DT, "lead_owner", "sr_lead_pipeline")
+    ensure_field_after(DT, "source", "lead_owner")
+
+    ensure_field_after(DT, "sr_lead_platform", "sr_lead_details_cb2")
+    ensure_field_after(DT, "status", "sr_lead_platform")
+    ensure_field_after(DT, "sr_lead_disposition", "status")
 
     # IMPORTANT: Do NOT set global locks here (no permlevel=1 / set_only_once)
     # Lead Owner permlevel can be set via Role Permissions Manager (recommended).
@@ -103,20 +119,23 @@ def _apply_crm_lead_ui_customizations():
     # put lead_owner on its own perm level so only roles with Level=2 Write can edit it
     upsert_property_setter(DT, "lead_owner", "permlevel", "2", "Int")
 
-    # 5) Hide unwanted flags/fieldss
+    # Hide unwanted flags/fieldss
     targets = (
         "organization",
         "website",
         "territory",
         "industry",
         "job_title",
-        "middle_name",
+        "salutation",
+        "lead_name",
         "no_of_employees",
         "annual_revenue",
         "image",
-        "converted",
-        "salutation",
+        "converted",        
         "products",
+        "total",
+        "net_total",
+        "sla_tab",
     )
     for f in targets:
         cfname = frappe.db.get_value("Custom Field", {"dt": DT, "fieldname": f}, "name")

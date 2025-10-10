@@ -1,0 +1,68 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:sr_platform_name",
+ "creation": "2025-10-10 13:40:38.585373",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sr_platform_name",
+  "sr_platform_details"
+ ],
+ "fields": [
+  {
+   "fieldname": "sr_platform_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Platform Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "sr_platform_details",
+   "fieldtype": "Text Editor",
+   "label": "Platform Details"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-10-10 13:40:38.585373",
+ "modified_by": "Administrator",
+ "module": "Sriaas Clinic",
+ "name": "SR Lead Platform",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Healthcare Administrator",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "sr_platform_name",
+ "track_changes": 1
+}

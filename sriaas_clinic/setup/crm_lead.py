@@ -67,9 +67,9 @@ def _make_crm_lead_fields():
             {"fieldname": "sr_lead_details_tab", "label": "Lead Details", "fieldtype": "Tab Break", "insert_after": "sr_is_archived"},
             {"fieldname": "sr_lead_details_sb", "label": "", "fieldtype": "Section Break", "insert_after": "sr_lead_details_tab"},
             {"fieldname": "sr_lead_details_cb1", "fieldtype": "Column Break", "insert_after": "sr_lead_details_sb"},
-            {"fieldname": "sr_lead_pipeline","label": "Pipeline","fieldtype": "Link","options": "SR Lead Pipeline","in_list_view": 1,"in_standard_filter": 1,"insert_after": "sr_lead_details_cb1"},
+            {"fieldname": "sr_lead_pipeline","label": "Pipeline","fieldtype": "Link", "options": "SR Lead Pipeline","in_list_view": 1,"in_standard_filter": 1,"insert_after": "sr_lead_details_cb1"},
             {"fieldname": "sr_lead_details_cb2", "fieldtype": "Column Break", "insert_after": "sr_lead_pipeline"},
-            {"fieldname": "sr_lead_platform", "label": "Platform", "fieldtype": "Data", "in_list_view": 1, "insert_after": "sr_lead_details_cb2"},
+            {"fieldname": "sr_lead_platform", "label": "Platform", "fieldtype": "Link", "options": "SR Lead Platform", "in_list_view": 1, "insert_after": "sr_lead_details_cb2"},
         ]
     })
 

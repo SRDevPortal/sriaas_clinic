@@ -24,12 +24,13 @@ def apply():
     _ensure_sr_instruction()
     _ensure_sr_medication_template_item()
     _ensure_sr_medication_template()
-    _ensure_sr_delivery_type()
-    _ensure_sr_lead_source()
+    _ensure_sr_delivery_type()    
     _ensure_sr_practitioner_pathy()
     _ensure_sr_state()
-    _ensure_sr_lead_disposition()
     _ensure_sr_lead_pipeline()
+    _ensure_sr_lead_platform()
+    _ensure_sr_lead_source()
+    _ensure_sr_lead_disposition()
     # _ensure_shiprocket_settings()
     # _ensure_sr_lead_duplicate()
 
@@ -247,34 +248,6 @@ def _ensure_sr_delivery_type():
         "permissions":[{"role":"System Manager","read":1,"write":1,"create":1,"delete":1,"print":1,"email":1,"export":1}],
     }).insert(ignore_permissions=True)
 
-def _ensure_sr_lead_source():
-    """Create SR Lead Source master."""
-    if frappe.db.exists("DocType", "SR Lead Source"):
-        return
-
-    frappe.get_doc({
-        "doctype":"DocType",
-        "name":"SR Lead Source",
-        "module":MODULE_DEF_NAME,
-        "custom":0,
-        "istable":0,
-        "editable_grid":0,
-        "issingle":0,
-        "track_changes":1,
-        "naming_rule":"By fieldname",
-        "autoname":"field:sr_source_name",
-        "title_field":"sr_source_name",
-        "field_order":["sr_source_name","sr_source_details"],
-        "fields": [
-            {"fieldname": "sr_source_name","fieldtype": "Data","label": "Source Name","reqd": 1,"in_list_view": 1,"unique": 1},
-            {"fieldname": "sr_source_details","fieldtype": "Text Editor","label": "Source Details"},
-        ],
-        "permissions": [
-            {"role": "System Manager","read": 1, "write": 1, "create": 1, "delete": 1,"print": 1, "email": 1, "export": 1},
-            {"role": "Healthcare Administrator","read": 1, "write": 1, "create": 1, "delete": 1},
-        ],
-    }).insert(ignore_permissions=True)
-
 def _ensure_sr_practitioner_pathy():
     """Create SR Practitioner Pathy master."""
     if frappe.db.exists("DocType", "SR Practitioner Pathy"):
@@ -401,6 +374,116 @@ def _ensure_sr_state():
     frappe.db.commit()
     frappe.logger().info("SR State Doctype and data seeded")
 
+def _ensure_sr_lead_pipeline():
+    """Create SR Lead Pipeline master."""
+    if frappe.db.exists("DocType", "SR Lead Pipeline"):
+        return
+
+    frappe.get_doc({
+        "doctype": "DocType",
+        "name": "SR Lead Pipeline",
+        "module": MODULE_DEF_NAME,
+        "custom": 0,
+        "istable": 0,
+        "issingle": 0,
+        "editable_grid": 0,
+        "track_changes": 1,
+        "allow_rename": 0,
+        "allow_import": 1,
+
+        "naming_rule": "By fieldname",
+        "autoname": "field:sr_pipeline_name",
+        "title_field": "sr_pipeline_name",
+
+        "field_order": ["sr_pipeline_name", "is_active", "description"],
+        "fields": [
+            {
+                "fieldname": "sr_pipeline_name",
+                "label": "Pipeline Name",
+                "fieldtype": "Data",
+                "reqd": 1,
+                "unique": 1,
+                "in_list_view": 1,
+                "in_standard_filter": 1,
+            },
+            {
+                "fieldname": "is_active",
+                "label": "Is Active",
+                "fieldtype": "Check",
+                "default": "1",
+            },
+            {
+                "fieldname": "description",
+                "label": "Description",
+                "fieldtype": "Small Text",
+            },
+        ],
+
+        "search_fields": "sr_pipeline_name",
+        "show_name_in_global_search": 1,
+
+        "permissions": [
+            {"role": "System Manager", "read":1, "write":1, "create":1, "delete":1, "print":1, "email":1, "export":1},
+            {"role": "Healthcare Administrator", "read":1, "write":1, "create":1, "delete":1},
+        ],
+    }).insert(ignore_permissions=True)
+
+def _ensure_sr_lead_platform():
+    """Create SR Lead Platform master."""
+    if frappe.db.exists("DocType", "SR Lead Platform"):
+        return
+
+    frappe.get_doc({
+        "doctype":"DocType",
+        "name":"SR Lead Platform",
+        "module":MODULE_DEF_NAME,
+        "custom":0,
+        "istable":0,
+        "editable_grid":0,
+        "issingle":0,
+        "track_changes":1,
+        "naming_rule":"By fieldname",
+        "autoname":"field:sr_platform_name",
+        "title_field":"sr_platform_name",
+        "field_order":["sr_platform_name","sr_platform_details"],
+        "fields": [
+            {"fieldname": "sr_platform_name","fieldtype": "Data","label": "Platform Name","reqd": 1,"in_list_view": 1,"unique": 1},
+            {"fieldname": "sr_platform_details","fieldtype": "Text Editor","label": "Platform Details"},
+        ],
+        "permissions": [
+            {"role": "System Manager","read": 1, "write": 1, "create": 1, "delete": 1,"print": 1, "email": 1, "export": 1},
+            {"role": "Healthcare Administrator","read": 1, "write": 1, "create": 1, "delete": 1},
+        ],
+    }).insert(ignore_permissions=True)
+
+def _ensure_sr_lead_source():
+    """Create SR Lead Source master."""
+    if frappe.db.exists("DocType", "SR Lead Source"):
+        return
+
+    frappe.get_doc({
+        "doctype":"DocType",
+        "name":"SR Lead Source",
+        "module":MODULE_DEF_NAME,
+        "custom":0,
+        "istable":0,
+        "editable_grid":0,
+        "issingle":0,
+        "track_changes":1,
+        "naming_rule":"By fieldname",
+        "autoname":"field:sr_source_name",
+        "title_field":"sr_source_name",
+        "field_order":["sr_source_name","sr_source_details"],
+        "fields": [
+            {"fieldname": "sr_source_name","fieldtype": "Data","label": "Source Name","reqd": 1,"in_list_view": 1,"unique": 1},
+            {"fieldname": "sr_source_details","fieldtype": "Text Editor","label": "Source Details"},
+        ],
+        "permissions": [
+            {"role": "System Manager","read": 1, "write": 1, "create": 1, "delete": 1,"print": 1, "email": 1, "export": 1},
+            {"role": "Healthcare Administrator","read": 1, "write": 1, "create": 1, "delete": 1},
+        ],
+    }).insert(ignore_permissions=True)
+
 def _ensure_sr_lead_disposition():
     """Create SR Lead Disposition master."""
     if frappe.db.exists("DocType", "SR Lead Disposition"):
@@ -461,68 +544,10 @@ def _ensure_sr_lead_disposition():
             },
         ],
 
-        # Useful list view & search tuning (optional)
-        "search_fields": "sr_disposition_name,sr_lead_status",
-        "show_name_in_global_search": 1,
-
         # Permissions (adjust to your roles)
         "permissions": [
             { "role": "System Manager", "read":1, "write":1, "create":1, "delete":1, "print":1, "email":1, "export":1 },
             { "role": "Healthcare Administrator", "read":1, "write":1, "create":1, "delete":1 },
-        ],
-    }).insert(ignore_permissions=True)
-
-def _ensure_sr_lead_pipeline():
-    """Create SR Lead Pipeline master."""
-    if frappe.db.exists("DocType", "SR Lead Pipeline"):
-        return
-
-    frappe.get_doc({
-        "doctype": "DocType",
-        "name": "SR Lead Pipeline",
-        "module": MODULE_DEF_NAME,
-        "custom": 0,
-        "istable": 0,
-        "issingle": 0,
-        "editable_grid": 0,
-        "track_changes": 1,
-        "allow_rename": 0,
-        "allow_import": 1,
-
-        "naming_rule": "By fieldname",
-        "autoname": "field:sr_pipeline_name",
-        "title_field": "sr_pipeline_name",
-
-        "field_order": ["sr_pipeline_name", "is_active", "description"],
-        "fields": [
-            {
-                "fieldname": "sr_pipeline_name",
-                "label": "Pipeline Name",
-                "fieldtype": "Data",
-                "reqd": 1,
-                "unique": 1,
-                "in_list_view": 1,
-                "in_standard_filter": 1,
-            },
-            {
-                "fieldname": "is_active",
-                "label": "Is Active",
-                "fieldtype": "Check",
-                "default": "1",
-            },
-            {
-                "fieldname": "description",
-                "label": "Description",
-                "fieldtype": "Small Text",
-            },
-        ],
-
-        "search_fields": "sr_pipeline_name",
-        "show_name_in_global_search": 1,
-
-        "permissions": [
-            {"role": "System Manager", "read":1, "write":1, "create":1, "delete":1, "print":1, "email":1, "export":1},
-            {"role": "Healthcare Administrator", "read":1, "write":1, "create":1, "delete":1},
         ],
     }).insert(ignore_permissions=True)
 

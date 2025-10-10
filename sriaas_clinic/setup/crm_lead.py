@@ -109,6 +109,7 @@ def _apply_crm_lead_ui_customizations():
     ensure_field_after(DT, "lead_owner", "sr_lead_pipeline")
     ensure_field_after(DT, "source", "lead_owner")
 
+    ensure_field_after(DT, "sr_lead_details_cb2", "source")
     ensure_field_after(DT, "sr_lead_platform", "sr_lead_details_cb2")
     ensure_field_after(DT, "status", "sr_lead_platform")
     ensure_field_after(DT, "sr_lead_disposition", "status")

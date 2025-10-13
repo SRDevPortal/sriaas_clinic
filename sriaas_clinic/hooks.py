@@ -59,7 +59,8 @@ doc_events = {
     },
     "Patient Encounter": {
         "before_save": "sriaas_clinic.api.encounter_flow.handlers.before_save_patient_encounter",
-        "on_update":   "sriaas_clinic.api.encounter_flow.handlers.create_billing_on_save",
+        # "on_update":   "sriaas_clinic.api.encounter_flow.handlers.create_billing_on_save",
+		"on_submit":   "sriaas_clinic.api.encounter_flow.handlers.create_billing_on_save",
     },
     "Sales Invoice": {
         "before_save": "sriaas_clinic.api.sales_invoice_cost.before_save",

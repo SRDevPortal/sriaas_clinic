@@ -97,12 +97,180 @@ def before_save_patient_encounter(doc, method):
                 it["warehouse"] = None
 
 
-def create_billing_on_save(doc, method):
-    """Create Draft Sales Invoice (+ Draft Payment Entry if advance) when Encounter is saved."""
-    if doc.docstatus != 0:
+# def create_billing_on_save(doc, method):
+#     """Create Draft Sales Invoice (+ Draft Payment Entry if advance) when Encounter is saved."""
+#     if doc.docstatus != 0:
+#         return
+#     if (doc.get(F_ENCOUNTER_TYPE) or "").strip().lower() != "order":
+#         return
+
+#     # Don’t duplicate
+#     if getattr(doc, "sales_invoice", None):
+#         return
+#     existing = frappe.get_all(
+#         "Sales Invoice",
+#         filters={"docstatus": 0, "remarks": ["like", f"%Patient Encounter: {doc.name}%"]},
+#         pluck="name",
+#         limit=1,
+#     )
+#     if existing:
+#         return
+
+#     # Build SI
+#     customer = _get_or_create_customer_from_patient(doc)
+#     item_rows = _find_item_rows(doc)
+#     if not item_rows:
+#         return  # no items → skip
+
+#     si = frappe.new_doc("Sales Invoice")
+#     si.update({
+#         "customer": customer,
+#         "company": doc.company,
+#         "posting_date": nowdate(),
+#         "due_date": nowdate(),
+#         "remarks": f"Created from Patient Encounter: {doc.name}",
+#     })
+
+#     # Healthcare fields if present
+#     si_meta = frappe.get_meta("Sales Invoice")
+#     if si_meta.has_field("patient") and doc.get("patient"):
+#         si.patient = doc.patient
+#         if si_meta.has_field("patient_name"):
+#             si.patient_name = frappe.db.get_value("Patient", doc.patient, "patient_name")
+
+#     # Optional back link
+#     if si_meta.has_field(SI_F_SOURCE_ENCOUNTER):
+#         setattr(si, SI_F_SOURCE_ENCOUNTER, doc.name)
+
+#     # Company address for GST
+#     addr = _get_company_primary_address(doc.company)
+#     if addr:
+#         si.company_address = addr
+
+#     # Avoid parent default warehouse
+#     if hasattr(si, "set_warehouse"):
+#         si.set_warehouse = None
+
+#     # Append items from Encounter.sr_pe_order_items
+#     added = 0
+#     for it in item_rows:
+#         item_code = _row_get(it, "item_code")
+#         if not item_code:
+#             continue
+
+#         qty   = flt(_row_get(it, "qty") or 1)
+#         rate  = flt(_row_get(it, "rate") or 0)
+#         uom   = _row_get(it, "uom")
+#         name  = _row_get(it, "item_name")
+#         req_wh = _row_get(it, "warehouse")
+
+#         safe_wh = _coalesce_warehouse(
+#             requested_wh=req_wh,
+#             company=doc.company,
+#             item_code=item_code,
+#         )
+
+#         row: Dict[str, Any] = {
+#             "item_code": item_code,
+#             "item_name": name,
+#             "description": it.get("description"),
+#             "uom": uom,
+#             "qty": qty,
+#             "rate": rate,
+#             "conversion_factor": it.get("conversion_factor") or 1,
+#             "income_account": it.get("income_account"),
+#             "cost_center": it.get("cost_center"),
+#         }
+#         if safe_wh:
+#             row["warehouse"] = safe_wh
+
+#         si.append("items", row)
+#         added += 1
+    
+#     if added == 0:
+#         # return  # no valid items → skip
+#         frappe.throw("No valid items found in Draft Invoice → Items List. Please enter Item Code, Qty and Rate.")
+
+#     # Map meta: Encounter → SI
+#     if si_meta.has_field(SI_F_ORDER_SOURCE) and doc.get(F_SOURCE):
+#         setattr(si, SI_F_ORDER_SOURCE, doc.get(F_SOURCE))
+#     if si_meta.has_field(SI_F_SALES_TYPE) and doc.get(F_SALES_TYPE):
+#         setattr(si, SI_F_SALES_TYPE, doc.get(F_SALES_TYPE))
+#     if si_meta.has_field(SI_F_DELIVERY_TYPE) and doc.get(F_DELIVERY_TYPE):
+#         setattr(si, SI_F_DELIVERY_TYPE, doc.get(F_DELIVERY_TYPE))
+
+#     # Taxes
+#     _set_tax_template_by_state(si, customer)
+#     _apply_company_tax_template(si)
+#     si.set_missing_values()
+#     si.calculate_taxes_and_totals()
+#     _company_safe_tax_rows(si)
+#     si.calculate_taxes_and_totals()
+#     _sanitize_si_warehouses(si, doc.company)
+
+#     # Payment summary (for UI)
+#     pre_amt = flt(doc.get(F_PAID_AMT) or 0)
+#     mop     = (doc.get(F_MOP) or "").strip()
+#     total   = flt(si.rounded_total or si.grand_total or 0)
+
+#     if si_meta.has_field(SI_F_PAID_AMOUNT):
+#         setattr(si, SI_F_PAID_AMOUNT, pre_amt)
+#     if si_meta.has_field(SI_F_MOP):
+#         setattr(si, SI_F_MOP, mop)
+#     if si_meta.has_field(SI_F_PAYMENT_TERM):
+#         if pre_amt <= 0:
+#             setattr(si, SI_F_PAYMENT_TERM, "Unpaid")
+#         elif total > 0 and pre_amt + 1e-6 < total:
+#             setattr(si, SI_F_PAYMENT_TERM, "Partially Paid")
+#         else:
+#             setattr(si, SI_F_PAYMENT_TERM, "Paid in Full")
+#     if si_meta.has_field(SI_F_OUTSTANDING):
+#         setattr(si, SI_F_OUTSTANDING, max(total - pre_amt, 0))
+
+#     # Optional POS payments (beware double-accounting)
+#     if USE_POS_PAYMENTS_ROW and pre_amt > 0 and mop:
+#         si.is_pos = 1
+#         si.set("payments", [])
+#         si.append("payments", {"mode_of_payment": mop, "amount": min(pre_amt, total) if total > 0 else pre_amt})
+
+#     # Final guard on warehouses
+#     for r in si.items:
+#         if r.warehouse and not _valid_warehouse(r.warehouse, doc.company):
+#             r.warehouse = None
+
+#     si.flags.ignore_permissions = True
+#     si.insert(ignore_permissions=True)  # keep Draft
+
+#     # Create Draft Payment Entry if advance exists
+#     pe_name = None
+#     if pre_amt > 0 and mop:
+#         pe_name = _create_draft_payment_entry(doc, customer, mop, pre_amt, si.name)
+
+#     # Backlink on Encounter if fields exist there
+#     if hasattr(doc, "sales_invoice"):
+#         doc.db_set("sales_invoice", si.name, update_modified=False)
+#     if pe_name and hasattr(doc, "payment_entry"):
+#         doc.db_set("payment_entry", pe_name, update_modified=False)
+
+#     frappe.msgprint(
+#         f"Created Sales Invoice <b>{si.name}</b>" + (f" and Payment Entry <b>{pe_name}</b>" if pe_name else ""),
+#         alert=True
+#     )
+
+
+def create_billing_on_submit(doc, method):
+    """Run on Patient Encounter submit and create DRAFT SI (+ DRAFT PE if advance)."""
+    if doc.docstatus != 1:
         return
     if (doc.get(F_ENCOUNTER_TYPE) or "").strip().lower() != "order":
         return
+    _create_billing_drafts_from_encounter(doc)
+
+
+def _create_billing_drafts_from_encounter(doc):
+    """The old create_billing_on_save body, but callable from on_submit."""
+    import frappe
+    from frappe.utils import flt, nowdate
 
     # Don’t duplicate
     if getattr(doc, "sales_invoice", None):
@@ -116,7 +284,7 @@ def create_billing_on_save(doc, method):
     if existing:
         return
 
-    # Build SI
+    # Build SI (DRAFT)
     customer = _get_or_create_customer_from_patient(doc)
     item_rows = _find_item_rows(doc)
     if not item_rows:
@@ -131,27 +299,22 @@ def create_billing_on_save(doc, method):
         "remarks": f"Created from Patient Encounter: {doc.name}",
     })
 
-    # Healthcare fields if present
     si_meta = frappe.get_meta("Sales Invoice")
     if si_meta.has_field("patient") and doc.get("patient"):
         si.patient = doc.patient
         if si_meta.has_field("patient_name"):
             si.patient_name = frappe.db.get_value("Patient", doc.patient, "patient_name")
 
-    # Optional back link
     if si_meta.has_field(SI_F_SOURCE_ENCOUNTER):
         setattr(si, SI_F_SOURCE_ENCOUNTER, doc.name)
 
-    # Company address for GST
     addr = _get_company_primary_address(doc.company)
     if addr:
         si.company_address = addr
 
-    # Avoid parent default warehouse
     if hasattr(si, "set_warehouse"):
         si.set_warehouse = None
 
-    # Append items from Encounter.sr_pe_order_items
     added = 0
     for it in item_rows:
         item_code = _row_get(it, "item_code")
@@ -170,7 +333,7 @@ def create_billing_on_save(doc, method):
             item_code=item_code,
         )
 
-        row: Dict[str, Any] = {
+        row = {
             "item_code": item_code,
             "item_name": name,
             "description": it.get("description"),
@@ -186,12 +349,11 @@ def create_billing_on_save(doc, method):
 
         si.append("items", row)
         added += 1
-    
+
     if added == 0:
-        # return  # no valid items → skip
         frappe.throw("No valid items found in Draft Invoice → Items List. Please enter Item Code, Qty and Rate.")
 
-    # Map meta: Encounter → SI
+    # Map Encounter → SI custom fields
     if si_meta.has_field(SI_F_ORDER_SOURCE) and doc.get(F_SOURCE):
         setattr(si, SI_F_ORDER_SOURCE, doc.get(F_SOURCE))
     if si_meta.has_field(SI_F_SALES_TYPE) and doc.get(F_SALES_TYPE):
@@ -199,7 +361,7 @@ def create_billing_on_save(doc, method):
     if si_meta.has_field(SI_F_DELIVERY_TYPE) and doc.get(F_DELIVERY_TYPE):
         setattr(si, SI_F_DELIVERY_TYPE, doc.get(F_DELIVERY_TYPE))
 
-    # Taxes
+    # Taxes & totals
     _set_tax_template_by_state(si, customer)
     _apply_company_tax_template(si)
     si.set_missing_values()
@@ -208,7 +370,7 @@ def create_billing_on_save(doc, method):
     si.calculate_taxes_and_totals()
     _sanitize_si_warehouses(si, doc.company)
 
-    # Payment summary (for UI)
+    # UI summary (non-GL)
     pre_amt = flt(doc.get(F_PAID_AMT) or 0)
     mop     = (doc.get(F_MOP) or "").strip()
     total   = flt(si.rounded_total or si.grand_total or 0)
@@ -227,33 +389,27 @@ def create_billing_on_save(doc, method):
     if si_meta.has_field(SI_F_OUTSTANDING):
         setattr(si, SI_F_OUTSTANDING, max(total - pre_amt, 0))
 
-    # Optional POS payments (beware double-accounting)
-    if USE_POS_PAYMENTS_ROW and pre_amt > 0 and mop:
-        si.is_pos = 1
-        si.set("payments", [])
-        si.append("payments", {"mode_of_payment": mop, "amount": min(pre_amt, total) if total > 0 else pre_amt})
-
     # Final guard on warehouses
     for r in si.items:
         if r.warehouse and not _valid_warehouse(r.warehouse, doc.company):
             r.warehouse = None
 
     si.flags.ignore_permissions = True
-    si.insert(ignore_permissions=True)  # keep Draft
+    si.insert(ignore_permissions=True)   # KEEP DRAFT
 
-    # Create Draft Payment Entry if advance exists
+    # Optional: Draft PE (no references yet) if advance present
     pe_name = None
     if pre_amt > 0 and mop:
         pe_name = _create_draft_payment_entry(doc, customer, mop, pre_amt, si.name)
 
-    # Backlink on Encounter if fields exist there
+    # Back-links on Encounter, if fields exist
     if hasattr(doc, "sales_invoice"):
         doc.db_set("sales_invoice", si.name, update_modified=False)
     if pe_name and hasattr(doc, "payment_entry"):
         doc.db_set("payment_entry", pe_name, update_modified=False)
 
     frappe.msgprint(
-        f"Created Sales Invoice <b>{si.name}</b>" + (f" and Payment Entry <b>{pe_name}</b>" if pe_name else ""),
+        f"Created Draft Sales Invoice <b>{si.name}</b>" + (f" and Draft Payment Entry <b>{pe_name}</b>" if pe_name else ""),
         alert=True
     )
 

@@ -158,19 +158,24 @@ def _apply_encounter_ui_customizations():
 
     # Make drug prescription section collapsible
     upsert_property_setter(DT, "sb_drug_prescription", "collapsible", "1", "Check")
-
-    upsert_property_setter(DT, "sr_pe_mode_of_payment", "depends_on", "eval:doc.sr_pe_paid_amount>0", "Data")
-    upsert_property_setter(DT, "sr_pe_mode_of_payment", "mandatory_depends_on", "eval:doc.sr_pe_paid_amount>0", "Data")
-
-    upsert_property_setter(DT, "sr_payment_receipt_sb", "depends_on", "eval:doc.sr_pe_paid_amount>0", "Data")
-    for f in ["sr_pe_payment_reference_no","sr_pe_payment_reference_date","sr_payment_receipt_cb"]:
-        upsert_property_setter(DT, f, "depends_on", "eval:doc.sr_pe_paid_amount>0", "Data")
-    for f in ["sr_pe_payment_reference_no","sr_pe_payment_reference_date"]:
-        upsert_property_setter(DT, f, "mandatory_depends_on", "eval:doc.sr_pe_paid_amount>0", "Data")
     
     # Rename drug prescription section to Ayurvedic Medications
     set_label(DT, "sb_drug_prescription", "Ayurvedic Medications")
     set_label(DT, "drug_prescription", "Ayurvedic Drug Prescription")
+
+    # show when Advance > 0
+    for f in ["sr_pe_mode_of_payment","sr_payment_receipt_sb","sr_pe_payment_reference_no","sr_pe_payment_proof","sr_payment_receipt_cb","sr_pe_payment_reference_date"]:
+        upsert_property_setter(DT, f, "depends_on", "eval:doc.sr_pe_paid_amount>0", "Data")
+
+    # make these *visibly* required when Advance > 0
+    for f in ["sr_pe_mode_of_payment","sr_pe_payment_proof","sr_pe_payment_reference_date"]:
+        upsert_property_setter(DT, f, "mandatory_depends_on", "eval:doc.sr_pe_paid_amount>0", "Data")
+
+    # and ensure the hard `reqd` flag is OFF so draft autosaves won't error
+    for f in ["sr_pe_mode_of_payment","sr_pe_payment_proof","sr_pe_payment_reference_date"]:
+        upsert_property_setter(DT, f, "reqd", "0", "Check")
+    
+    upsert_property_setter(DT, "sr_pe_payment_proof", "read_only", "0", "Check")
 
     # --------------------------
     # 2) Hide unwanted flags/fields
@@ -186,7 +191,6 @@ def _apply_encounter_ui_customizations():
         "therapies",
         "naming_series",
         "appointment",
-        # "sr_pe_payment_proof",
     )
     for f in targets:
         cfname = frappe.db.get_value("Custom Field", {"dt": DT, "fieldname": f}, "name")

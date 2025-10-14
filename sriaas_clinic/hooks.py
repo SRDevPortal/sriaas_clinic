@@ -58,7 +58,11 @@ doc_events = {
         "validate": "sriaas_clinic.api.item_package_weight.calculate_pkg_weights",
     },
     "Patient Encounter": {
-        "before_save": "sriaas_clinic.api.encounter_flow.handlers.before_save_patient_encounter",
+        "before_save": [
+            "sriaas_clinic.api.encounter_flow.handlers.before_save_patient_encounter",
+            "sriaas_clinic.api.encounter_flow.handlers.clear_advance_dependent_fields",
+        ],
+        "before_submit": "sriaas_clinic.api.encounter_flow.handlers.validate_required_before_submit",
         # "on_update":   "sriaas_clinic.api.encounter_flow.handlers.create_billing_on_save",
         "on_submit":   "sriaas_clinic.api.encounter_flow.handlers.create_billing_on_submit",
     },
@@ -136,6 +140,9 @@ doctype_js = {
         "public/js/pe_template_medication.js",
         "public/js/pe_manual_medication.js",
         "public/js/clinical_history_modal.js",
+        # "public/js/patient_encounter_upload_proof.js",
+        "public/js/patient_encounter_block_autosave_for_proof.js",
+        "public/js/patient_encounter_clear_advance.js",
     ],
     "Item": [
         "public/js/item_package_weight.js",

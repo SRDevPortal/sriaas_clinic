@@ -97,6 +97,48 @@ def before_save_patient_encounter(doc, method):
                 it["warehouse"] = None
 
 
+def clear_advance_dependent_fields(doc, method):
+    """When advance is blank/zero, clear dependent payment fields."""
+    amt = flt(doc.get("sr_pe_paid_amount") or 0)
+    if amt <= 0:
+        for f in ("sr_pe_mode_of_payment",
+                  "sr_pe_payment_proof",
+                  "sr_pe_payment_reference_no",
+                  "sr_pe_payment_reference_date"):
+            if getattr(doc, f, None):
+                setattr(doc, f, None)
+
+
+def _has_any_attachment(doc) -> bool:
+    """True if the doc has any File attached via the sidebar."""
+    return bool(frappe.get_all(
+        "File",
+        filters={"attached_to_doctype": doc.doctype, "attached_to_name": doc.name},
+        limit=1
+    ))
+
+def validate_required_before_submit(doc, method):
+    """
+    Block submit if an advance was recorded but required payment info is missing.
+    Runs in before_submit so DRAFT saves (e.g., image autosave) won't be blocked.
+    """
+    amt = flt(doc.get("sr_pe_paid_amount") or 0)
+    if amt > 0:
+        missing = []
+        if not (doc.get("sr_pe_mode_of_payment") or "").strip():
+            missing.append("Mode of Payment")
+        if not doc.get("sr_pe_payment_reference_date"):
+            missing.append("Payment Reference Date")
+
+        # Accept either the field or ANY sidebar attachment
+        has_proof = bool(doc.get("sr_pe_payment_proof")) or _has_any_attachment(doc)
+        if not has_proof:
+            missing.append("Payment Proof (upload via field or the Attachments sidebar)")
+
+        if missing:
+            frappe.throw("Please complete before submit: " + ", ".join(missing))
+
+
 # def create_billing_on_save(doc, method):
 #     """Create Draft Sales Invoice (+ Draft Payment Entry if advance) when Encounter is saved."""
 #     if doc.docstatus != 0:

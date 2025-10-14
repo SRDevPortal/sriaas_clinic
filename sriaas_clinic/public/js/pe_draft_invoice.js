@@ -39,7 +39,7 @@ function toggle_draft_invoice_ui(frm) {
     'sr_pe_paid_amount',
     'sr_pe_payment_reference_no',
     'sr_pe_payment_reference_date',
-    'sr_pe_payment_proof',
+    // 'sr_pe_payment_proof',
   ];
 
   [...sections, ...fields].forEach(f => frm.toggle_display(f, is_order));
@@ -56,7 +56,7 @@ function reset_draft_invoice_fields(frm) {
   frm.set_value('sr_pe_paid_amount', 0);
   frm.set_value('sr_pe_payment_reference_no', null);
   frm.set_value('sr_pe_payment_reference_date', null);
-  frm.set_value('sr_pe_payment_proof', null);
+  // frm.set_value('sr_pe_payment_proof', null);
 
   // make sure UI matches current type after clearing
   toggle_draft_invoice_ui(frm);

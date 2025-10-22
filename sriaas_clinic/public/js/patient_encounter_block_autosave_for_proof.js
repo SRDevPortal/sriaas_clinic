@@ -37,7 +37,7 @@
 
       // Optional feedback
       frappe.show_alert({
-        message: __('Payment proof updated (changes not saved yet)'),
+        message: __('Changes not saved yet'),
         indicator: 'blue'
       });
     }

@@ -75,12 +75,7 @@ doc_events = {
         ]
     },
     "CRM Lead": {
-        # normalize phone-like values without tripping guard
         "before_save": "sriaas_clinic.api.crm_lead.normalize_phoneish_fields",
-        # "validate": "sriaas_clinic.api.lead_dedupe.on_validate",
-        # "after_insert": "sriaas_clinic.api.lead_dedupe.on_after_insert",
-        # "on_update": "sriaas_clinic.api.lead_dedupe.on_update",
-        # "on_trash": "sriaas_clinic.api.lead_dedupe.on_trash",
         # block illegal edits depending on role + new/existing state
         "validate":"sriaas_clinic.api.crm_lead_field_guard.guard_restricted_fields",
         # keep Assignment + DocShare in sync with lead_owner

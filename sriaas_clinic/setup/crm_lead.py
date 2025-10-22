@@ -23,12 +23,22 @@ def _make_crm_lead_fields():
             {"fieldname": "sr_lead_message","label": "Message","fieldtype": "Small Text","insert_after": "sr_lead_personal_cb2"},
             {"fieldname": "sr_lead_notes","label": "Notes","fieldtype": "Small Text","insert_after": "sr_lead_message"},
 
+            # Lead Details
+            {"fieldname": "sr_lead_details_tab", "label": "Lead Details", "fieldtype": "Tab Break", "insert_after": "sr_lead_notes"},
+            {"fieldname": "sr_lead_details_sb", "label": "", "fieldtype": "Section Break", "insert_after": "sr_lead_details_tab"},
+            {"fieldname": "sr_lead_details_cb1", "fieldtype": "Column Break", "insert_after": "sr_lead_details_sb"},
+            {"fieldname": "sr_lead_pipeline","label": "Pipeline","fieldtype": "Link", "options": "SR Lead Pipeline","in_list_view": 1,"in_standard_filter": 1,"insert_after": "sr_lead_details_cb1"},
+            {"fieldname": "sr_lead_details_cb2", "fieldtype": "Column Break", "insert_after": "sr_lead_pipeline"},
+            {"fieldname": "sr_lead_platform", "label": "Platform", "fieldtype": "Link", "options": "SR Lead Platform", "in_list_view": 1, "insert_after": "sr_lead_details_cb2"},
+
             # PEX
             {"fieldname": "sr_lead_pex_tab","label":"PEX","fieldtype":"Tab Break","insert_after":"status_change_log"},
             {"fieldname": "sr_lead_pex_launcher_html","label":"PEX Launcher","fieldtype":"HTML","insert_after":"sr_lead_pex_tab","read_only":0},
 
-            # Meta Details
+            # Meta Details fields
             {"fieldname": "sr_meta_tab","label":"Meta Details","fieldtype":"Tab Break","insert_after":"sr_lead_pex_launcher_html"},
+            
+            # Meta Details - General Tracking
             {"fieldname": "sr_meta_general_sb","label":"General Tracking","fieldtype":"Section Break","insert_after":"sr_meta_tab"},
             {"fieldname": "sr_ip_address","label":"IP Address","fieldtype":"Data","read_only":1,"insert_after":"sr_meta_general_sb"},
             {"fieldname": "sr_vpn_status","label":"VPN Status","fieldtype":"Data","read_only":1,"insert_after":"sr_ip_address"},
@@ -37,6 +47,7 @@ def _make_crm_lead_fields():
             {"fieldname": "sr_remote_location","label":"Remote Location","fieldtype":"Small Text","read_only":1,"insert_after":"sr_meta_general_cb2"},
             {"fieldname": "sr_user_agent","label":"User Agent","fieldtype":"Small Text","read_only":1,"insert_after":"sr_remote_location"},
 
+            # Meta Details - Google Tracking
             {"fieldname": "sr_meta_google_sb","label":"Google Tracking","fieldtype":"Section Break","insert_after":"sr_user_agent"},
             {"fieldname": "sr_utm_source","label":"UTM Source","fieldtype":"Data","read_only":1,"insert_after":"sr_meta_google_sb"},
             {"fieldname": "sr_utm_campaign","label":"UTM Campaign","fieldtype":"Data","read_only":1,"insert_after":"sr_utm_source"},
@@ -47,29 +58,17 @@ def _make_crm_lead_fields():
             {"fieldname": "sr_utm_term","label":"UTM Term","fieldtype":"Data","read_only":1,"insert_after":"sr_utm_medium"},
             {"fieldname": "sr_utm_adgroup_id","label":"UTM Ad Group ID","fieldtype":"Data","read_only":1,"insert_after":"sr_utm_term"},
 
+            # Meta Details - Facebook Tracking
             {"fieldname": "sr_meta_facebook_sb","label":"Facebook Tracking","fieldtype":"Section Break","insert_after":"sr_utm_adgroup_id"},
             {"fieldname": "sr_fbclid","label":"FBCLID","fieldtype":"Data","read_only":1,"insert_after":"sr_meta_facebook_sb"},
 
+            # Meta Details - Interakt Tracking
             {"fieldname": "sr_meta_interakt_sb","label":"Interakt Tracking","fieldtype":"Section Break","insert_after":"sr_fbclid"},
             {"fieldname": "sr_w_source_id","label":"W Source_id","fieldtype":"Data","read_only":1,"insert_after":"sr_meta_interakt_sb"},
             {"fieldname": "sr_w_source_url","label":"W Source_url","fieldtype":"Data","read_only":1,"insert_after":"sr_w_source_id"},
             {"fieldname": "sr_w_ctwa_clid","label":"W Ctwa_clid","fieldtype":"Data","read_only":1,"insert_after":"sr_w_source_url"},
-            {"fieldname": "sr_w_team_id","label":"W Team_id","fieldtype":"Data","read_only":1,"insert_after":"sr_w_ctwa_clid"},
-
-            # Dedupe
-            {"fieldname": "sr_dedupe_tab","label":"Duplicates","fieldtype":"Tab Break","insert_after":"sr_w_team_id"},
-            {"fieldname": "sr_dedupe_sec","label":"Duplicates","fieldtype":"Section Break","insert_after":"sr_dedupe_tab"},
-            {"fieldname": "sr_is_latest","label":"Is Latest for Mobile","fieldtype":"Check","default":"1","read_only":1,"insert_after":"sr_dedupe_sec","in_list_view":0,"in_standard_filter":0},
-            {"fieldname": "sr_duplicate_count","label":"Duplicate Count","fieldtype":"Int","default":0,"read_only":1,"insert_after":"sr_is_latest","in_list_view":0,"in_standard_filter":0},
-            {"fieldname": "sr_primary_lead","label":"Primary (Latest) Lead","fieldtype":"Link","options":"CRM Lead","read_only":1,"insert_after":"sr_duplicate_count"},
-            {"fieldname": "sr_is_archived","label":"Archived (Hidden)","fieldtype":"Check","default":"0","read_only":1,"insert_after":"sr_primary_lead","in_list_view":0,"in_standard_filter":0},
-
-            {"fieldname": "sr_lead_details_tab", "label": "Lead Details", "fieldtype": "Tab Break", "insert_after": "sr_is_archived"},
-            {"fieldname": "sr_lead_details_sb", "label": "", "fieldtype": "Section Break", "insert_after": "sr_lead_details_tab"},
-            {"fieldname": "sr_lead_details_cb1", "fieldtype": "Column Break", "insert_after": "sr_lead_details_sb"},
-            {"fieldname": "sr_lead_pipeline","label": "Pipeline","fieldtype": "Link", "options": "SR Lead Pipeline","in_list_view": 1,"in_standard_filter": 1,"insert_after": "sr_lead_details_cb1"},
-            {"fieldname": "sr_lead_details_cb2", "fieldtype": "Column Break", "insert_after": "sr_lead_pipeline"},
-            {"fieldname": "sr_lead_platform", "label": "Platform", "fieldtype": "Link", "options": "SR Lead Platform", "in_list_view": 1, "insert_after": "sr_lead_details_cb2"},
+            {"fieldname": "sr_w_team_id","label":"W Team (Id)","fieldtype":"Data","read_only":1,"insert_after":"sr_w_ctwa_clid"},
+            {"fieldname": "sr_w_team_user","label":"W Team (User)","fieldtype":"Link","options": "User","read_only":1,"insert_after":"sr_w_team_id"},
         ]
     })
 
@@ -84,19 +83,17 @@ def _apply_crm_lead_ui_customizations():
         return
 
     # Standard label/filters
-    # upsert_property_setter(DT, "status", "label", "Lead Status", "Data")
     upsert_property_setter(DT, "status", "in_standard_filter", "1", "Check")
+    
     upsert_property_setter(DT, "first_name", "reqd", "0", "Check")
+    
     upsert_property_setter(DT, "mobile_no", "reqd", "1", "Check")
     upsert_property_setter(DT, "mobile_no", "in_list_view", "1", "Check")
     upsert_property_setter(DT, "mobile_no", "in_standard_filter", "1", "Check")
-    # upsert_property_setter(DT, "source", "label", "Lead Source", "Data")
+    
     upsert_property_setter(DT, "source", "options", "SR Lead Source", "Link")
     upsert_property_setter(DT, "source", "in_list_view", "1", "Check")
     upsert_property_setter(DT, "source", "in_standard_filter", "1", "Check")
-
-    # upsert_property_setter(DT, "sr_remote_location", "fieldtype", "Small Text", "Data")
-    # upsert_property_setter(DT, "sr_user_agent", "fieldtype", "Small Text", "Data")
 
     upsert_property_setter(DT, "person_tab", "label", "Patient Details", "Data")
 
@@ -105,12 +102,12 @@ def _apply_crm_lead_ui_customizations():
     ensure_field_after(DT, "phone", "mobile_no")
     ensure_field_after(DT, "gender", "phone")
 
-    ensure_field_after(DT, "sr_lead_pipeline", "sr_lead_details_cb1")
+    # ensure_field_after(DT, "sr_lead_pipeline", "sr_lead_details_cb1")
     ensure_field_after(DT, "lead_owner", "sr_lead_pipeline")
     ensure_field_after(DT, "source", "lead_owner")
 
     ensure_field_after(DT, "sr_lead_details_cb2", "source")
-    ensure_field_after(DT, "sr_lead_platform", "sr_lead_details_cb2")
+    # ensure_field_after(DT, "sr_lead_platform", "sr_lead_details_cb2")
     ensure_field_after(DT, "status", "sr_lead_platform")
     ensure_field_after(DT, "sr_lead_disposition", "status")
 

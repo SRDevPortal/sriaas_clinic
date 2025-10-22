@@ -67,8 +67,8 @@ def _make_crm_lead_fields():
             {"fieldname": "sr_w_source_id","label":"W Source_id","fieldtype":"Data","read_only":1,"insert_after":"sr_meta_interakt_sb"},
             {"fieldname": "sr_w_source_url","label":"W Source_url","fieldtype":"Data","read_only":1,"insert_after":"sr_w_source_id"},
             {"fieldname": "sr_w_ctwa_clid","label":"W Ctwa_clid","fieldtype":"Data","read_only":1,"insert_after":"sr_w_source_url"},
-            {"fieldname": "sr_w_team_id","label":"W Team (Id)","fieldtype":"Data","read_only":1,"insert_after":"sr_w_ctwa_clid"},
-            {"fieldname": "sr_w_team_user","label":"W Team (User)","fieldtype":"Link","options": "User","read_only":1,"insert_after":"sr_w_team_id"},
+            {"fieldname": "sr_w_team_id","label":"W Team (Id)","fieldtype":"Data","hidden":1,"read_only":1,"insert_after":"sr_w_ctwa_clid"},
+            {"fieldname": "sr_w_team_user","label":"W Team (User)","fieldtype":"Link","options": "User","read_only":1,"insert_after":"sr_w_ctwa_clid"},
         ]
     })
 

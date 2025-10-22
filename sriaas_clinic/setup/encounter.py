@@ -106,35 +106,41 @@ def _setup_instructions_section():
 
 def _setup_draft_invoice_tab():
     """Add Draft Invoice tab to Patient Encounter for 'Order' type encounters"""
+    both_cond = 'eval:doc.sr_encounter_type=="Order" && doc.sr_encounter_place=="Online"'
+
     create_cf_with_module({
         DT: [
-            {"fieldname":"sr_draft_invoice_tab","label":"Draft Invoice","fieldtype":"Tab Break","insert_after":"clinical_notes","depends_on":'eval:doc.sr_encounter_type=="Order"'},
-            
-            {"fieldname":"sr_delivery_type","label":"Delivery Type","fieldtype":"Link","options":"SR Delivery Type","insert_after":"sr_draft_invoice_tab",
-             "depends_on":'eval:doc.sr_encounter_type=="Order"',"mandatory_depends_on":'eval:doc.sr_encounter_type=="Order"'},
+            {
+                "fieldname": "sr_draft_invoice_tab",
+                "label": "Draft Invoice",
+                "fieldtype": "Tab Break",
+                "insert_after": "clinical_notes",
+                "depends_on": both_cond,
+            },
+
+            {
+                "fieldname": "sr_delivery_type",
+                "label": "Delivery Type",
+                "fieldtype": "Link",
+                "options": "SR Delivery Type",
+                "insert_after": "sr_draft_invoice_tab",
+                "depends_on": both_cond,
+                "mandatory_depends_on": both_cond,
+            },
             
             {"fieldname":"sr_items_list_sb","label":"Items List","fieldtype":"Section Break","collapsible":0,"insert_after":"sr_delivery_type"},
-            
             {"fieldname":"sr_pe_order_items","label":"Order Items","fieldtype":"Table","options":"SR Order Item","insert_after":"sr_items_list_sb"},
             
             {"fieldname":"sr_advance_payment_sb","label":"Advance Payment","fieldtype":"Section Break","collapsible":0,"insert_after":"sr_pe_order_items"},
-            
             {"fieldname":"sr_pe_paid_amount","label":"Paid Amount","fieldtype":"Currency","insert_after":"sr_advance_payment_sb"},
-            
             {"fieldname":"sr_advance_payment_cb","fieldtype": "Column Break","insert_after": "sr_pe_paid_amount"},
-            
             {"fieldname":"sr_pe_mode_of_payment","label":"Mode of Payment","fieldtype":"Link","options":"Mode of Payment", "insert_after":"sr_advance_payment_cb"},
             
             {"fieldname":"sr_payment_receipt_sb","label":"Payment Receipt","fieldtype":"Section Break","collapsible":0,"insert_after":"sr_pe_mode_of_payment"},
-            
             {"fieldname":"sr_pe_payment_reference_no","label":"Payment Reference No","fieldtype":"Data","insert_after":"sr_payment_receipt_sb"},
-            
             {"fieldname":"sr_pe_payment_proof","label":"Payment Proof","fieldtype":"Attach Image","insert_after":"sr_pe_payment_reference_no"},
-            
             {"fieldname":"sr_payment_receipt_cb","fieldtype": "Column Break","insert_after": "sr_pe_payment_proof"},
-            
             {"fieldname":"sr_pe_payment_reference_date","label":"Payment Reference Date","fieldtype":"Date","insert_after":"sr_payment_receipt_cb"},
-            
         ]
     })
 

@@ -63,16 +63,27 @@ doc_events = {
             "sriaas_clinic.api.encounter_flow.handlers.clear_advance_dependent_fields",
         ],
         "before_submit": "sriaas_clinic.api.encounter_flow.handlers.validate_required_before_submit",
-        # "on_update":   "sriaas_clinic.api.encounter_flow.handlers.create_billing_on_save",
         "on_submit":   "sriaas_clinic.api.encounter_flow.handlers.create_billing_on_submit",
     },
     "Sales Invoice": {
-        "before_save": "sriaas_clinic.api.sales_invoice_cost.before_save",
+        "before_save": [
+            "sriaas_clinic.api.sales_invoice_cost.before_save",
+            "sriaas_clinic.api.si_payment_flow.handlers.clear_dp_when_blank",
+        ],
+        "before_submit": [
+            "sriaas_clinic.api.si_payment_flow.handlers.validate_dp_before_submit",
+            "sriaas_clinic.api.si_payment_flow.handlers.refresh_payment_history",
+        ],
         "on_submit": [
             "sriaas_clinic.api.encounter_flow.handlers.link_pending_payment_entries",
+            "sriaas_clinic.api.si_payment_flow.handlers.create_pe_from_si_dp",
+            "sriaas_clinic.api.si_payment_flow.handlers.refresh_payment_history",
             # "sriaas_clinic.api.integrations.shiprocket.create_shiprocket_order",
             # "sriaas_clinic.api.integrations.n8n_shiprocket.send_to_n8n_on_submit",
-        ]
+        ],
+        "on_update_after_submit": [
+            "sriaas_clinic.api.si_payment_flow.handlers.refresh_payment_history",
+        ],
     },
     "CRM Lead": {
         "before_save": "sriaas_clinic.api.crm_lead.normalize_phoneish_fields",
@@ -142,8 +153,13 @@ doctype_js = {
     "Item": [
         "public/js/item_package_weight.js",
     ],
+    "Sales Invoice": [
+        "public/js/sales_invoice_draft_payment.js",
+        "public/js/sales_invoice_actions.js",
+    ],
     "Payment Entry": [
         "public/js/payment_entry_outstanding_dialog.js",
+        "public/js/payment_entry_actions.js",
     ],
     "CRM Lead": [
         "public/js/crm_lead_pex_launcher.js",

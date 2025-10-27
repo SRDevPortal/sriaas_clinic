@@ -31,7 +31,8 @@ def _make_encounter_fields():
 
             {"fieldname":"sr_pe_id","label":"Patient ID","fieldtype":"Data","read_only":1,"depends_on":"eval:doc.patient","fetch_from":"patient.sr_patient_id","in_list_view":1,"in_standard_filter":1,"insert_after":"sr_pe_mobile"},
 
-            {"fieldname":"sr_pe_deptt","label":"Patient Department","fieldtype":"Data","read_only":1,"depends_on":"eval:doc.patient","fetch_from":"patient.sr_medical_department","in_list_view":1,"in_standard_filter":1,"insert_after":"sr_pe_id"},
+            # {"fieldname":"sr_pe_deptt","label":"Patient Department","fieldtype":"Data","read_only":1,"depends_on":"eval:doc.patient","fetch_from":"patient.sr_medical_department","in_list_view":1,"in_standard_filter":1,"insert_after":"sr_pe_id"},
+            {"fieldname":"sr_pe_deptt","label":"Patient Department","fieldtype":"Link","options": "Medical Department","read_only":1,"depends_on":"eval:doc.patient","fetch_from":"patient.sr_medical_department","in_list_view":1,"in_standard_filter":1,"insert_after":"sr_pe_id"},
 
             {"fieldname":"sr_pe_age","label":"Patient Age","fieldtype":"Data","read_only":1,"depends_on":"eval:doc.patient","fetch_from":"patient.sr_patient_age","in_list_view":1,"in_standard_filter":1,"insert_after":"sr_pe_deptt"},
 

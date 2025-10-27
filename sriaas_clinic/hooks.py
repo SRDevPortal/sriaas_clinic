@@ -31,18 +31,22 @@ fixtures = [
 ]
 
 doc_events = {
-    "Customer": {
-        "before_insert": "sriaas_clinic.api.customer.set_sr_customer_id",
-        "before_save":   "sriaas_clinic.api.customer.normalize_phoneish_fields",
-    },
     "Patient": {
-        "before_insert": "sriaas_clinic.api.patient.set_sr_patient_id",
-        "before_save":   "sriaas_clinic.api.patient.normalize_phoneish_fields",
+        "before_insert": [
+            "sriaas_clinic.api.patient.set_sr_patient_id",
+        ],
+        "autoname": "sriaas_clinic.api.patient.force_patient_series",
+        "before_save": "sriaas_clinic.api.patient.normalize_phoneish_fields",
         "after_insert": [
             "sriaas_clinic.api.patient.assign_followup_day",
             "sriaas_clinic.api.patient.set_followup_last_digit",
         ],
         "after_save": "sriaas_clinic.api.address.mirror_links_to_customer",
+    },
+    "Customer": {
+        "before_insert": "sriaas_clinic.api.customer.set_sr_customer_id",
+        "autoname": "sriaas_clinic.api.customer.force_customer_series",
+        "before_save":   "sriaas_clinic.api.customer.normalize_phoneish_fields",
     },
     "Address": {
         "before_validate": "sriaas_clinic.api.address.validate_state",
@@ -78,7 +82,6 @@ doc_events = {
             "sriaas_clinic.api.encounter_flow.handlers.link_pending_payment_entries",
             "sriaas_clinic.api.si_payment_flow.handlers.create_pe_from_si_dp",
             "sriaas_clinic.api.si_payment_flow.handlers.refresh_payment_history",
-            # "sriaas_clinic.api.integrations.shiprocket.create_shiprocket_order",
             # "sriaas_clinic.api.integrations.n8n_shiprocket.send_to_n8n_on_submit",
         ],
         "on_update_after_submit": [

@@ -53,3 +53,6 @@ def _apply_patient_ui_customizations():
     upsert_property_setter(DT, "age", "in_standard_filter", "0", "Check")
     upsert_property_setter(DT, "uid", "in_standard_filter", "0", "Check")
     set_label(DT, "status", "Patient Status")
+
+    # Disable Allow Rename on Patient DocType
+    upsert_property_setter(DT, "allow_rename", "default", "0", "Check")

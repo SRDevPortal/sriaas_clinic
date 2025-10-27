@@ -1,6 +1,10 @@
 # sriaas_clinic/api/patient.py
-import frappe
 import re
+import frappe
+from frappe.model.naming import make_autoname
+
+# Match series: HLC-PAT-2025-000001
+_SERIES_RX = re.compile(r"^HLC-PAT-\d{4}-\d+$")
 
 # ----------------------------
 # A) Patient ID auto-generator
@@ -86,3 +90,19 @@ def set_followup_last_digit(doc, method=None):
             last_digit = ch
     if doc.get("sr_followup_id") != last_digit:
         doc.db_set("sr_followup_id", last_digit, update_modified=False)
+
+def force_patient_series(doc, method=None):
+    """
+    Runs during set_new_name(). Ensure Patient uses naming_series.
+    If a name was passed (via API/import) and it doesn't match our series,
+    overwrite it with the correct series-based name.
+    """
+    # keep if already correct
+    if doc.name and _SERIES_RX.match(doc.name):
+        return
+
+    series = getattr(doc, "naming_series", None) or "HLC-PAT-.YYYY.-"
+    doc.name = make_autoname(series)
+
+    # optional: log once to confirm it ran
+    frappe.logger().info(f"[Patient] series name -> {doc.name}")

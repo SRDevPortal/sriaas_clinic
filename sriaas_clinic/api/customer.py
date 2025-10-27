@@ -1,7 +1,11 @@
 # sriaas_clinic/api/customer.py
+import re
 import frappe
+from frappe.model.naming import make_autoname
 
 PREFIX = "CUST-"
+# Match series: CUST-2025-00001
+_CUST_SERIES_RX = re.compile(r"^CUST-\d{4}-\d+$")
 
 # ----------------------------
 # A) Customer ID auto-generator
@@ -47,3 +51,20 @@ def normalize_phoneish_fields(doc, method=None):
         cleaned = _clean_spaces(val)
         if cleaned != val:
             doc.set(field, cleaned)  # before_save: no extra DB write
+
+def force_customer_series(doc, method=None):
+    """
+    Runs during set_new_name(). Ensure Customer uses CUST series.
+    If a name was passed (via API/import) and it doesn't match our series,
+    overwrite it with the correct series.
+    """
+
+    # If name already matches series → keep it
+    if doc.name and _CUST_SERIES_RX.match(doc.name):
+        return
+
+    # Ensure naming_series exists
+    series = getattr(doc, "naming_series", None) or "CUST-.YYYY.-"
+    doc.name = make_autoname(series)
+
+    frappe.logger().info(f"[Customer] series name -> {doc.name}")

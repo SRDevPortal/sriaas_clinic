@@ -1,10 +1,13 @@
 # sriaas_clinic/setup/payment_entry.py
 import frappe
-from .utils import create_cf_with_module, upsert_property_setter
+from .utils import create_cf_with_module, upsert_property_setter, upsert_title_field
 
 DT = "Payment Entry"
 
 def apply():
+    _make_payment_entry_fields()
+    
+def _make_payment_entry_fields():
     """
     Adds a hidden, read-only Link field on Payment Entry:
       - Fieldname: intended_sales_invoice
@@ -30,3 +33,6 @@ def apply():
     upsert_property_setter(DT, "intended_sales_invoice", "in_list_view", "0", "Check")
     upsert_property_setter(DT, "intended_sales_invoice", "in_standard_filter", "0", "Check")
     upsert_property_setter(DT, "intended_sales_invoice", "print_hide", "1", "Check")
+
+    # Set title field to party_name
+    upsert_title_field(DT, "party_name")

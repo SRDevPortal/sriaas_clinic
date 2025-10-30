@@ -14,7 +14,7 @@ def apply():
                 "fieldname": "sr_medical_department",
                 "label": "Medical Department",
                 "fieldtype": "Link",
-                "options": "Medical Department",  # change to "SR Lead Pipeline" if that’s your master
+                "options": "Medical Department",
                 "insert_after": "username",
                 "description": "Primary department for CRM lead access (drives group mapping).",
             },

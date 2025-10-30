@@ -35,7 +35,7 @@ doc_events = {
         "before_insert": [
             "sriaas_clinic.api.patient.set_sr_patient_id",
         ],
-        "autoname": "sriaas_clinic.api.patient.force_patient_series",
+        # "autoname": "sriaas_clinic.api.patient.force_patient_series",
         "before_save": "sriaas_clinic.api.patient.normalize_phoneish_fields",
         "after_insert": [
             "sriaas_clinic.api.patient.assign_followup_day",
@@ -45,7 +45,7 @@ doc_events = {
     },
     "Customer": {
         "before_insert": "sriaas_clinic.api.customer.set_sr_customer_id",
-        "autoname": "sriaas_clinic.api.customer.force_customer_series",
+        # "autoname": "sriaas_clinic.api.customer.force_customer_series",
         "before_save":   "sriaas_clinic.api.customer.normalize_phoneish_fields",
     },
     "Address": {
@@ -149,7 +149,6 @@ doctype_js = {
         "public/js/pe_template_medication.js",
         "public/js/pe_manual_medication.js",
         "public/js/clinical_history_modal.js",
-        # "public/js/patient_encounter_upload_proof.js",
         "public/js/patient_encounter_block_autosave_for_proof.js",
         "public/js/patient_encounter_clear_advance.js",
     ],

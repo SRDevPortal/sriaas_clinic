@@ -1,6 +1,6 @@
 # sriaas_clinic/setup/encounter.py
 import frappe
-from .utils import create_cf_with_module, upsert_property_setter, collapse_section, set_label
+from .utils import create_cf_with_module, upsert_property_setter, collapse_section, set_label, upsert_title_field
 
 DT = "Patient Encounter"
 
@@ -31,14 +31,13 @@ def _make_encounter_fields():
 
             {"fieldname":"sr_pe_id","label":"Patient ID","fieldtype":"Data","read_only":1,"depends_on":"eval:doc.patient","fetch_from":"patient.sr_patient_id","in_list_view":1,"in_standard_filter":1,"insert_after":"sr_pe_mobile"},
 
-            # {"fieldname":"sr_pe_deptt","label":"Patient Department","fieldtype":"Data","read_only":1,"depends_on":"eval:doc.patient","fetch_from":"patient.sr_medical_department","in_list_view":1,"in_standard_filter":1,"insert_after":"sr_pe_id"},
             {"fieldname":"sr_pe_deptt","label":"Patient Department","fieldtype":"Link","options": "Medical Department","read_only":1,"depends_on":"eval:doc.patient","fetch_from":"patient.sr_medical_department","in_list_view":1,"in_standard_filter":1,"insert_after":"sr_pe_id"},
 
             {"fieldname":"sr_pe_age","label":"Patient Age","fieldtype":"Data","read_only":1,"depends_on":"eval:doc.patient","fetch_from":"patient.sr_patient_age","in_list_view":1,"in_standard_filter":1,"insert_after":"sr_pe_deptt"},
 
             {"fieldname":"sr_encounter_source","label":"Encounter Source","fieldtype":"Link","options":lead_source_dt,"reqd":1,"insert_after":"google_meet_link"},
 
-            {"fieldname":"sr_encounter_status","label":"Encounter Status","fieldtype":"Link","options":"SR Encounter Status","in_list_view":1,"in_standard_filter":1,"allow_on_submit":1,"insert_after":"sr_encounter_source"},
+            {"fieldname":"sr_encounter_status","label":"Encounter Status","fieldtype":"Link","options":"SR Encounter Status","reqd":1,"in_list_view":1,"in_standard_filter":1,"allow_on_submit":1,"insert_after":"sr_encounter_source"},
         ]
     }),
     upsert_property_setter(DT, "get_applicable_treatment_plans", "hidden", "1", "Check")
@@ -62,9 +61,28 @@ def _setup_ayurvedic_section():
 
     create_cf_with_module({
         DT: [
-            {"fieldname":"sr_medication_template","label":"Medication Template","fieldtype":"Link","options":"SR Medication Template","insert_after":"sb_drug_prescription"},
-            {"fieldname":"sr_ayurvedic_practitioner","label":"Ayurvedic Practitioner","fieldtype":"Link","options":"Healthcare Practitioner","insert_after":"sr_medication_template"},
-            {"fieldname":"sr_ayurvedic_practitioner_name","label":"Ayurvedic Practitioner Name","fieldtype":"Data","read_only":1,"fetch_from":f"sr_ayurvedic_practitioner.{name_field}","insert_after":"sr_ayurvedic_practitioner"},
+            {
+                "fieldname":"sr_medication_template",
+                "label":"Medication Template",
+                "fieldtype":"Link",
+                "options":"SR Medication Template",
+                "insert_after":"sb_drug_prescription"
+            },
+            {
+                "fieldname":"sr_ayurvedic_practitioner",
+                "label":"Ayurvedic Practitioner",
+                "fieldtype":"Link",
+                "options":"Healthcare Practitioner",
+                "insert_after":"sr_medication_template"
+            },
+            {
+                "fieldname":"sr_ayurvedic_practitioner_name",
+                "label":"Ayurvedic Practitioner Name",
+                "fieldtype":"Data",
+                "read_only":1,
+                "fetch_from":f"sr_ayurvedic_practitioner.{name_field}",
+                "insert_after":"sr_ayurvedic_practitioner"
+            },
         ]
     })
 
@@ -184,10 +202,14 @@ def _apply_encounter_ui_customizations():
     
     upsert_property_setter(DT, "sr_pe_payment_proof", "read_only", "0", "Check")
 
+    upsert_property_setter(DT, "practitioner", "reqd", "0", "Check")
+
     # --------------------------
     # 2) Hide unwanted flags/fields
     # --------------------------
     targets = (
+        "company",
+        "practitioner",
         "invoiced",
         "submit_orders_on_save",
         "codification_table",
@@ -211,3 +233,6 @@ def _apply_encounter_ui_customizations():
             upsert_property_setter(DT, f, "hidden", "1", "Check")
             upsert_property_setter(DT, f, "in_list_view", "0", "Check")
             upsert_property_setter(DT, f, "in_standard_filter", "0", "Check")
+    
+    # Set title field to patient_name
+    upsert_title_field(DT, "patient_name")

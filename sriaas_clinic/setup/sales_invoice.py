@@ -1,6 +1,6 @@
 # sriaas_clinic/setup/sales_invoice.py
 import frappe
-from .utils import create_cf_with_module, upsert_property_setter
+from .utils import create_cf_with_module, upsert_property_setter, upsert_title_field
 
 PARENT = "Sales Invoice"
 CHILD = "Sales Invoice Item"
@@ -10,8 +10,8 @@ RIGHT_COL_CB = "column_break1"
 def apply():
     _make_invoice_fields()
     _setup_payment_history_section()
-    _setup_draft_payment_tab()
-    # _setup_order_tracking_tab()
+    _setup_advance_payment_tab()
+    # _setup_tracking_tab()
     if frappe.db.exists("DocType", PARENT) and frappe.db.exists("DocType", CHILD):
         _setup_cost_section()
         _setup_invoice_item_fields()
@@ -67,7 +67,7 @@ def _setup_payment_history_section():
     })
 
 
-def _setup_draft_payment_tab():
+def _setup_advance_payment_tab():
     """
     Add 'Draft Payment' tab on Sales Invoice to capture an intended advance.
     - Tab is always visible (so user can enter the amount).
@@ -120,7 +120,7 @@ def _setup_draft_payment_tab():
         upsert_property_setter(PARENT, f, "reqd", "0", "Check")
 
 
-def _setup_order_tracking_tab():
+def _setup_tracking_tab():
     """
     Adds a new tab 'Order Tracking' with two columns:
       Left column:  sr_si_shipping_status (Data, RO), sr_si_delivery_date (Datetime, RO)
@@ -243,3 +243,6 @@ def _apply_invoice_ui_customizations():
     if meta.get_field("contact_mobile"):
         upsert_property_setter(PARENT, "contact_mobile", "in_list_view", "1", "Check")  # show in list
         upsert_property_setter(PARENT, "contact_mobile", "in_standard_filter", "1", "Check")  # show in filters
+
+    # Set title field to patient_name
+    upsert_title_field(PARENT, "patient_name")

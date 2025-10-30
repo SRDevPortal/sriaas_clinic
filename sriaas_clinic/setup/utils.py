@@ -98,3 +98,18 @@ def ensure_field_after(doctype: str, fieldname: str, after: str):
 def set_full_field_order(doctype: str, ordered_fieldnames: list[str]):
     upsert_property_setter(doctype, None, "field_order", json.dumps(ordered_fieldnames), "Text")
     frappe.clear_cache(doctype=doctype)
+
+def upsert_title_field(doctype: str, fieldname: str):
+    """
+    Sets or updates the title_field of a given DocType.
+    Safe to run multiple times.
+    """
+    if not doctype or not fieldname:
+        return
+
+    # Fetch current value to avoid unnecessary writes
+    current = frappe.db.get_value("DocType", doctype, "title_field")
+    if current != fieldname:
+        frappe.db.set_value("DocType", doctype, "title_field", fieldname)
+        frappe.clear_cache(doctype=doctype)
+        frappe.logger().info(f"Updated title_field for {doctype} to {fieldname}")

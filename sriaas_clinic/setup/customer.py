@@ -27,8 +27,5 @@ def _make_customer_fields():
 
 def _apply_customer_ui_customizations():
     """DocType-level tweaks for Customer"""
-    # Uncheck “Allow Rename”
+    # Uncheck Allow Rename
     upsert_property_setter(DT, "allow_rename", "default", "0", "Check")
-
-    # (optional) keep the series field default in one place if you want:
-    # upsert_property_setter(DT, "autoname", "default", "naming_series:", "Data")

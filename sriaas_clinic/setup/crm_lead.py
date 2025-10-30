@@ -33,7 +33,7 @@ def _make_crm_lead_fields():
 
             # PEX
             {"fieldname": "sr_lead_pex_tab","label":"PEX","fieldtype":"Tab Break","insert_after":"status_change_log"},
-            {"fieldname": "sr_lead_pex_launcher_html","label":"PEX Launcher","fieldtype":"HTML","insert_after":"sr_lead_pex_tab","read_only":0},
+            {"fieldname": "sr_lead_pex_launcher_html","label":"PEX Launcher","fieldtype":"HTML","read_only":0,"insert_after":"sr_lead_pex_tab"},
 
             # Meta Details fields
             {"fieldname": "sr_meta_tab","label":"Meta Details","fieldtype":"Tab Break","insert_after":"sr_lead_pex_launcher_html"},
@@ -60,7 +60,14 @@ def _make_crm_lead_fields():
 
             # Meta Details - Facebook Tracking
             {"fieldname": "sr_meta_facebook_sb","label":"Facebook Tracking","fieldtype":"Section Break","insert_after":"sr_utm_adgroup_id"},
-            {"fieldname": "sr_fbclid","label":"FBCLID","fieldtype":"Data","read_only":1,"insert_after":"sr_meta_facebook_sb"},
+            {"fieldname": "sr_f_ad_id","label":"FBCLID","fieldtype":"Data","read_only":1,"insert_after":"sr_meta_facebook_sb"},
+            {"fieldname": "sr_f_ad_name","label":"FBCLID","fieldtype":"Data","read_only":1,"insert_after":"sr_f_ad_id"},
+            {"fieldname": "sr_f_adset_id","label":"FBCLID","fieldtype":"Data","read_only":1,"insert_after":"sr_f_ad_name"},
+            {"fieldname": "sr_f_adset_name","label":"FBCLID","fieldtype":"Data","read_only":1,"insert_after":"sr_f_adset_id"},
+            {"fieldname": "sr_f_campaign_id","label":"FBCLID","fieldtype":"Data","read_only":1,"insert_after":"sr_f_adset_name"},
+            {"fieldname": "sr_f_campaign_name","label":"FBCLID","fieldtype":"Data","read_only":1,"insert_after":"sr_f_campaign_id"},
+            {"fieldname": "sr_f_utm_medium","label":"FBCLID","fieldtype":"Data","read_only":1,"insert_after":"sr_f_campaign_name"},
+            {"fieldname": "sr_fbclid","label":"FBCLID","fieldtype":"Data","read_only":1,"insert_after":"sr_f_utm_medium"},
 
             # Meta Details - Interakt Tracking
             {"fieldname": "sr_meta_interakt_sb","label":"Interakt Tracking","fieldtype":"Section Break","insert_after":"sr_fbclid"},
@@ -102,12 +109,10 @@ def _apply_crm_lead_ui_customizations():
     ensure_field_after(DT, "phone", "mobile_no")
     ensure_field_after(DT, "gender", "phone")
 
-    # ensure_field_after(DT, "sr_lead_pipeline", "sr_lead_details_cb1")
     ensure_field_after(DT, "lead_owner", "sr_lead_pipeline")
     ensure_field_after(DT, "source", "lead_owner")
 
     ensure_field_after(DT, "sr_lead_details_cb2", "source")
-    # ensure_field_after(DT, "sr_lead_platform", "sr_lead_details_cb2")
     ensure_field_after(DT, "status", "sr_lead_platform")
     ensure_field_after(DT, "sr_lead_disposition", "status")
 

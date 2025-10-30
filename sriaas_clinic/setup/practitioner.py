@@ -45,8 +45,7 @@ def make_practitioner_fields():
 
 def set_practitioner_autoname():
     """Force naming rule: By fieldname (practitioner_name)."""
-    # Naming Rule itself
-    # upsert_property_setter(DT, "", "naming_rule", "By fieldname", "Select")
+    # Naming Rule: use Naming Series or fieldname — keep as you had
     upsert_property_setter(DT, "", "naming_rule", "Naming Series", "Select")
     
     # Which field to use

@@ -39,6 +39,15 @@ def _make_appointment_fields():
                 "insert_after": "apt_patient_id"
             },
             {
+                "fieldname": "apt_patient_age",
+                "label": "Patient Age",
+                "fieldtype": "Data",
+                "read_only": 1,
+                "depends_on": "eval:doc.patient",
+                "fetch_from": "patient.sr_patient_age",
+                "insert_after": "patient_sex"
+            },
+            {
                 "fieldname": "apt_department",
                 "label": "Patient Department",
                 "fieldtype": "Link",
@@ -48,7 +57,7 @@ def _make_appointment_fields():
                 "fetch_from": "patient.sr_medical_department",
                 "in_list_view": 0,
                 "in_standard_filter": 1,
-                "insert_after": "patient_age"
+                "insert_after": "apt_patient_age"
             }
         ]
     })
@@ -58,6 +67,7 @@ def _customize_appointment_doctype():
     targets = (
         "service_unit",
         "event",
+        "patient_age",
     )
     for f in targets:
         cfname = frappe.db.get_value("Custom Field", {"dt": DT, "fieldname": f}, "name")

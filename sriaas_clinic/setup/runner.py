@@ -4,7 +4,7 @@ from . import (
     patient, customer, encounter, practitioner,
     drug_prescription, item_price, item_package,
     sales_invoice, payment_entry,
-    crm_lead, user,
+    crm_lead, appointment, user,
     print_formats, ui,
 )
 
@@ -41,6 +41,9 @@ def setup_all():
 
     # CRM Lead custom fields
     crm_lead.apply()
+
+    # Appointment custom fields
+    appointment.apply()
 
     # User customizations
     user.apply()

@@ -12,7 +12,8 @@ function _has_notes(e) {
     _clean(e.sr_complaints).length ||
     _clean(e.sr_observations).length ||
     _clean(e.sr_investigations).length ||
-    _clean(e.sr_notes).length
+    _clean(e.sr_notes).length ||
+    _clean(e.sr_diagnosis).length
   );
 }
 
@@ -65,9 +66,8 @@ function _build_header(patient, encounter) {
   return `
   <div class="header">
     <div class="meta"><b>Patient Name:</b> ${_esc(patient.patient_name || patient.first_name || patient.name)}</div>
-    <div class="meta"><b>Gender:</b> ${_esc(patient.sex || patient.gender || "-")}
-      &nbsp;&nbsp; <b>Mobile:</b> ${_esc(patient.mobile || patient.mobile_no || patient.sr_mobile_no || "-")}</div>
     <div class="meta"><b>Patient ID:</b> ${_esc(patient.sr_patient_id || patient.patient_id || patient.name)}</div>
+    <div class="meta"><b>Gender:</b> ${_esc(patient.sex || patient.gender || "-")} &nbsp;&nbsp; <b>Mobile:</b> ${_esc(patient.mobile || patient.mobile_no || patient.sr_mobile_no || "-")}</div>
     ${encounter ? `<div class="meta"><b>Encounter:</b> ${_esc(encounter.name)}</div>` : ""}
     <div class="meta muted">Generated on ${_esc(frappe.datetime.str_to_user(frappe.datetime.nowdate()))}</div>
   </div>`;
@@ -77,12 +77,12 @@ function _build_blocks(rows) {
   return rows.map((e) => {
     const date_txt = e.encounter_date ? frappe.datetime.str_to_user(e.encounter_date) : "-";
     const practitioner = e.practitioner_name || e.practitioner || "-";
+    // &nbsp;&nbsp; <b>Practitioner:</b> ${_esc(practitioner)} ADD THIS LIVE IF NEEDED IN .enc-head SECTION
     return `
       <div class="enc-card">
         <div class="enc-head">
           <b>Encounter:</b> ${_esc(e.name)}
           &nbsp;&nbsp; <b>Date:</b> ${_esc(date_txt)}
-          &nbsp;&nbsp; <b>Practitioner:</b> ${_esc(practitioner)}
         </div>
 
         <div class="section-title">Complaints</div>
@@ -96,6 +96,9 @@ function _build_blocks(rows) {
 
         <div class="section-title">Notes</div>
         <div class="row-line">${_esc(_clean(e.sr_notes))}</div>
+
+        <div class="section-title">Diagnosis</div>
+        <div class="row-line">${_esc(_clean(e.sr_diagnosis))}</div>
       </div>`;
   }).join("");
 }
@@ -116,7 +119,7 @@ async function _fetch_encounters(patient_name) {
       filters: { patient: patient_name },
       fields: [
         "name", "encounter_date", "practitioner", "practitioner_name",
-        "sr_complaints", "sr_observations", "sr_investigations", "sr_notes"
+        "sr_complaints", "sr_observations", "sr_investigations", "sr_notes", "sr_diagnosis"
       ],
       order_by: "encounter_date asc, creation asc",
       limit_page_length: 1000

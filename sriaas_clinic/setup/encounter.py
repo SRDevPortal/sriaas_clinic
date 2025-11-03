@@ -26,8 +26,7 @@ def _make_encounter_fields():
 
             {"fieldname":"sr_encounter_place","label":"Encounter Place","fieldtype":"Select","options":"\nOnline\nOPD","reqd":1,"in_list_view":1,"in_standard_filter":1,"insert_after":"sr_sales_type"},
 
-            {"fieldname":"sr_pe_mobile","label":"Patient Mobile","fieldtype":"Data","read_only":1,"depends_on":"eval:doc.patient","fetch_from":"patient.mobile","in_list_view":1,"in_standard_filter":1,
-            "insert_after":"inpatient_status"},
+            {"fieldname":"sr_pe_mobile","label":"Patient Mobile","fieldtype":"Data","read_only":1,"depends_on":"eval:doc.patient","fetch_from":"patient.mobile","in_list_view":1,"in_standard_filter":1, "insert_after":"inpatient_status"},
 
             {"fieldname":"sr_pe_id","label":"Patient ID","fieldtype":"Data","read_only":1,"depends_on":"eval:doc.patient","fetch_from":"patient.sr_patient_id","in_list_view":1,"in_standard_filter":1,"insert_after":"sr_pe_mobile"},
 
@@ -46,11 +45,12 @@ def _setup_clinical_notes_section():
     """Add Clinical Notes section to Patient Encounter"""
     create_cf_with_module({
         DT: [
-            {"fieldname":"sr_clinical_notes_sb","label":"Clinical Notes","fieldtype":"Section Break","collapsible":1,"insert_after":"submit_orders_on_save"},
+            {"fieldname":"sr_clinical_notes_sb","label":"Clinical Notes","fieldtype":"Section Break","collapsible":0,"insert_after":"submit_orders_on_save"},
             {"fieldname":"sr_complaints","label":"Complaints","fieldtype":"Small Text","insert_after":"sr_clinical_notes_sb"},
             {"fieldname":"sr_observations","label":"Observations","fieldtype":"Small Text","insert_after":"sr_complaints"},
             {"fieldname":"sr_investigations","label":"Investigations","fieldtype":"Small Text","insert_after":"sr_observations"},
             {"fieldname":"sr_notes","label":"Notes","fieldtype":"Small Text","insert_after":"sr_investigations"},
+            {"fieldname":"sr_diagnosis","label":"Diagnosis","fieldtype":"Small Text","insert_after":"sr_notes"},
         ]
     })
 
@@ -93,7 +93,7 @@ def _setup_homeopathy_section():
 
     create_cf_with_module({
         DT: [
-            {"fieldname":"sr_homeopathy_medications_sb","label":"Homeopathy Medications","fieldtype":"Section Break","collapsible":1,"insert_after":"drug_prescription"},
+            {"fieldname":"sr_homeopathy_medications_sb","label":"Homeopathy Medications","fieldtype":"Section Break","collapsible":0,"insert_after":"drug_prescription"},
             {"fieldname":"sr_homeopathy_practitioner","label":"Homeopathy Practitioner","fieldtype":"Link","options":"Healthcare Practitioner","insert_after":"sr_homeopathy_medications_sb"},
             {"fieldname":"sr_homeopathy_practitioner_name","label":"Homeopathy Practitioner Name","fieldtype":"Data","read_only":1,"fetch_from":f"sr_homeopathy_practitioner.{name_field}","insert_after":"sr_homeopathy_practitioner"},
             {"fieldname":"sr_homeopathy_drug_prescription","label":"Homeopathy Drug Prescription","fieldtype":"Table","options":"Drug Prescription","allow_on_submit":1,"insert_after":"sr_homeopathy_practitioner_name"},
@@ -107,7 +107,7 @@ def _setup_allopathy_section():
 
     create_cf_with_module({
         DT: [
-            {"fieldname":"sr_allopathy_medications_sb","label":"Allopathy Medications","fieldtype":"Section Break","collapsible":1,"insert_after":"sr_homeopathy_drug_prescription"},
+            {"fieldname":"sr_allopathy_medications_sb","label":"Allopathy Medications","fieldtype":"Section Break","collapsible":0,"insert_after":"sr_homeopathy_drug_prescription"},
             {"fieldname":"sr_allopathy_practitioner","label":"Allopathy Practitioner","fieldtype":"Link","options":"Healthcare Practitioner","insert_after":"sr_allopathy_medications_sb"},
             {"fieldname":"sr_allopathy_practitioner_name","label":"Allopathy Practitioner Name","fieldtype":"Data","read_only":1,"fetch_from":f"sr_allopathy_practitioner.{name_field}","insert_after":"sr_allopathy_practitioner"},
             {"fieldname":"sr_allopathy_drug_prescription","label":"Allopathy Drug Prescription","fieldtype":"Table","options":"Drug Prescription","allow_on_submit":1,"insert_after":"sr_allopathy_practitioner_name"},
@@ -182,7 +182,7 @@ def _apply_encounter_ui_customizations():
     set_label(DT, "section_break_33", "Review")
 
     # Make drug prescription section collapsible
-    upsert_property_setter(DT, "sb_drug_prescription", "collapsible", "1", "Check")
+    upsert_property_setter(DT, "sb_drug_prescription", "collapsible", "0", "Check")
     
     # Rename drug prescription section to Ayurvedic Medications
     set_label(DT, "sb_drug_prescription", "Ayurvedic Medications")

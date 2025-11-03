@@ -5,32 +5,103 @@ app_description = "Clinic customizations packaged as clean installable/uninstall
 app_email = "webdevelopersriaas@gmail.com"
 app_license = "mit"
 
-# Life-cycle hooks
+# Apps
+# ------------------
+
+# Includes in <head>
+# ------------------
+
+# include js, css files in header of desk.html
+app_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
+app_include_js = "/assets/sriaas_clinic/js/patient_quick_entry_patch.js"
+
+app_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
+web_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
+
+# include js, css files in header of web template
+web_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
+
+# include js in doctype views
+doctype_js = {
+    "CRM Lead": [
+        "public/js/crm_lead_disposition_filter.js",
+        "public/js/crm_lead_lock_fields.js",
+        "public/js/crm_lead_pex_launcher.js",
+    ],
+    "Patient": [
+        "public/js/patient_invoices.js",
+        "public/js/patient_payments.js",
+        "public/js/patient_pex_launcher.js",
+        "public/js/clinical_history_modal.js",
+    ],
+    "Healthcare Practitioner": [
+        "public/js/healthcare_practitioner.js",
+    ],
+    "Patient Encounter": [
+        "public/js/pe_draft_invoice.js",
+        "public/js/pe_order_item.js",
+        "public/js/pe_practitioner_filters.js",
+        "public/js/pe_medication_template.js",
+        "public/js/pe_medication_manual.js",
+        "public/js/pe_medication_filters.js",
+        "public/js/pe_block_autosave_for_proof.js",
+        "public/js/pe_clear_advance.js",
+        "public/js/clinical_history_modal.js",
+    ],
+    "Item": [
+        "public/js/item_package_weight.js",
+    ],
+    "Sales Invoice": [
+        "public/js/sales_invoice_draft_payment.js",
+        "public/js/sales_invoice_actions.js",
+    ],
+    "Payment Entry": [
+        "public/js/payment_entry_outstanding_dialog.js",
+        "public/js/payment_entry_actions.js",
+    ],
+}
+
+list_js = {
+    "Sales Invoice": "public/js/sales_invoice_list.js"
+}
+
+# Installation
+# ------------
+# before_install = "sriaas_clinic.install.before_install"
 after_install = "sriaas_clinic.install.after_install"
 after_migrate = "sriaas_clinic.install.after_migrate"
 
-# If you add an uninstall cleaner later:
+# Uninstallation
+# ------------
 # before_uninstall = "sriaas_clinic.uninstall.before_uninstall"
 # after_uninstall = "sriaas_clinic.uninstall.after_uninstall"
 
-# Export only items that belong to our module
-fixtures = [
-    {"dt": "Custom Field", "filters": [["module", "=", "SRIAAS Clinic"]]},
-    {"dt": "Property Setter", "filters": [["module", "=", "SRIAAS Clinic"]]},
-    {"dt": "Client Script", "filters": [["module", "=", "SRIAAS Clinic"]]},
-    {"dt": "Server Script", "filters": [["module", "=", "SRIAAS Clinic"]]},
-    {"dt": "Workspace", "filters": [["module", "=", "SRIAAS Clinic"]]},
-    {"dt": "Print Format", "filters": [["module", "=", "SRIAAS Clinic"]]},
-    {"dt": "Report", "filters": [["module", "=", "SRIAAS Clinic"]]},
-    {"dt": "Dashboard Chart", "filters": [["module", "=", "SRIAAS Clinic"]]},
-    {"dt": "Notification", "filters": [["module", "=", "SRIAAS Clinic"]]},
-    {"dt": "Web Template", "filters": [["module", "=", "SRIAAS Clinic"]]},
-    {"dt": "Form Tour", "filters": [["module", "=", "SRIAAS Clinic"]]},
-    {"dt": "Form Tour Step", "filters": [["module", "=", "SRIAAS Clinic"]]},
-    {"dt": "Custom DocPerm", "filters": [["module", "=", "SRIAAS Clinic"]]},
-]
+# Permissions
+# -----------
+# Permissions evaluated in scripted ways
+
+# Exactly ONE entry per doctype
+permission_query_conditions = {
+    "CRM Lead": "sriaas_clinic.api.crm_lead_access.crm_lead_pqc",
+}
+
+has_permission = {
+    "CRM Lead": "sriaas_clinic.api.crm_lead_access.crm_lead_has_permission",
+}
+
+# Document Events
+# ---------------
+# Hook on document methods and events
 
 doc_events = {
+    "CRM Lead": {
+        "before_save": "sriaas_clinic.api.crm_lead.normalize_phoneish_fields",
+        # block illegal edits depending on role + new/existing state
+        "validate":"sriaas_clinic.api.crm_lead_field_guard.guard_restricted_fields",
+        # keep Assignment + DocShare in sync with lead_owner
+        "after_insert":"sriaas_clinic.api.crm_lead_assignment.after_insert",
+        "on_update":"sriaas_clinic.api.crm_lead_assignment.on_update",
+    },
     "Patient": {
         "before_insert": [
             "sriaas_clinic.api.patient.set_sr_patient_id",
@@ -58,9 +129,6 @@ doc_events = {
     "Healthcare Practitioner": {
         "before_validate": "sriaas_clinic.api.practitioner.compose_full_name",
     },
-    "Item": {
-        "validate": "sriaas_clinic.api.item_package_weight.calculate_pkg_weights",
-    },
     "Patient Encounter": {
         "before_save": [
             "sriaas_clinic.api.encounter_flow.handlers.before_save_patient_encounter",
@@ -68,6 +136,9 @@ doc_events = {
         ],
         "before_submit": "sriaas_clinic.api.encounter_flow.handlers.validate_required_before_submit",
         "on_submit":   "sriaas_clinic.api.encounter_flow.handlers.create_billing_on_submit",
+    },
+    "Item": {
+        "validate": "sriaas_clinic.api.item_package_weight.calculate_pkg_weights",
     },
     "Sales Invoice": {
         "before_save": [
@@ -88,21 +159,13 @@ doc_events = {
             "sriaas_clinic.api.si_payment_flow.handlers.refresh_payment_history",
         ],
     },
-    "CRM Lead": {
-        "before_save": "sriaas_clinic.api.crm_lead.normalize_phoneish_fields",
-        # block illegal edits depending on role + new/existing state
-        "validate":"sriaas_clinic.api.crm_lead_field_guard.guard_restricted_fields",
-        # keep Assignment + DocShare in sync with lead_owner
-        "after_insert":"sriaas_clinic.api.crm_lead_assignment.after_insert",
-        "on_update":"sriaas_clinic.api.crm_lead_assignment.on_update",
+    "Medical Department": {
+        "after_insert": "sriaas_clinic.api.medical_department.after_insert",
+        # "on_rename": "sriaas_clinic.api.medical_department.on_rename",
     },
     # Protect assignment/unassignment rights & keep shares tidy
     "ToDo": {
         "on_trash": "sriaas_clinic.api.assign_guard.todo_on_trash",
-    },
-    "Medical Department": {
-        "after_insert": "sriaas_clinic.api.medical_department.after_insert",
-        # "on_rename": "sriaas_clinic.api.medical_department.on_rename",
     },
     # User Group sync (dept/segments)
     "User": {
@@ -115,14 +178,9 @@ doc_events = {
     },
 }
 
-# Exactly ONE entry per doctype
-permission_query_conditions = {
-    "CRM Lead": "sriaas_clinic.api.crm_lead_access.crm_lead_pqc",
-}
-
-has_permission = {
-    "CRM Lead": "sriaas_clinic.api.crm_lead_access.crm_lead_has_permission",
-}
+# Overriding Methods
+# ------------------------------
+#
 
 # Keep your assignment authorization guards
 override_whitelisted_methods = {
@@ -131,55 +189,22 @@ override_whitelisted_methods = {
     "frappe.desk.form.assign_to.clear":  "sriaas_clinic.api.assign_guard.clear",
 }
 
-doctype_js = {
-    "Patient": [
-        "public/js/patient_invoices.js",
-        "public/js/patient_payments.js",
-        "public/js/patient_pex_launcher.js",
-        "public/js/clinical_history_modal.js",
-    ],
-    "Healthcare Practitioner": [
-        "public/js/healthcare_practitioner.js",
-    ],
-    "Patient Encounter": [
-        "public/js/pe_draft_invoice.js",
-        "public/js/pe_order_item.js",
-        "public/js/pe_practitioner_filters.js",
-        "public/js/pe_medication_filters.js",
-        "public/js/pe_template_medication.js",
-        "public/js/pe_manual_medication.js",
-        "public/js/clinical_history_modal.js",
-        "public/js/patient_encounter_block_autosave_for_proof.js",
-        "public/js/patient_encounter_clear_advance.js",
-    ],
-    "Item": [
-        "public/js/item_package_weight.js",
-    ],
-    "Sales Invoice": [
-        "public/js/sales_invoice_draft_payment.js",
-        "public/js/sales_invoice_actions.js",
-    ],
-    "Payment Entry": [
-        "public/js/payment_entry_outstanding_dialog.js",
-        "public/js/payment_entry_actions.js",
-    ],
-    "CRM Lead": [
-        "public/js/crm_lead_pex_launcher.js",
-        "public/js/crm_lead_disposition_filter.js",
-        "public/js/crm_lead_lock_fields.js",
-    ],
-}
-
-app_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
-web_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
-
-app_include_js = [
-    "/assets/sriaas_clinic/js/patient_quick_entry_patch.js",
+# Export only items that belong to our module
+fixtures = [
+    {"dt": "Custom Field", "filters": [["module", "=", "SRIAAS Clinic"]]},
+    {"dt": "Property Setter", "filters": [["module", "=", "SRIAAS Clinic"]]},
+    {"dt": "Client Script", "filters": [["module", "=", "SRIAAS Clinic"]]},
+    {"dt": "Server Script", "filters": [["module", "=", "SRIAAS Clinic"]]},
+    {"dt": "Workspace", "filters": [["module", "=", "SRIAAS Clinic"]]},
+    {"dt": "Print Format", "filters": [["module", "=", "SRIAAS Clinic"]]},
+    {"dt": "Report", "filters": [["module", "=", "SRIAAS Clinic"]]},
+    {"dt": "Dashboard Chart", "filters": [["module", "=", "SRIAAS Clinic"]]},
+    {"dt": "Notification", "filters": [["module", "=", "SRIAAS Clinic"]]},
+    {"dt": "Web Template", "filters": [["module", "=", "SRIAAS Clinic"]]},
+    {"dt": "Form Tour", "filters": [["module", "=", "SRIAAS Clinic"]]},
+    {"dt": "Form Tour Step", "filters": [["module", "=", "SRIAAS Clinic"]]},
+    {"dt": "Custom DocPerm", "filters": [["module", "=", "SRIAAS Clinic"]]},
 ]
-
-list_js = {
-    "Sales Invoice": "public/js/sales_invoice_list.js"
-}
 
 # Apps
 # ------------------

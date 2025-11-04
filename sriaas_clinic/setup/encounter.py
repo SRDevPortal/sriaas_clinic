@@ -1,4 +1,4 @@
-# sriaas_clinic/setup/encounter.py
+# apps/sriaas_clinic/sriaas_clinic/setup/encounter.py
 import frappe
 from .utils import create_cf_with_module, upsert_property_setter, collapse_section, set_label, upsert_title_field
 
@@ -37,9 +37,18 @@ def _make_encounter_fields():
             {"fieldname":"sr_encounter_source","label":"Encounter Source","fieldtype":"Link","options":lead_source_dt,"reqd":1,"insert_after":"google_meet_link"},
 
             {"fieldname":"sr_encounter_status","label":"Encounter Status","fieldtype":"Link","options":"SR Encounter Status","reqd":1,"in_list_view":1,"in_standard_filter":1,"allow_on_submit":1,"insert_after":"sr_encounter_source"},
+
+            {
+                "fieldname": "created_by_agent",
+                "label": "Created By",
+                "fieldtype": "Link",
+                "options": "User",
+                "read_only": 1,
+                # do NOT set default here – we populate per-doc in before_insert
+                "insert_after": "sr_encounter_status"
+            },
         ]
-    }),
-    upsert_property_setter(DT, "get_applicable_treatment_plans", "hidden", "1", "Check")
+    })
 
 def _setup_clinical_notes_section():
     """Add Clinical Notes section to Patient Encounter"""
@@ -220,6 +229,7 @@ def _apply_encounter_ui_customizations():
         "therapies",
         "naming_series",
         "appointment",
+        "get_applicable_treatment_plans",
     )
     for f in targets:
         cfname = frappe.db.get_value("Custom Field", {"dt": DT, "fieldname": f}, "name")
@@ -236,3 +246,9 @@ def _apply_encounter_ui_customizations():
     
     # Set title field to patient_name
     upsert_title_field(DT, "patient_name")
+
+    # ensure created_by_agent is hidden
+    upsert_property_setter(DT, "created_by_agent", "hidden", "0", "Check")
+    upsert_property_setter(DT, "created_by_agent", "in_list_view", "0", "Check")
+    upsert_property_setter(DT, "created_by_agent", "in_standard_filter", "0", "Check")
+    upsert_property_setter(DT, "created_by_agent", "print_hide", "1", "Check")

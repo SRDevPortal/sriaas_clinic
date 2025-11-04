@@ -11,7 +11,6 @@ def apply():
     _make_invoice_fields()
     _setup_payment_history_section()
     _setup_advance_payment_tab()
-    # _setup_tracking_tab()
     if frappe.db.exists("DocType", PARENT) and frappe.db.exists("DocType", CHILD):
         _setup_cost_section()
         _setup_invoice_item_fields()
@@ -47,6 +46,16 @@ def _make_invoice_fields():
             {"fieldname": "sr_si_order_source","label": "Order Source","fieldtype": "Link","options": lead_source_dt,"in_list_view":1,"in_standard_filter":1,"insert_after": insert_anchor},
             {"fieldname": "sr_si_sales_type","label": "Sales Type","fieldtype": "Link","options": "SR Sales Type","in_list_view":1,"in_standard_filter":1,"insert_after": "sr_si_order_source",},
             {"fieldname": "sr_si_delivery_type","label": "Delivery Type","fieldtype": "Link","options": "SR Delivery Type","in_list_view":1,"in_standard_filter":1,"allow_on_submit":1,"insert_after": "sr_si_sales_type"},
+
+            {
+                "fieldname": "created_by_agent",
+                "label": "Created By",
+                "fieldtype": "Link",
+                "options": "User",
+                "read_only": 1,
+                # do NOT set default here — we populate per-doc in before_insert
+                "insert_after": "due_date"
+            },
         ]
     })
 
@@ -118,26 +127,6 @@ def _setup_advance_payment_tab():
     # Keep hard reqd OFF so autosaves don’t fail
     for f in ["si_dp_mode_of_payment", "si_dp_reference_date"]:
         upsert_property_setter(PARENT, f, "reqd", "0", "Check")
-
-
-def _setup_tracking_tab():
-    """
-    Adds a new tab 'Order Tracking' with two columns:
-      Left column:  sr_si_shipping_status (Data, RO), sr_si_delivery_date (Datetime, RO)
-      Right column: sr_si_courier_partner (Data, RO), sr_si_awb_no (Data, RO)
-    """
-
-    create_cf_with_module({
-        PARENT: [
-            {"fieldname": "sr_si_order_tracking_tab","label": "Order Tracking","fieldtype": "Tab Break","insert_after": "si_dp_payment_proof"},
-            {"fieldname": "sr_si_order_tracking_sb","label": "Tracking Details","fieldtype": "Section Break","insert_after": "sr_si_order_tracking_tab"},
-            {"fieldname": "sr_si_shipping_status","label": "Shipping Status","fieldtype": "Data","read_only": 1,"insert_after": "sr_si_order_tracking_sb"},
-            {"fieldname": "sr_si_delivery_date","label": "Delivery Date","fieldtype": "Datetime","read_only": 1,"insert_after": "sr_si_shipping_status"},
-            {"fieldname": "sr_si_order_tracking_cb","fieldtype": "Column Break","insert_after": "sr_si_delivery_date"},
-            {"fieldname": "sr_si_courier_partner","label": "Courier Partner","fieldtype": "Data","read_only": 1,"insert_after": "sr_si_order_tracking_cb"},
-            {"fieldname": "sr_si_awb_no","label": "AWB No","fieldtype": "Data","read_only": 1,"insert_after": "sr_si_courier_partner"},
-        ]
-    })
 
 
 def _setup_cost_section():
@@ -243,6 +232,13 @@ def _apply_invoice_ui_customizations():
     if meta.get_field("contact_mobile"):
         upsert_property_setter(PARENT, "contact_mobile", "in_list_view", "1", "Check")  # show in list
         upsert_property_setter(PARENT, "contact_mobile", "in_standard_filter", "1", "Check")  # show in filters
+
+    # ensure created_by_agent is hidden and not shown in list/filter
+    if meta.get_field("created_by_agent"):
+        upsert_property_setter(PARENT, "created_by_agent", "hidden", "0", "Check")
+        upsert_property_setter(PARENT, "created_by_agent", "in_list_view", "0", "Check")
+        upsert_property_setter(PARENT, "created_by_agent", "in_standard_filter", "0", "Check")
+        upsert_property_setter(PARENT, "created_by_agent", "print_hide", "1", "Check")
 
     # Set title field to patient_name
     upsert_title_field(PARENT, "patient_name")

@@ -102,6 +102,9 @@ doc_events = {
         "after_insert":"sriaas_clinic.api.crm_lead_assignment.after_insert",
         "on_update":"sriaas_clinic.api.crm_lead_assignment.on_update",
     },
+    "Patient Appointment": {
+        "before_insert": "sriaas_clinic.api.appointment.set_created_by_agent"
+    },
     "Patient": {
         "before_insert": [
             "sriaas_clinic.api.patient.set_sr_patient_id",
@@ -130,6 +133,7 @@ doc_events = {
         "before_validate": "sriaas_clinic.api.practitioner.compose_full_name",
     },
     "Patient Encounter": {
+        "before_insert": "sriaas_clinic.api.encounter.set_created_by_agent",
         "before_save": [
             "sriaas_clinic.api.encounter_flow.handlers.before_save_patient_encounter",
             "sriaas_clinic.api.encounter_flow.handlers.clear_advance_dependent_fields",
@@ -141,6 +145,7 @@ doc_events = {
         "validate": "sriaas_clinic.api.item_package_weight.calculate_pkg_weights",
     },
     "Sales Invoice": {
+        "before_insert": "sriaas_clinic.api.sales_invoice.set_created_by_agent",
         "before_save": [
             "sriaas_clinic.api.sales_invoice_cost.before_save",
             "sriaas_clinic.api.si_payment_flow.handlers.clear_dp_when_blank",
@@ -158,6 +163,9 @@ doc_events = {
         "on_update_after_submit": [
             "sriaas_clinic.api.si_payment_flow.handlers.refresh_payment_history",
         ],
+    },
+    "Payment Entry": {
+        "before_insert": "sriaas_clinic.api.payment_entry.set_created_by_agent"
     },
     "Medical Department": {
         "after_insert": "sriaas_clinic.api.medical_department.after_insert",

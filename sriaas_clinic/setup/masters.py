@@ -31,6 +31,7 @@ def apply():
     _ensure_sr_lead_platform()
     _ensure_sr_lead_source()
     _ensure_sr_lead_disposition()
+    _ensure_sr_payment_modes()
     # _ensure_shiprocket_settings()
     # _ensure_sr_lead_duplicate()
 
@@ -550,6 +551,33 @@ def _ensure_sr_lead_disposition():
             { "role": "Healthcare Administrator", "read":1, "write":1, "create":1, "delete":1 },
         ],
     }).insert(ignore_permissions=True)
+
+def _ensure_sr_payment_modes():
+    if frappe.db.exists("DocType", "Payment Mode Detail"):
+        return
+
+    frappe.get_doc({
+        "doctype": "DocType",
+        "name": "Payment Mode Detail",
+        "module": MODULE_DEF_NAME,
+        "custom": 0,
+        "istable": 1,
+        "editable_grid": 1,
+        "track_changes": 1,
+        "fields": [
+            {"fieldname": "sr_mode_of_payment", "label": "Payment Mode", "fieldtype": "Link", "options": "Mode of Payment", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "sr_amount", "label": "Amount", "fieldtype": "Currency", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "sr_account", "label": "Account", "fieldtype": "Link", "options": "Account", "reqd": 1, "in_list_view": 1},
+            {"fieldname": "sr_reference_no", "label": "Reference No", "fieldtype": "Data", "in_list_view": 1},
+            {"fieldname": "sr_reference_date", "label": "Reference Date", "fieldtype": "Date", "in_list_view": 1},
+            {"fieldname": "description", "label": "Description", "fieldtype": "Small Text", "in_list_view": 1},
+        ],
+        "permissions": [
+            {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "print": 1, "email": 1, "export": 1},
+            {"role": "Healthcare Administrator", "read": 1, "write": 1, "create": 1, "delete": 1},
+        ],
+    }).insert(ignore_permissions=True)
+
 
 # def _ensure_shiprocket_settings():
 #     """Create Shiprocket Settings master."""

@@ -23,7 +23,6 @@ def _lead_source_dt() -> str:
         return "CRM Lead Source"
     return "Lead Source"
 
-
 def _make_invoice_fields():
     """
     Put these three at the very top of the right column (after column_break1):
@@ -59,7 +58,6 @@ def _make_invoice_fields():
         ]
     })
 
-
 def _setup_payment_history_section():
     """
     Add 'Payment History' section after 'advances' with read-only summary fields.
@@ -74,7 +72,6 @@ def _setup_payment_history_section():
             {"fieldname": "sr_si_outstanding_amount","label": "Outstanding Amount","fieldtype": "Currency","read_only": 1,"insert_after": "sr_si_mode_of_payment"},
         ]
     })
-
 
 def _setup_advance_payment_tab():
     """
@@ -128,7 +125,6 @@ def _setup_advance_payment_tab():
     for f in ["si_dp_mode_of_payment", "si_dp_reference_date"]:
         upsert_property_setter(PARENT, f, "reqd", "0", "Check")
 
-
 def _setup_cost_section():
     create_cf_with_module({
         PARENT: [
@@ -169,7 +165,6 @@ def _setup_cost_section():
         ]
     })
 
-
 def _setup_invoice_item_fields():
     create_cf_with_module({
         CHILD: [
@@ -198,7 +193,6 @@ def _setup_invoice_item_fields():
             },
         ]
     })
-
 
 def _apply_invoice_ui_customizations():
     """Apply various UI customizations to Sales Invoice"""

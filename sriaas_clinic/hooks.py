@@ -15,9 +15,6 @@ app_license = "mit"
 app_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
 app_include_js = "/assets/sriaas_clinic/js/patient_quick_entry_patch.js"
 
-app_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
-web_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
-
 # include js, css files in header of web template
 web_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
 
@@ -58,9 +55,11 @@ doctype_js = {
     "Payment Entry": [
         "public/js/payment_entry_outstanding_dialog.js",
         "public/js/payment_entry_actions.js",
+        # "public/js/payment_entry_extend.js",
     ],
 }
 
+# doctype list js
 list_js = {
     "Sales Invoice": "public/js/sales_invoice_list.js"
 }
@@ -108,8 +107,9 @@ doc_events = {
     "Patient": {
         "before_insert": [
             "sriaas_clinic.api.patient.set_sr_patient_id",
+            "sriaas_clinic.api.patient.validate_unique_contact_mobile",
         ],
-        # "autoname": "sriaas_clinic.api.patient.force_patient_series",
+        "autoname": "sriaas_clinic.api.patient.force_patient_series",
         "before_save": "sriaas_clinic.api.patient.normalize_phoneish_fields",
         "after_insert": [
             "sriaas_clinic.api.patient.assign_followup_day",
@@ -119,7 +119,7 @@ doc_events = {
     },
     "Customer": {
         "before_insert": "sriaas_clinic.api.customer.set_sr_customer_id",
-        # "autoname": "sriaas_clinic.api.customer.force_customer_series",
+        "autoname": "sriaas_clinic.api.customer.force_customer_series",
         "before_save":   "sriaas_clinic.api.customer.normalize_phoneish_fields",
     },
     "Address": {
@@ -165,7 +165,11 @@ doc_events = {
         ],
     },
     "Payment Entry": {
-        "before_insert": "sriaas_clinic.api.payment_entry.set_created_by_agent"
+        "before_insert": "sriaas_clinic.api.payment_entry.set_created_by_agent",
+        # "before_save": "sriaas_clinic.api.payment_entry.sync_parent_mode_from_children_server",
+        # "validate": "sriaas_clinic.api.payment_entry.validate_payment_modes_total",
+        # "on_submit": "sriaas_clinic.api.payment_entry.create_journal_for_payment_modes",
+        # "on_cancel": "sriaas_clinic.api.payment_entry.cancel_linked_journal_entries",
     },
     "Medical Department": {
         "after_insert": "sriaas_clinic.api.medical_department.after_insert",

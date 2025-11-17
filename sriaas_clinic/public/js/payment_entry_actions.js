@@ -42,7 +42,7 @@ frappe.ui.form.on('Payment Entry', {
         frappe.msgprint(__('Could not look up related Sales Invoices.'));
       }
     });
-    decorate_button(viewSiBtn, 'fa fa-file-text');
+    // decorate_button(viewSiBtn, 'fa fa-file-text');
 
     // --- Patient Dashboard (open Patient form) ---
     const patientBtn = frm.add_custom_button(__('Patient Dashboard'), async () => {
@@ -85,7 +85,7 @@ frappe.ui.form.on('Payment Entry', {
         frappe.msgprint(__('Could not determine Patient for this Payment Entry.'));
       }
     });
-    decorate_button(patientBtn, 'fa fa-user');
+    // decorate_button(patientBtn, 'fa fa-user');
   },
 });
 

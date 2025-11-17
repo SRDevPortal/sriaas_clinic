@@ -45,6 +45,9 @@ def _apply_patient_ui_customizations():
     upsert_property_setter(DT, "status", "read_only_depends_on", "", "Text")
     upsert_property_setter(DT, "status", "in_standard_filter", "1", "Select")
 
+    upsert_property_setter(DT, "mobile", "read_only", "0", "Check")
+    upsert_property_setter(DT, "mobile", "reqd", "1", "Check")
+
     upsert_property_setter(DT, "invite_user", "default", "0", "Check")
     upsert_property_setter(DT, "invite_user", "hidden", "1", "Check")
     upsert_property_setter(DT, "age", "hidden", "1", "Check")

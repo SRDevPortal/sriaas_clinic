@@ -9,16 +9,26 @@ def _get_title(doctype: str, name: str) -> str:
     return frappe.get_cached_value(doctype, name, title_field) or name
 
 def _append_customer_link_if_missing(d, customer: str, do_save: bool = False) -> bool:
+    # ensure customer exists
+    if not customer or not frappe.db.exists("Customer", customer):
+        frappe.logger("sriaas").warning(f"Skipping append: Customer not found: {customer}")
+        return False
+
     for l in (d.links or []):
         if l.link_doctype == "Customer" and l.link_name == customer:
             return False
+
     d.append("links", {
         "link_doctype": "Customer",
         "link_name": customer,
         "link_title": _get_title("Customer", customer),
     })
     if do_save:
-        d.save(ignore_permissions=True)
+        try:
+            d.save(ignore_permissions=True)
+        except Exception:
+            frappe.logger("sriaas").exception(f"Failed to save Address/Contact {d.doctype}:{d.name} after appending Customer link {customer}")
+            return False
     return True
 
 def ensure_address_has_customer_link(doc, method=None):
@@ -47,7 +57,7 @@ def ensure_address_has_customer_link(doc, method=None):
 
 def mirror_links_to_customer(doc, method=None):
     customer = doc.get("customer")
-    if not customer:
+    if not customer or not frappe.db.exists("Customer", customer):
         return
 
     patient = doc.name
@@ -58,7 +68,12 @@ def mirror_links_to_customer(doc, method=None):
         pluck="parent",
     )
     for addr in set(addr_names):
-        _append_customer_link_if_missing(frappe.get_doc("Address", addr), customer, do_save=True)
+        try:
+            addr_doc = frappe.get_doc("Address", addr)
+        except frappe.DoesNotExistError:
+            frappe.logger("sriaas").warning(f"Address not found: {addr} while mirroring links for patient {patient}")
+            continue
+        _append_customer_link_if_missing(addr_doc, customer, do_save=True)
 
     contact_names = frappe.get_all(
         "Dynamic Link",
@@ -66,7 +81,12 @@ def mirror_links_to_customer(doc, method=None):
         pluck="parent",
     )
     for c in set(contact_names):
-        _append_customer_link_if_missing(frappe.get_doc("Contact", c), customer, do_save=True)
+        try:
+            contact_doc = frappe.get_doc("Contact", c)
+        except frappe.DoesNotExistError:
+            frappe.logger("sriaas").warning(f"Contact not found: {c} while mirroring links for patient {patient}")
+            continue
+        _append_customer_link_if_missing(contact_doc, customer, do_save=True)
 
 def validate_state(doc, method=None):
     """Server-side guarantee: for India, legacy `state` must be present."""

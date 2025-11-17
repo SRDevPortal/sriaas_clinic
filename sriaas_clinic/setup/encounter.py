@@ -60,6 +60,10 @@ def _setup_clinical_notes_section():
             {"fieldname":"sr_investigations","label":"Investigations","fieldtype":"Small Text","insert_after":"sr_observations"},
             {"fieldname":"sr_notes","label":"Notes","fieldtype":"Small Text","insert_after":"sr_investigations"},
             {"fieldname":"sr_diagnosis","label":"Diagnosis","fieldtype":"Small Text","insert_after":"sr_notes"},
+            # report attachments multiple with gallery view (existing attach image field you already added)
+            {"fieldname":"sr_medical_reports","label":"Medical Reports","fieldtype":"Attach Image","insert_after":"sr_notes"},
+            # NEW — html preview area for gallery
+            {"fieldname":"sr_medical_reports_preview","label":"Medical Reports Preview","fieldtype":"HTML","insert_after":"sr_medical_reports"},
         ]
     })
 
@@ -178,13 +182,7 @@ def _apply_encounter_ui_customizations():
     # --------------------------
     # 1) Collapse selected sections
     # --------------------------
-    for f in [
-        "sb_symptoms",
-        "sb_test_prescription",
-        "sb_procedures",
-        "rehabilitation_section",
-        "section_break_33"
-    ]:
+    for f in ["sb_symptoms","sb_test_prescription","sb_procedures","rehabilitation_section","section_break_33"]:
         collapse_section(DT, f, True)
 
     # Rename section for clarity

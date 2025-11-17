@@ -43,7 +43,7 @@ frappe.ui.form.on('Sales Invoice', {
         frappe.msgprint(__('Could not fetch Payment Entries.'));
       }
     });
-    decorate_button(printBtn, 'fa fa-money');
+    // decorate_button(printBtn, 'fa fa-money');
 
     // Patient Dashboard
     if (frm.doc.patient) {
@@ -54,7 +54,7 @@ frappe.ui.form.on('Sales Invoice', {
           frappe.msgprint(__('No Patient linked on this Sales Invoice.'));
         }
       });
-      decorate_button(dashBtn, 'fa fa-user');
+      // decorate_button(dashBtn, 'fa fa-user');
     }
   },
 });

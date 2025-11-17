@@ -66,7 +66,6 @@ ROW_KEYS = {
     "rate":      ["sr_item_rate", "rate"],
 }
 
-
 def _row_get(row: Dict[str, Any], key: str, default=None):
     for k in ROW_KEYS.get(key, []):
         val = row.get(k)
@@ -74,9 +73,7 @@ def _row_get(row: Dict[str, Any], key: str, default=None):
             return val
     return default
 
-
 # ----------------------- Event handlers -----------------------
-
 def before_save_patient_encounter(doc, method):
     """Clean invalid warehouses in Encounter order items; compute amount fallback."""
     rows = _find_item_rows(doc)
@@ -98,7 +95,6 @@ def before_save_patient_encounter(doc, method):
             if wh and not _valid_warehouse(wh, company):
                 it["warehouse"] = None
 
-
 def clear_advance_dependent_fields(doc, method):
     """When advance is blank/zero OR not Order+Online, clear dependent payment fields."""
     amt = flt(doc.get("sr_pe_paid_amount") or 0)
@@ -111,7 +107,6 @@ def clear_advance_dependent_fields(doc, method):
                 setattr(doc, f, None)
         if getattr(doc, "sr_pe_paid_amount", None) and not _is_order_online(doc):
             doc.sr_pe_paid_amount = 0
-
 
 def _has_any_attachment(doc) -> bool:
     """True if the doc has any File attached via the sidebar."""
@@ -142,11 +137,9 @@ def validate_required_before_submit(doc, method):
         if missing:
             frappe.throw("Please complete before submit: " + ", ".join(missing))
 
-
 def _is_order_online(doc) -> bool:
     return (str(doc.get(F_ENCOUNTER_TYPE) or "").lower() == "order"
             and str(doc.get(F_ENCOUNTER_PLACE) or "").lower() == "online")
-
 
 def create_billing_on_submit(doc, method):
     """Run on Patient Encounter submit and create DRAFT SI (+ DRAFT PE if advance)."""
@@ -155,7 +148,6 @@ def create_billing_on_submit(doc, method):
     if not _is_order_online(doc):
         return
     _create_billing_drafts_from_encounter(doc)
-
 
 def _create_billing_drafts_from_encounter(doc):
     """The old create_billing_on_save body, but callable from on_submit."""
@@ -303,7 +295,6 @@ def _create_billing_drafts_from_encounter(doc):
         alert=True
     )
 
-
 def link_pending_payment_entries(si, method):
     """On SI submit, auto-append reference in any Draft PE that intended to pay this SI."""
     if si.docstatus != 1:
@@ -351,9 +342,7 @@ def link_pending_payment_entries(si, method):
 
         outstanding -= alloc
 
-
 # ---------------- Helpers ----------------
-
 def _create_draft_payment_entry(encounter, customer, mop, amount, intended_si_name) -> str:
     pe = frappe.new_doc("Payment Entry")
     pe.update({
@@ -389,11 +378,9 @@ def _create_draft_payment_entry(encounter, customer, mop, amount, intended_si_na
     pe.insert(ignore_permissions=True)
     return pe.name
 
-
 def _find_item_rows(doc) -> List[Dict[str, Any]]:
     rows = doc.get(ORDER_ITEMS_TABLE)
     return rows or []
-
 
 def _get_or_create_customer_from_patient(doc) -> str:
     if not doc.get("patient"):
@@ -403,7 +390,6 @@ def _get_or_create_customer_from_patient(doc) -> str:
         return customer
     patient_name = frappe.db.get_value("Patient", doc.patient, "patient_name") or doc.patient
     return _ensure_customer(patient_name, doc.company)
-
 
 def _ensure_customer(customer_name: str, company: str) -> str:
     existing = frappe.db.get_value("Customer", {"customer_name": customer_name})
@@ -418,16 +404,13 @@ def _ensure_customer(customer_name: str, company: str) -> str:
     c.insert(ignore_permissions=True)
     return c.name
 
-
 def _is_stock_item(item_code: str) -> int:
     return frappe.db.get_value("Item", item_code, "is_stock_item") or 0
-
 
 def _valid_warehouse(wh_name: Optional[str], company: str) -> bool:
     if not wh_name or not frappe.db.exists("Warehouse", wh_name):
         return False
     return frappe.db.get_value("Warehouse", wh_name, "company") == company
-
 
 def _coalesce_warehouse(requested_wh: Optional[str], company: str, item_code: str) -> Optional[str]:
     if not _is_stock_item(item_code):
@@ -447,7 +430,6 @@ def _coalesce_warehouse(requested_wh: Optional[str], company: str, item_code: st
         return DEFAULT_FALLBACK_WAREHOUSE
     return None
 
-
 def _sanitize_si_warehouses(si, company: str) -> None:
     for row in si.items:
         if not _is_stock_item(row.item_code):
@@ -458,9 +440,7 @@ def _sanitize_si_warehouses(si, company: str) -> None:
                 wh = DEFAULT_FALLBACK_WAREHOUSE if (DEFAULT_FALLBACK_WAREHOUSE and _valid_warehouse(DEFAULT_FALLBACK_WAREHOUSE, company)) else None
             row.warehouse = wh
 
-
 # ---- Tax helpers ----
-
 def _get_primary_address_for(doctype: str, name: str) -> Optional[str]:
     if doctype == "Customer":
         addr = frappe.db.get_value("Customer", name, "customer_primary_address")
@@ -474,18 +454,14 @@ def _get_primary_address_for(doctype: str, name: str) -> Optional[str]:
             return dl.parent
     return links[0]["parent"]
 
-
 def _get_address_state(addr_name: Optional[str]) -> Optional[str]:
     return frappe.db.get_value("Address", addr_name, "state") if addr_name else None
-
 
 def _get_customer_state(customer: str) -> Optional[str]:
     return _get_address_state(_get_primary_address_for("Customer", customer))
 
-
 def _get_company_state(company: str) -> Optional[str]:
     return _get_address_state(_get_primary_address_for("Company", company))
-
 
 def _get_company_primary_address(company: str) -> Optional[str]:
     links = frappe.get_all("Dynamic Link", filters={"parenttype": "Address", "link_doctype": "Company", "link_name": company}, fields=["parent"], limit=100)
@@ -497,7 +473,6 @@ def _get_company_primary_address(company: str) -> Optional[str]:
         return primary[0]["name"]
     recent = frappe.get_all("Address", filters={"name": ["in", addr_names]}, fields=["name"], order_by="modified desc", limit=1)
     return recent[0]["name"] if recent else None
-
 
 def _choose_tax_template_by_state(company: str, customer: str) -> Optional[str]:
     cust_state = (_get_customer_state(customer) or "").strip().lower()
@@ -514,13 +489,11 @@ def _choose_tax_template_by_state(company: str, customer: str) -> Optional[str]:
         or frappe.db.get_value("Sales Taxes and Charges Template", {"company": company, "disabled": 0, "title": ["like", f"%{keyword}%"]}, "name")
     return tmpl
 
-
 def _set_tax_template_by_state(si, customer: str) -> None:
     tmpl = _choose_tax_template_by_state(si.company, customer)
     if tmpl:
         si.taxes_and_charges = tmpl
         si.set("taxes", [])
-
 
 def _apply_company_tax_template(si) -> None:
     if si.taxes_and_charges:
@@ -531,7 +504,6 @@ def _apply_company_tax_template(si) -> None:
     if tmpl:
         si.taxes_and_charges = tmpl
         si.set("taxes", [])
-
 
 def _company_safe_tax_rows(si) -> None:
     fixed = []
@@ -552,9 +524,7 @@ def _company_safe_tax_rows(si) -> None:
             fixed.append(t)
     si.set("taxes", fixed)
 
-
 # ---- Accounts helpers ----
-
 def _party_account(company: str, party_type: str, party: str) -> Optional[str]:
     try:
         return get_party_account(party_type, party, company)
@@ -565,7 +535,6 @@ def _party_account(company: str, party_type: str, party: str) -> Optional[str]:
             return None
     except Exception:
         return None
-
 
 def _mop_account(company: str, mop: str) -> Optional[str]:
     acc = frappe.db.get_value("Mode of Payment Account", {"parent": mop, "company": company}, "default_account")

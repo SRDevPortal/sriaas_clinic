@@ -50,6 +50,23 @@ def _make_encounter_fields():
         ]
     })
 
+# def _setup_clinical_notes_section():
+#     """Add Clinical Notes section to Patient Encounter"""
+#     create_cf_with_module({
+#         DT: [
+#             {"fieldname":"sr_clinical_notes_sb","label":"Clinical Notes","fieldtype":"Section Break","collapsible":0,"insert_after":"submit_orders_on_save"},
+#             {"fieldname":"sr_complaints","label":"Complaints","fieldtype":"Small Text","insert_after":"sr_clinical_notes_sb"},
+#             {"fieldname":"sr_observations","label":"Observations","fieldtype":"Small Text","insert_after":"sr_complaints"},
+#             {"fieldname":"sr_investigations","label":"Investigations","fieldtype":"Small Text","insert_after":"sr_observations"},
+#             {"fieldname":"sr_notes","label":"Notes","fieldtype":"Small Text","insert_after":"sr_investigations"},
+#             {"fieldname":"sr_diagnosis","label":"Diagnosis","fieldtype":"Small Text","insert_after":"sr_notes"},
+#             # existing attach image field you already added
+#             {"fieldname":"sr_medical_reports","label":"Medical Reports","fieldtype":"Attach","insert_after":"sr_diagnosis"},
+#             # NEW — html preview area for gallery
+#             {"fieldname":"sr_medical_reports_preview","label":"Medical Reports Preview","fieldtype":"HTML","insert_after":"sr_medical_reports"},
+#         ]
+#     })
+
 def _setup_clinical_notes_section():
     """Add Clinical Notes section to Patient Encounter"""
     create_cf_with_module({
@@ -60,10 +77,12 @@ def _setup_clinical_notes_section():
             {"fieldname":"sr_investigations","label":"Investigations","fieldtype":"Small Text","insert_after":"sr_observations"},
             {"fieldname":"sr_notes","label":"Notes","fieldtype":"Small Text","insert_after":"sr_investigations"},
             {"fieldname":"sr_diagnosis","label":"Diagnosis","fieldtype":"Small Text","insert_after":"sr_notes"},
-            # report attachments multiple with gallery view (existing attach image field you already added)
-            {"fieldname":"sr_medical_reports","label":"Medical Reports","fieldtype":"Attach Image","insert_after":"sr_notes"},
-            # NEW — html preview area for gallery
-            {"fieldname":"sr_medical_reports_preview","label":"Medical Reports Preview","fieldtype":"HTML","insert_after":"sr_medical_reports"},
+
+            # Use a child Table for multiple reports (one row per report)
+            {"fieldname":"sr_medical_reports_table","label":"Medical Reports","fieldtype":"Table","options":"SR Medical Report","insert_after":"sr_diagnosis"},
+
+            # HTML preview area for gallery (JS will render here)
+            {"fieldname":"sr_medical_reports_preview","label":"Medical Reports Gallery","fieldtype":"HTML","insert_after":"sr_medical_reports_table"},
         ]
     })
 

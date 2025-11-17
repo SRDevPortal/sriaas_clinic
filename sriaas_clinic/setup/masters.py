@@ -32,6 +32,7 @@ def apply():
     _ensure_sr_lead_source()
     _ensure_sr_lead_disposition()
     _ensure_sr_payment_modes()
+    _ensure_sr_medical_report_doctype()
     # _ensure_shiprocket_settings()
     # _ensure_sr_lead_duplicate()
 
@@ -578,6 +579,56 @@ def _ensure_sr_payment_modes():
         ],
     }).insert(ignore_permissions=True)
 
+def _ensure_sr_medical_report_doctype():
+    """Create SR Medical Report child table."""
+    if frappe.db.exists("DocType", "SR Medical Report"):
+        return
+
+    frappe.get_doc({
+        "doctype": "DocType",
+        "name": "SR Medical Report",
+        "module": MODULE_DEF_NAME,
+        "custom": 1,
+        "istable": 1,
+        "editable_grid": 1,
+        "field_order": [
+            "sr_payment_entry", "sr_posting_date", "sr_paid_amount", "sr_mode_of_payment"
+        ],
+        "fields": [
+            {
+                "fieldname": "report",
+                "label": "Report",
+                "fieldtype": "Attach",
+                "in_list_view":1,
+                "columns":3
+            },
+            {
+                "fieldname": "report_date",
+                "label": "Report Date",
+                "fieldtype": "Date",
+                "in_list_view": 1,
+                "columns": 2
+            },
+            {
+                "fieldname": "report_type",
+                "label": "Report Type",
+                "fieldtype": "Data",
+                "in_list_view": 0,
+                "columns":2
+            },
+            {
+                "fieldname": "notes",
+                "label": "Notes",
+                "fieldtype": "Small Text",
+                "in_list_view": 0,
+                "columns":3
+            },
+        ],
+        "permissions": [
+            {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+            {"role": "Healthcare Administrator", "read": 1, "write": 0, "create": 0, "delete": 0}
+        ]
+    }).insert(ignore_permissions=True)
 
 # def _ensure_shiprocket_settings():
 #     """Create Shiprocket Settings master."""

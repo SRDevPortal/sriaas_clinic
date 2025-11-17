@@ -44,6 +44,9 @@ doctype_js = {
         "public/js/pe_block_autosave_for_proof.js",
         "public/js/pe_clear_advance.js",
         "public/js/clinical_history_modal.js",
+        # "public/js/pe_report_gallery.js",
+        # "public/js/pe_block_autosave_for_attachments.js",
+        "public/js/patient_encounter_attachments.js"
     ],
     "Item": [
         "public/js/item_package_weight.js",

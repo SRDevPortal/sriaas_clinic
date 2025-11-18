@@ -2,7 +2,7 @@ frappe.ui.form.on("Patient Encounter", {
   refresh(frm) {
     if (frm.is_new()) return;
 
-    frm.add_custom_button("🖨️ Print History", async () => {
+    frm.add_custom_button("Print History", async () => {
       try {
         const esc = (t) => frappe.utils.escape_html(t || "-").replace(/\n/g, "<br>");
         const clean = (t) => (t || "").replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();

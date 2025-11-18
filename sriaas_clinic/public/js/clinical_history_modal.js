@@ -171,7 +171,7 @@ async function openClinicalHistoryDialog({ patient_name, current_encounter = nul
         ${header}
         ${blocks}
         <div class="dialog-actions">
-          <button class="btn btn-primary" data-action="print-history">🖨️ Print</button>
+          <button class="btn btn-primary" data-action="print-history">Print</button>
           <button class="btn btn-default" data-action="close">Close</button>
         </div>
       </div>`;
@@ -197,7 +197,7 @@ async function openClinicalHistoryDialog({ patient_name, current_encounter = nul
 frappe.ui.form.on("Patient", {
   refresh(frm) {
     if (!frm.doc || frm.is_new()) return;
-    frm.add_custom_button("🖨️ Clinical History", () =>
+    frm.add_custom_button("Clinical History", () =>
       openClinicalHistoryDialog({ patient_name: frm.doc.name })
     );
   },
@@ -206,7 +206,7 @@ frappe.ui.form.on("Patient", {
 frappe.ui.form.on("Patient Encounter", {
   refresh(frm) {
     if (!frm.doc || !frm.doc.patient) return;
-    frm.add_custom_button("🖨️ Clinical History", () =>
+    frm.add_custom_button("Clinical History", () =>
       openClinicalHistoryDialog({ patient_name: frm.doc.patient, current_encounter: frm.doc })
     );
   },

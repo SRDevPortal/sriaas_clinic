@@ -1,12 +1,13 @@
 # apps/sriaas_clinic/sriaas_clinic/setup/appointment.py
 
 import frappe
-from .utils import create_cf_with_module, upsert_property_setter
+from .utils import create_cf_with_module, upsert_property_setter, ensure_field_before, ensure_field_after
 
 DT = "Patient Appointment"
 
 def apply():
     _make_appointment_fields()
+    _hide_payment_child_fields()
     _customize_appointment_doctype()
 
 def _make_appointment_fields():
@@ -67,11 +68,43 @@ def _make_appointment_fields():
                 "read_only": 1,
                 # do NOT set default here – we populate per-doc in before_insert
                 "insert_after": "appointment_date"
-            }
+            },
+            # --- Payments (Table) field to hold multiple payments ---
+            {
+                "fieldname": "apt_payments_sb",
+                "label": "Payments",
+                "fieldtype": "Section Break",
+                "collapsible": 0,
+                "insert_after": "ref_sales_invoice"
+            },
+            {
+                "fieldname": "apt_payments",
+                "label": "Payments (Multiple)",
+                "fieldtype": "Table",
+                "options": "SR Patient Payment View",
+                "insert_after": "apt_payments_sb",
+                "in_list_view": 0
+            },
         ]
     })
 
+# hide child table fields in SR Patient Payment View so they are not shown while booking
+def _hide_payment_child_fields():
+    # hide columns on the child doctype
+    upsert_property_setter("SR Patient Payment View", "sr_payment_entry", "hidden", "1", "Check")
+    upsert_property_setter("SR Patient Payment View", "sr_posting_date", "hidden", "1", "Check")
+
+    # ensure they are not required and not shown in list view
+    upsert_property_setter("SR Patient Payment View", "sr_payment_entry", "reqd", "0", "Check")
+    upsert_property_setter("SR Patient Payment View", "sr_posting_date", "reqd", "0", "Check")
+    upsert_property_setter("SR Patient Payment View", "sr_payment_entry", "in_list_view", "0", "Check")
+    upsert_property_setter("SR Patient Payment View", "sr_posting_date", "in_list_view", "0", "Check")
+
 def _customize_appointment_doctype():
+    """Move a few fields to sit nicely with your new fields"""
+    ensure_field_after(DT, "mode_of_payment", "column_break_2")
+    ensure_field_before(DT, "paid_amount", "billing_item")
+
     """Set properties on Patient Appointment fields."""
     targets = (
         "service_unit",
@@ -80,6 +113,7 @@ def _customize_appointment_doctype():
         "therapy_plan",
         "get_procedure_from_encounter",
         "procedure_template",
+        "invoiced"
     )
     for f in targets:
         cfname = frappe.db.get_value("Custom Field", {"dt": DT, "fieldname": f}, "name")

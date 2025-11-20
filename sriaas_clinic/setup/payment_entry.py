@@ -36,28 +36,20 @@ def _make_payment_entry_fields():
                 # do NOT set default here — we'll populate per-doc via before_insert
                 "insert_after": "posting_date",
             },
-            {
-                "fieldname": "sr_payment_modes_sb",
-                "label": "Payment Modes",
-                "fieldtype": "Section Break",
-                "collapsible": 0,
-                "insert_after": "base_received_amount_after_tax"
-            },
-            {
-                "fieldname": "sr_payment_modes",
-                "label": "Payment Modes",
-                "fieldtype": "Table",
-                "options": "Payment Mode Detail",
-                "insert_after": "sr_payment_modes_sb",
-            },
             # {
-            #     "fieldname": "sr_linked_journal_entry",
-            #     "label": "Linked Journal Entry",
-            #     "fieldtype": "Link",
-            #     "options": "Journal Entry",
-            #     "read_only": 1,
-            #     "insert_after": "sr_payment_modes_sb"
-            # }
+            #     "fieldname": "sr_payment_modes_sb",
+            #     "label": "Payment Modes",
+            #     "fieldtype": "Section Break",
+            #     "collapsible": 0,
+            #     "insert_after": "base_received_amount_after_tax"
+            # },
+            # {
+            #     "fieldname": "sr_payment_modes",
+            #     "label": "Payment Modes",
+            #     "fieldtype": "Table",
+            #     "options": "Payment Mode Detail",
+            #     "insert_after": "sr_payment_modes_sb",
+            # },
 
         ]
     })

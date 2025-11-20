@@ -105,7 +105,9 @@ doc_events = {
         "on_update":"sriaas_clinic.api.crm_lead_assignment.on_update",
     },
     "Patient Appointment": {
-        "before_insert": "sriaas_clinic.api.appointment.set_created_by_agent"
+        "before_insert": "sriaas_clinic.api.patient_appointment.set_created_by_agent",
+        # "on_update": "sriaas_clinic.api.patient_appointment.create_payment_entries_from_child_table",
+        # "on_update": "sriaas_clinic.api.patient_appointment.on_update_create_payments",
     },
     "Patient": {
         "before_insert": [

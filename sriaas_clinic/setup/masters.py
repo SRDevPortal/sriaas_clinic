@@ -31,10 +31,8 @@ def apply():
     _ensure_sr_lead_platform()
     _ensure_sr_lead_source()
     _ensure_sr_lead_disposition()
-    _ensure_sr_payment_modes()
     _ensure_sr_medical_report_doctype()
-    # _ensure_shiprocket_settings()
-    # _ensure_sr_lead_duplicate()
+    create_bulk_clearance_doctype()
 
 def _ensure_sr_patient_disable_reason():
     """Create SR Patient Disable Reason master."""
@@ -110,26 +108,44 @@ def _ensure_sr_patient_payment_view():
         "istable": 1,
         "editable_grid": 1,
         "field_order": [
-            "sr_payment_entry", "sr_posting_date", "sr_paid_amount", "sr_mode_of_payment"
+            "sr_payment_entry", "sr_posting_date", "sr_paid_amount", "sr_mode_of_payment",
+            "sr_reference_no", "sr_reference_date", "sr_payment_proof"
         ],
         "fields": [
             {
                 "fieldname":"sr_payment_entry", "label":"Payment Entry",
                 "fieldtype":"Link", "options":"Payment Entry",
-                "in_list_view":1, "columns":3
+                "in_list_view":1, "columns":2
             },
             {
                 "fieldname":"sr_posting_date", "label":"Posting Date",
                 "fieldtype":"Date",
-                "in_list_view":1, "columns":2
+                "in_list_view":1, "columns":1
             },
             {
                 "fieldname":"sr_paid_amount", "label":"Paid Amount",
                 "fieldtype":"Currency",
-                "in_list_view":1, "columns":2},
+                "in_list_view":1, "columns":1
+            },
             {
-                "fieldname":"sr_mode_of_payment","label":"Mode of Payment",
+                "fieldname":"sr_mode_of_payment", "label":"Mode of Payment",
+                "fieldtype":"Link",
+                "options":"Mode of Payment",
+                "in_list_view":1, "columns":1
+            },
+            {
+                "fieldname":"sr_reference_no", "label":"Payment Reference No",
                 "fieldtype":"Data",
+                "in_list_view":1, "columns":1
+            },
+            {
+                "fieldname":"sr_reference_date", "label":"Payment Reference Date",
+                "fieldtype":"Date",
+                "in_list_view":1, "columns":1
+            },
+            {
+                "fieldname":"sr_payment_proof", "label":"Payment Proof",
+                "fieldtype":"Attach",
                 "in_list_view":1, "columns":3
             },
         ],
@@ -553,32 +569,6 @@ def _ensure_sr_lead_disposition():
         ],
     }).insert(ignore_permissions=True)
 
-def _ensure_sr_payment_modes():
-    if frappe.db.exists("DocType", "Payment Mode Detail"):
-        return
-
-    frappe.get_doc({
-        "doctype": "DocType",
-        "name": "Payment Mode Detail",
-        "module": MODULE_DEF_NAME,
-        "custom": 0,
-        "istable": 1,
-        "editable_grid": 1,
-        "track_changes": 1,
-        "fields": [
-            {"fieldname": "sr_mode_of_payment", "label": "Payment Mode", "fieldtype": "Link", "options": "Mode of Payment", "reqd": 1, "in_list_view": 1},
-            {"fieldname": "sr_amount", "label": "Amount", "fieldtype": "Currency", "reqd": 1, "in_list_view": 1},
-            {"fieldname": "sr_account", "label": "Account", "fieldtype": "Link", "options": "Account", "reqd": 1, "in_list_view": 1},
-            {"fieldname": "sr_reference_no", "label": "Reference No", "fieldtype": "Data", "in_list_view": 1},
-            {"fieldname": "sr_reference_date", "label": "Reference Date", "fieldtype": "Date", "in_list_view": 1},
-            {"fieldname": "description", "label": "Description", "fieldtype": "Small Text", "in_list_view": 1},
-        ],
-        "permissions": [
-            {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "print": 1, "email": 1, "export": 1},
-            {"role": "Healthcare Administrator", "read": 1, "write": 1, "create": 1, "delete": 1},
-        ],
-    }).insert(ignore_permissions=True)
-
 def _ensure_sr_medical_report_doctype():
     """Create SR Medical Report child table."""
     if frappe.db.exists("DocType", "SR Medical Report"):
@@ -630,46 +620,77 @@ def _ensure_sr_medical_report_doctype():
         ]
     }).insert(ignore_permissions=True)
 
-# def _ensure_shiprocket_settings():
-#     """Create Shiprocket Settings master."""
-#     if frappe.db.exists("DocType", "Shiprocket Settings"):
-#         return
+def create_bulk_clearance_doctype():
+    """
+    Idempotently create the 'Bulk Clearance Upload' DocType used to upload CSV and run bulk settle jobs.
+    Run with:
+      bench --site <site> execute sriaas_clinic.setup.masters.create_bulk_clearance_doctype
+    """
+    doctype_name = "Bulk Clearance Upload"
 
-#     frappe.get_doc({
-#         "doctype": "DocType",
-#         "name": "Shiprocket Settings",
-#         "module": MODULE_DEF_NAME,
-#         "is_single": 1,
-#         "fields": [
-#             { "fieldname": "api_email", "fieldtype": "Data", "label": "API Email", "options": "Email", "reqd": 1 },
-#             { "fieldname": "api_password", "fieldtype": "Password", "label": "API Password", "reqd": 1 },
-#             { "fieldname": "pickup_location", "fieldtype": "Data", "label": "Pickup Location", "reqd": 1, "description": "e.g., warehouse_abc" },
-#             { "fieldname": "enable_sync", "fieldtype": "Check", "label": "Enable Sync", "default": "0", "reqd": 1 }
-#         ],
-#         "permissions": [
-#             { "role": "System Manager", "read": 1, "write": 1 },
-#             { "role": "Administrator", "read": 1, "write": 1 }
-#         ]
-#     }).insert(ignore_permissions=True)
+    if frappe.db.exists("DocType", doctype_name):
+        print(f"DocType '{doctype_name}' already exists. Skipping.")
+        return {"skipped": True, "reason": "exists"}
 
-# def _ensure_sr_lead_duplicate():
-#     if frappe.db.exists("DocType", "SR Lead Duplicate"):
-#         return
+    # Basic DocType structure
+    frappe.get_doc({
+        "doctype": "DocType",
+        "name": doctype_name,
+        "module": MODULE_DEF_NAME,
+        "custom": 1,
+        "fields": [
+            {
+                "label": "CSV File",
+                "fieldname": "csv_file",
+                "fieldtype": "Attach",
+                "reqd": 1
+            },
+            {
+                "label": "Run Actual (create entries)",
+                "fieldname": "run_actual",
+                "fieldtype": "Check",
+                "default": "0",
+                "description": "When checked, the backend will create and submit Payment Entries. Otherwise performs dry-run."
+            },
+            {
+                "label": "Process File",
+                "fieldname": "process_button",
+                "fieldtype": "Button"
+            },
+            {
+                "label": "Result / Status",
+                "fieldname": "status_html",
+                "fieldtype": "HTML"
+            },
+            {
+                "label": "Log File",
+                "fieldname": "log_file",
+                "fieldtype": "Data",
+                "description": "URL of generated log CSV (e.g. /files/xxx.csv)"
+            },
+            {
+                "label": "Last Run",
+                "fieldname": "last_run",
+                "fieldtype": "Datetime"
+            }
+        ],
+        # small UX settings
+        "permissions": [
+            {"role": "System Manager", "read": 1, "write": 1, "create": 1},
+            {"role": "Accounts Manager", "read": 1, "write": 1, "create": 1}
+        ],
 
-#     d = frappe.new_doc("DocType")
-#     d.update({
-#         "name": "SR Lead Duplicate",
-#         "module": MODULE_DEF_NAME,
-#         "istable": 1,
-#         "custom": 1,
-#         "fields": [
-#             {"fieldname": "duplicate_lead", "label": "Duplicate Lead", "fieldtype": "Link", "options": "CRM Lead", "in_list_view": 1, "reqd": 1},
-#             {"fieldname": "dup_created_on", "label": "Created On", "fieldtype": "Datetime", "in_list_view": 1},
-#             {"fieldname": "dup_status", "label": "Status", "fieldtype": "Data", "in_list_view": 1},
-#             {"fieldname": "dup_source", "label": "Source", "fieldtype": "Data", "in_list_view": 1},
-#             {"fieldname": "dup_notes", "label": "Notes", "fieldtype": "Small Text"},
-#         ]
-#     })
-#     d.insert(ignore_permissions=True)
+        # use hash autoname to avoid needing naming series setup
+        "autoname": "hash",
+        "is_table": 0,
+        "issingle": 0,
+        "istable": 0,
+        "show_in_calendar": 0,
+        "track_changes": 1,
+        "allow_rename": 0,
+        "module": MODULE_DEF_NAME,
+    }).insert(ignore_permissions=True)
+    frappe.db.commit()
+    print(f"Created DocType '{doctype_name}' in module '{MODULE_DEF_NAME}'.")
 
 # End of sriaas_clinic/setup/masters.py

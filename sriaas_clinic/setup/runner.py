@@ -1,10 +1,11 @@
 # apps/sriaas_clinic/sriaas_clinic/setup/runner.py
 from . import (
     masters,
-    patient, customer, encounter, practitioner,
+    patient, customer, encounter,
+    patient_appointment, practitioner,
     drug_prescription, item_price, item_package,
     sales_invoice, payment_entry,
-    crm_lead, appointment, user,
+    crm_lead, user,
     print_formats, ui,
 )
 
@@ -43,7 +44,7 @@ def setup_all():
     crm_lead.apply()
 
     # Appointment custom fields
-    appointment.apply()
+    patient_appointment.apply()
 
     # User customizations
     user.apply()

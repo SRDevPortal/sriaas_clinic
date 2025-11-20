@@ -20,11 +20,11 @@ def _make_encounter_fields():
 
     create_cf_with_module({
         DT: [
-            {"fieldname":"sr_encounter_type","label":"Encounter Type","fieldtype":"Select","options":"\nFollowup\nOrder","reqd":1,"in_list_view":1,"in_standard_filter":1,"allow_on_submit":1,"insert_after":"naming_series"},
+            {"fieldname":"sr_encounter_type","label":"Encounter Type","fieldtype":"Select","options":"\nFollowup\nOrder","reqd":1,"in_list_view":1,"in_standard_filter":1,"allow_on_submit":1,"insert_after":"naming_series"},            
 
-            {"fieldname":"sr_sales_type","label":"Sales Type","fieldtype":"Link","options":"SR Sales Type","depends_on":'eval:doc.sr_encounter_type=="Order"',"mandatory_depends_on":'eval:doc.sr_encounter_type=="Order"',"insert_after":"sr_encounter_type"},
+            {"fieldname":"sr_encounter_place","label":"Encounter Place","fieldtype":"Select","options":"\nOnline\nOPD","reqd":1,"in_list_view":1,"in_standard_filter":1,"insert_after":"sr_encounter_type"},
 
-            {"fieldname":"sr_encounter_place","label":"Encounter Place","fieldtype":"Select","options":"\nOnline\nOPD","reqd":1,"in_list_view":1,"in_standard_filter":1,"insert_after":"sr_sales_type"},
+            {"fieldname":"sr_sales_type","label":"Sales Type","fieldtype":"Link","options":"SR Sales Type","depends_on":'eval:doc.sr_encounter_type=="Order"',"mandatory_depends_on":'eval:doc.sr_encounter_type=="Order"',"insert_after":"sr_encounter_place"},
 
             {"fieldname":"sr_pe_mobile","label":"Patient Mobile","fieldtype":"Data","read_only":1,"depends_on":"eval:doc.patient","fetch_from":"patient.mobile","in_list_view":1,"in_standard_filter":1, "insert_after":"inpatient_status"},
 
@@ -168,7 +168,6 @@ def _setup_draft_invoice_tab():
                 "insert_after": "clinical_notes",
                 "depends_on": both_cond,
             },
-
             {
                 "fieldname": "sr_delivery_type",
                 "label": "Delivery Type",
@@ -177,8 +176,7 @@ def _setup_draft_invoice_tab():
                 "insert_after": "sr_draft_invoice_tab",
                 "depends_on": both_cond,
                 "mandatory_depends_on": both_cond,
-            },
-            
+            },            
             {"fieldname":"sr_items_list_sb","label":"Items List","fieldtype":"Section Break","collapsible":0,"insert_after":"sr_delivery_type"},
             {"fieldname":"sr_pe_order_items","label":"Order Items","fieldtype":"Table","options":"SR Order Item","insert_after":"sr_items_list_sb"},
             

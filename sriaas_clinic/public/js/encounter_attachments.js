@@ -1,4 +1,4 @@
-// patient_encounter_attachments.js
+// encounter_attachments.js
 // Option A — safe multi-file upload: upload via upload_file, DO NOT add child rows.
 // Renders gallery from File doctype, supports private-file thumbnails by fetching blobs,
 // and opens images in a modal gallery. Blocks autosave while upload is happening.

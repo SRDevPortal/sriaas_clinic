@@ -35,24 +35,22 @@ doctype_js = {
         "public/js/healthcare_practitioner.js",
     ],
     "Patient Encounter": [
-        "public/js/pe_draft_invoice.js",
-        "public/js/pe_order_item.js",
-        "public/js/pe_practitioner_filters.js",
-        "public/js/pe_medication_template.js",
-        "public/js/pe_medication_manual.js",
-        "public/js/pe_medication_filters.js",
-        "public/js/pe_block_autosave_for_proof.js",
-        "public/js/pe_clear_advance.js",
+        # "public/js/encounter_clear_advance.js",
+        "public/js/encounter_draft_invoice.js",
+        "public/js/encounter_order_item.js",
+        "public/js/encounter_practitioner_filters.js",
+        "public/js/encounter_medication_template.js",
+        "public/js/encounter_medication_manual.js",
+        "public/js/encounter_medication_filters.js",
+        "public/js/encounter_block_autosave_for_proof.js",
+        "public/js/encounter_attachments.js"
         "public/js/clinical_history_modal.js",
-        # "public/js/pe_report_gallery.js",
-        # "public/js/pe_block_autosave_for_attachments.js",
-        "public/js/patient_encounter_attachments.js"
     ],
     "Item": [
         "public/js/item_package_weight.js",
     ],
     "Sales Invoice": [
-        "public/js/sales_invoice_draft_payment.js",
+        # "public/js/sales_invoice_draft_payment.js",
         "public/js/sales_invoice_actions.js",
     ],
     "Payment Entry": [
@@ -138,36 +136,40 @@ doc_events = {
         "before_validate": "sriaas_clinic.api.practitioner.compose_full_name",
     },
     "Patient Encounter": {
-        "before_insert": "sriaas_clinic.api.encounter.set_created_by_agent",
+        # Save creator only once
+        "before_insert": "sriaas_clinic.api.encounter_flow.handlers.set_created_by_agent",
+        # Clean + prepare order items and clear old advance fields
         "before_save": [
             "sriaas_clinic.api.encounter_flow.handlers.before_save_patient_encounter",
             "sriaas_clinic.api.encounter_flow.handlers.clear_advance_dependent_fields",
         ],
+        # Only validation (NOT billing)
         "before_submit": "sriaas_clinic.api.encounter_flow.handlers.validate_required_before_submit",
+        # Billing (Sales Invoice + Multi-Mode Draft Payment Entries)
         "on_submit":   "sriaas_clinic.api.encounter_flow.handlers.create_billing_on_submit",
     },
     "Item": {
         "validate": "sriaas_clinic.api.item_package_weight.calculate_pkg_weights",
     },
     "Sales Invoice": {
-        "before_insert": "sriaas_clinic.api.sales_invoice.set_created_by_agent",
+        "before_insert": "sriaas_clinic.api.si_payment_flow.handlers.set_created_by_agent",
         "before_save": [
             "sriaas_clinic.api.sales_invoice_cost.before_save",
-            "sriaas_clinic.api.si_payment_flow.handlers.clear_dp_when_blank",
+            # "sriaas_clinic.api.si_payment_flow.handlers.clear_dp_when_blank",
         ],
-        "before_submit": [
-            "sriaas_clinic.api.si_payment_flow.handlers.validate_dp_before_submit",
-            "sriaas_clinic.api.si_payment_flow.handlers.refresh_payment_history",
-        ],
+        # "before_submit": [
+        #     "sriaas_clinic.api.si_payment_flow.handlers.validate_dp_before_submit",
+        #     "sriaas_clinic.api.si_payment_flow.handlers.refresh_payment_history",
+        # ],
         "on_submit": [
             "sriaas_clinic.api.encounter_flow.handlers.link_pending_payment_entries",
-            "sriaas_clinic.api.si_payment_flow.handlers.create_pe_from_si_dp",
-            "sriaas_clinic.api.si_payment_flow.handlers.refresh_payment_history",
+            # "sriaas_clinic.api.si_payment_flow.handlers.create_pe_from_si_dp",
+            # "sriaas_clinic.api.si_payment_flow.handlers.refresh_payment_history",
             # "sriaas_clinic.api.integrations.n8n_shiprocket.send_to_n8n_on_submit",
         ],
-        "on_update_after_submit": [
-            "sriaas_clinic.api.si_payment_flow.handlers.refresh_payment_history",
-        ],
+        # "on_update_after_submit": [
+        #     "sriaas_clinic.api.si_payment_flow.handlers.refresh_payment_history",
+        # ],
     },
     "Payment Entry": {
         "before_insert": "sriaas_clinic.api.payment_entry.set_created_by_agent",

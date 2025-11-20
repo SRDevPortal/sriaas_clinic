@@ -11,13 +11,12 @@ def apply():
     # Make sure Module Def existss
     ensure_module_def()
     # ensure_module_def("SRIAAS Clinic", "sriaas_clinic")
-
     # Reload any JSON Doctypes you ship with the app (if changed)
     reload_local_json_doctypes(JSON_DOCTYPES)
-
     _ensure_sr_patient_disable_reason()
     _ensure_sr_patient_invoice_view()
     _ensure_sr_patient_payment_view()
+    _ensure_sr_multi_mode_payment()
     _ensure_sr_sales_type()
     _ensure_sr_encounter_status()
     _ensure_sr_order_item()
@@ -145,6 +144,63 @@ def _ensure_sr_patient_payment_view():
             },
             {
                 "fieldname":"sr_payment_proof", "label":"Payment Proof",
+                "fieldtype":"Attach",
+                "in_list_view":1, "columns":3
+            },
+        ],
+        "permissions":[]
+    }).insert(ignore_permissions=True)
+
+def _ensure_sr_multi_mode_payment():
+    """Create SR Multi Mode Payment master."""
+    if frappe.db.exists("DocType", "SR Multi Mode Payment"):
+        return
+
+    frappe.get_doc({
+        "doctype": "DocType",
+        "name": "SR Multi Mode Payment",
+        "module": MODULE_DEF_NAME,
+        "custom": 1,
+        "istable": 1,
+        "editable_grid": 1,
+        "field_order": [
+            "mmp_payment_entry", "mmp_posting_date", "mmp_paid_amount", "mmp_mode_of_payment",
+            "mmp_reference_no", "mmp_reference_date", "mmp_payment_proof"
+        ],
+        "fields": [
+            {
+                "fieldname":"mmp_payment_entry", "label":"Payment Entry",
+                "fieldtype":"Link", "options":"Payment Entry",
+                "in_list_view":1, "columns":2
+            },
+            {
+                "fieldname":"mmp_posting_date", "label":"Posting Date",
+                "fieldtype":"Date",
+                "in_list_view":1, "columns":1
+            },
+            {
+                "fieldname":"mmp_paid_amount", "label":"Paid Amount",
+                "fieldtype":"Currency",
+                "in_list_view":1, "columns":1
+            },
+            {
+                "fieldname":"mmp_mode_of_payment", "label":"Mode of Payment",
+                "fieldtype":"Link",
+                "options":"Mode of Payment",
+                "in_list_view":1, "columns":1
+            },
+            {
+                "fieldname":"mmp_reference_no", "label":"Reference No",
+                "fieldtype":"Data",
+                "in_list_view":1, "columns":1
+            },
+            {
+                "fieldname":"mmp_reference_date", "label":"Reference Date",
+                "fieldtype":"Date",
+                "in_list_view":1, "columns":1
+            },
+            {
+                "fieldname":"mmp_payment_proof", "label":"Payment Proof",
                 "fieldtype":"Attach",
                 "in_list_view":1, "columns":3
             },

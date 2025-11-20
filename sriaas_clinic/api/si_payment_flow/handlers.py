@@ -5,6 +5,14 @@ import frappe
 from frappe.utils import nowdate, flt
 from erpnext.accounts.party import get_party_account
 
+# ----------------------------------
+# small helper: set_created_by_agent
+# ----------------------------------
+def set_created_by_agent(doc, method):
+    """Populate created_by_agent on insert only (so edits don't override)."""
+    if not getattr(doc, "created_by_agent", None):
+        doc.created_by_agent = frappe.session.user
+
 # -----------------------------
 # Draft Payment (input) fields
 # -----------------------------

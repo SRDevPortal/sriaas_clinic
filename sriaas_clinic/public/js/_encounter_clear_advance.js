@@ -1,4 +1,4 @@
-// sriaas_clinic/public/js/patient_encounter_clear_advance.js
+// sriaas_clinic/public/js/pe_clear_advance.js
 frappe.ui.form.on('Patient Encounter', {
   sr_pe_paid_amount(frm) {
     const _flt = (v) => (typeof flt === "function" ? flt(v) : (parseFloat(v) || 0));

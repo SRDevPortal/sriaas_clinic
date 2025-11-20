@@ -16,9 +16,13 @@ def process_file_settle_invoices(file_url="/files/sample.csv", submit=0, clearin
     submit = bool(int(submit))
     try:
         site_path = frappe.get_site_path()
+        # Resolve full path properly for both public & private files
         if file_url.startswith("/files/"):
             csv_path = os.path.join(site_path, "public", file_url.lstrip("/"))
+        elif file_url.startswith("/private/files/"):
+            csv_path = os.path.join(site_path, "private", "files", os.path.basename(file_url))
         else:
+            # fallback (absolute path or unknown)
             csv_path = file_url
 
         if not os.path.exists(csv_path):

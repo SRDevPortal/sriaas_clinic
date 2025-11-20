@@ -22,6 +22,7 @@ def _make_crm_lead_fields():
             # {"fieldname": "sr_lead_department","label": "Department","fieldtype": "Link","options": "Medical Department","insert_after": "sr_lead_personal_cb2"},
             {"fieldname": "sr_lead_message","label": "Message","fieldtype": "Small Text","insert_after": "sr_lead_personal_cb2"},
             {"fieldname": "sr_lead_notes","label": "Notes","fieldtype": "Small Text","insert_after": "sr_lead_message"},
+            {"fieldname": "sr_lead_disease","label": "Disease","fieldtype": "Data","insert_after": "sr_lead_notes"},
 
             # Lead Details
             {"fieldname": "sr_lead_details_tab", "label": "Lead Details", "fieldtype": "Tab Break", "insert_after": "sr_lead_notes"},

@@ -34,9 +34,9 @@ def _make_encounter_fields():
 
             {"fieldname":"sr_pe_age","label":"Patient Age","fieldtype":"Data","read_only":1,"depends_on":"eval:doc.patient","fetch_from":"patient.sr_patient_age","in_list_view":1,"in_standard_filter":1,"insert_after":"sr_pe_deptt"},
 
-            {"fieldname":"sr_encounter_source","label":"Encounter Source","fieldtype":"Link","options":lead_source_dt,"reqd":1,"insert_after":"google_meet_link"},
+            {"fieldname":"sr_encounter_source","label":"Encounter Source","fieldtype":"Link","options":lead_source_dt,"reqd":1,"depends_on":'eval:doc.sr_encounter_place=="Online"',"mandatory_depends_on":'eval:doc.sr_encounter_place=="Online"',"insert_after":"google_meet_link"},
 
-            {"fieldname":"sr_encounter_status","label":"Encounter Status","fieldtype":"Link","options":"SR Encounter Status","reqd":1,"in_list_view":1,"in_standard_filter":1,"allow_on_submit":1,"insert_after":"sr_encounter_source"},
+            {"fieldname":"sr_encounter_status","label":"Encounter Status","fieldtype":"Link","options":"SR Encounter Status","reqd":1,"in_list_view":1,"in_standard_filter":1,"allow_on_submit":1,"depends_on":'eval:doc.sr_encounter_place=="Online"',"mandatory_depends_on":'eval:doc.sr_encounter_place=="Online"',"insert_after":"sr_encounter_source"},
 
             {
                 "fieldname": "created_by_agent",
@@ -50,23 +50,6 @@ def _make_encounter_fields():
         ]
     })
 
-# def _setup_clinical_notes_section():
-#     """Add Clinical Notes section to Patient Encounter"""
-#     create_cf_with_module({
-#         DT: [
-#             {"fieldname":"sr_clinical_notes_sb","label":"Clinical Notes","fieldtype":"Section Break","collapsible":0,"insert_after":"submit_orders_on_save"},
-#             {"fieldname":"sr_complaints","label":"Complaints","fieldtype":"Small Text","insert_after":"sr_clinical_notes_sb"},
-#             {"fieldname":"sr_observations","label":"Observations","fieldtype":"Small Text","insert_after":"sr_complaints"},
-#             {"fieldname":"sr_investigations","label":"Investigations","fieldtype":"Small Text","insert_after":"sr_observations"},
-#             {"fieldname":"sr_notes","label":"Notes","fieldtype":"Small Text","insert_after":"sr_investigations"},
-#             {"fieldname":"sr_diagnosis","label":"Diagnosis","fieldtype":"Small Text","insert_after":"sr_notes"},
-#             # existing attach image field you already added
-#             {"fieldname":"sr_medical_reports","label":"Medical Reports","fieldtype":"Attach","insert_after":"sr_diagnosis"},
-#             # NEW — html preview area for gallery
-#             {"fieldname":"sr_medical_reports_preview","label":"Medical Reports Preview","fieldtype":"HTML","insert_after":"sr_medical_reports"},
-#         ]
-#     })
-
 def _setup_clinical_notes_section():
     """Add Clinical Notes section to Patient Encounter"""
     create_cf_with_module({
@@ -79,10 +62,10 @@ def _setup_clinical_notes_section():
             {"fieldname":"sr_diagnosis","label":"Diagnosis","fieldtype":"Small Text","insert_after":"sr_notes"},
 
             # Use a child Table for multiple reports (one row per report)
-            {"fieldname":"sr_medical_reports_table","label":"Medical Reports","fieldtype":"Table","options":"SR Medical Report","insert_after":"sr_diagnosis"},
+            {"fieldname":"sr_medical_reports_table","label":"Attach Medical Report","fieldtype":"Table","options":"SR Medical Report","insert_after":"sr_diagnosis"},
 
             # HTML preview area for gallery (JS will render here)
-            {"fieldname":"sr_medical_reports_preview","label":"Medical Reports Gallery","fieldtype":"HTML","insert_after":"sr_medical_reports_table"},
+            {"fieldname":"sr_medical_reports_preview","label":"Medical Reports/Attachments","fieldtype":"HTML","insert_after":"sr_medical_reports_table"},
         ]
     })
 
@@ -157,8 +140,7 @@ def _setup_instructions_section():
 
 def _setup_draft_invoice_tab():
     """Add Draft Invoice tab to Patient Encounter for 'Order' type encounters"""
-    both_cond = 'eval:doc.sr_encounter_type=="Order" && doc.sr_encounter_place=="Online"'
-
+    both_cond = 'eval:doc.sr_encounter_type=="Order" && (doc.sr_encounter_place=="Online" || doc.sr_encounter_place=="OPD")'
     create_cf_with_module({
         DT: [
             {
@@ -180,16 +162,32 @@ def _setup_draft_invoice_tab():
             {"fieldname":"sr_items_list_sb","label":"Items List","fieldtype":"Section Break","collapsible":0,"insert_after":"sr_delivery_type"},
             {"fieldname":"sr_pe_order_items","label":"Order Items","fieldtype":"Table","options":"SR Order Item","insert_after":"sr_items_list_sb"},
             
-            {"fieldname":"sr_advance_payment_sb","label":"Advance Payment","fieldtype":"Section Break","collapsible":0,"insert_after":"sr_pe_order_items"},
-            {"fieldname":"sr_pe_paid_amount","label":"Paid Amount","fieldtype":"Currency","insert_after":"sr_advance_payment_sb"},
-            {"fieldname":"sr_advance_payment_cb","fieldtype": "Column Break","insert_after": "sr_pe_paid_amount"},
-            {"fieldname":"sr_pe_mode_of_payment","label":"Mode of Payment","fieldtype":"Link","options":"Mode of Payment", "insert_after":"sr_advance_payment_cb"},
+            # {"fieldname":"sr_advance_payment_sb","label":"Advance Payment","fieldtype":"Section Break","collapsible":0,"insert_after":"enc_multi_payments"},
+            # {"fieldname":"sr_pe_paid_amount","label":"Paid Amount","fieldtype":"Currency","insert_after":"sr_advance_payment_sb"},
+            # {"fieldname":"sr_advance_payment_cb","fieldtype": "Column Break","insert_after": "sr_pe_paid_amount"},
+            # {"fieldname":"sr_pe_mode_of_payment","label":"Mode of Payment","fieldtype":"Link","options":"Mode of Payment", "insert_after":"sr_advance_payment_cb"},
             
-            {"fieldname":"sr_payment_receipt_sb","label":"Payment Receipt","fieldtype":"Section Break","collapsible":0,"insert_after":"sr_pe_mode_of_payment"},
-            {"fieldname":"sr_pe_payment_reference_no","label":"Payment Reference No","fieldtype":"Data","insert_after":"sr_payment_receipt_sb"},
-            {"fieldname":"sr_pe_payment_proof","label":"Payment Proof","fieldtype":"Attach Image","insert_after":"sr_pe_payment_reference_no"},
-            {"fieldname":"sr_payment_receipt_cb","fieldtype": "Column Break","insert_after": "sr_pe_payment_proof"},
-            {"fieldname":"sr_pe_payment_reference_date","label":"Payment Reference Date","fieldtype":"Date","insert_after":"sr_payment_receipt_cb"},
+            # {"fieldname":"sr_payment_receipt_sb","label":"Payment Receipt","fieldtype":"Section Break","collapsible":0,"insert_after":"sr_pe_mode_of_payment"},
+            # {"fieldname":"sr_pe_payment_reference_no","label":"Payment Reference No","fieldtype":"Data","insert_after":"sr_payment_receipt_sb"},
+            # {"fieldname":"sr_pe_payment_proof","label":"Payment Proof","fieldtype":"Attach Image","insert_after":"sr_pe_payment_reference_no"},
+            # {"fieldname":"sr_payment_receipt_cb","fieldtype": "Column Break","insert_after": "sr_pe_payment_proof"},
+            # {"fieldname":"sr_pe_payment_reference_date","label":"Payment Reference Date","fieldtype":"Date","insert_after":"sr_payment_receipt_cb"},
+
+            {
+                "fieldname": "enc_mmp_sb",
+                "label": "Payments",
+                "fieldtype": "Section Break",
+                "collapsible": 0,
+                "insert_after": "sr_pe_order_items"
+            },
+            {
+                "fieldname": "enc_multi_payments",
+                "label": "Payments (Multiple)",
+                "fieldtype": "Table",
+                "options": "SR Multi Mode Payment",
+                "insert_after": "enc_mmp_sb",
+                "in_list_view": 0
+            },
         ]
     })
 
@@ -226,6 +224,9 @@ def _apply_encounter_ui_customizations():
     
     upsert_property_setter(DT, "sr_pe_payment_proof", "read_only", "0", "Check")
 
+    upsert_property_setter(DT, "sr_encounter_source", "reqd", "0", "Check")
+    upsert_property_setter(DT, "sr_encounter_status", "reqd", "0", "Check")
+
     upsert_property_setter(DT, "practitioner", "reqd", "0", "Check")
 
     # --------------------------
@@ -245,6 +246,16 @@ def _apply_encounter_ui_customizations():
         "naming_series",
         "appointment",
         "get_applicable_treatment_plans",
+        # Hide Advance Payment fields
+        "sr_advance_payment_sb",
+        "sr_pe_paid_amount",
+        "sr_advance_payment_cb",
+        "sr_pe_mode_of_payment",
+        "sr_payment_receipt_sb",
+        "sr_pe_payment_reference_no",
+        "sr_pe_payment_proof",
+        "sr_payment_receipt_cb",
+        "sr_pe_payment_reference_date"
     )
     for f in targets:
         cfname = frappe.db.get_value("Custom Field", {"dt": DT, "fieldname": f}, "name")
@@ -258,6 +269,7 @@ def _apply_encounter_ui_customizations():
             upsert_property_setter(DT, f, "hidden", "1", "Check")
             upsert_property_setter(DT, f, "in_list_view", "0", "Check")
             upsert_property_setter(DT, f, "in_standard_filter", "0", "Check")
+            upsert_property_setter(DT, f, "reqd", "0", "Check")
     
     # Set title field to patient_name
     upsert_title_field(DT, "patient_name")

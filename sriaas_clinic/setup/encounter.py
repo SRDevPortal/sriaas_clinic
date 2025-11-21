@@ -60,10 +60,8 @@ def _setup_clinical_notes_section():
             {"fieldname":"sr_investigations","label":"Investigations","fieldtype":"Small Text","insert_after":"sr_observations"},
             {"fieldname":"sr_notes","label":"Notes","fieldtype":"Small Text","insert_after":"sr_investigations"},
             {"fieldname":"sr_diagnosis","label":"Diagnosis","fieldtype":"Small Text","insert_after":"sr_notes"},
-
             # Use a child Table for multiple reports (one row per report)
             {"fieldname":"sr_medical_reports_table","label":"Attach Medical Report","fieldtype":"Table","options":"SR Medical Report","insert_after":"sr_diagnosis"},
-
             # HTML preview area for gallery (JS will render here)
             {"fieldname":"sr_medical_reports_preview","label":"Medical Reports/Attachments","fieldtype":"HTML","insert_after":"sr_medical_reports_table"},
         ]
@@ -159,19 +157,20 @@ def _setup_draft_invoice_tab():
                 "depends_on": both_cond,
                 "mandatory_depends_on": both_cond,
             },            
-            {"fieldname":"sr_items_list_sb","label":"Items List","fieldtype":"Section Break","collapsible":0,"insert_after":"sr_delivery_type"},
-            {"fieldname":"sr_pe_order_items","label":"Order Items","fieldtype":"Table","options":"SR Order Item","insert_after":"sr_items_list_sb"},
-            
-            # {"fieldname":"sr_advance_payment_sb","label":"Advance Payment","fieldtype":"Section Break","collapsible":0,"insert_after":"enc_multi_payments"},
-            # {"fieldname":"sr_pe_paid_amount","label":"Paid Amount","fieldtype":"Currency","insert_after":"sr_advance_payment_sb"},
-            # {"fieldname":"sr_advance_payment_cb","fieldtype": "Column Break","insert_after": "sr_pe_paid_amount"},
-            # {"fieldname":"sr_pe_mode_of_payment","label":"Mode of Payment","fieldtype":"Link","options":"Mode of Payment", "insert_after":"sr_advance_payment_cb"},
-            
-            # {"fieldname":"sr_payment_receipt_sb","label":"Payment Receipt","fieldtype":"Section Break","collapsible":0,"insert_after":"sr_pe_mode_of_payment"},
-            # {"fieldname":"sr_pe_payment_reference_no","label":"Payment Reference No","fieldtype":"Data","insert_after":"sr_payment_receipt_sb"},
-            # {"fieldname":"sr_pe_payment_proof","label":"Payment Proof","fieldtype":"Attach Image","insert_after":"sr_pe_payment_reference_no"},
-            # {"fieldname":"sr_payment_receipt_cb","fieldtype": "Column Break","insert_after": "sr_pe_payment_proof"},
-            # {"fieldname":"sr_pe_payment_reference_date","label":"Payment Reference Date","fieldtype":"Date","insert_after":"sr_payment_receipt_cb"},
+            {
+                "fieldname": "sr_items_list_sb",
+                "label": "Items List",
+                "fieldtype": "Section Break",
+                "collapsible": 0,
+                "insert_after": "sr_delivery_type"
+            },
+            {
+                "fieldname": "sr_pe_order_items",
+                "label": "Order Items",
+                "fieldtype": "Table",
+                "options": "SR Order Item",
+                "insert_after": "sr_items_list_sb"
+            },
 
             {
                 "fieldname": "enc_mmp_sb",
@@ -197,7 +196,7 @@ def _apply_encounter_ui_customizations():
     # --------------------------
     # 1) Collapse selected sections
     # --------------------------
-    for f in ["sb_symptoms","sb_test_prescription","sb_procedures","rehabilitation_section","section_break_33"]:
+    for f in ["sb_symptoms", "sb_test_prescription", "sb_procedures", "rehabilitation_section", "section_break_33"]:
         collapse_section(DT, f, True)
 
     # Rename section for clarity
@@ -205,28 +204,18 @@ def _apply_encounter_ui_customizations():
 
     # Make drug prescription section collapsible
     upsert_property_setter(DT, "sb_drug_prescription", "collapsible", "0", "Check")
-    
+
     # Rename drug prescription section to Ayurvedic Medications
     set_label(DT, "sb_drug_prescription", "Ayurvedic Medications")
     set_label(DT, "drug_prescription", "Ayurvedic Drug Prescription")
 
-    # show when Advance > 0
-    for f in ["sr_pe_mode_of_payment","sr_payment_receipt_sb","sr_pe_payment_reference_no","sr_pe_payment_proof","sr_payment_receipt_cb","sr_pe_payment_reference_date"]:
-        upsert_property_setter(DT, f, "depends_on", "eval:doc.sr_pe_paid_amount>0", "Data")
-
-    # make these *visibly* required when Advance > 0
-    for f in ["sr_pe_mode_of_payment","sr_pe_payment_proof","sr_pe_payment_reference_date"]:
-        upsert_property_setter(DT, f, "mandatory_depends_on", "eval:doc.sr_pe_paid_amount>0", "Data")
-
-    # and ensure the hard `reqd` flag is OFF so draft autosaves won't error
-    for f in ["sr_pe_mode_of_payment","sr_pe_payment_proof","sr_pe_payment_reference_date"]:
-        upsert_property_setter(DT, f, "reqd", "0", "Check")
-    
-    upsert_property_setter(DT, "sr_pe_payment_proof", "read_only", "0", "Check")
+    # NOTE:
+    # Legacy single-advance fields (sr_pe_paid_amount, sr_pe_mode_of_payment, sr_pe_payment_proof, etc.)
+    # have been removed in favor of enc_multi_payments (SR Multi Mode Payment).
+    # Therefore we no longer create depends_on / mandatory_depends_on rules for the deleted fields.
 
     upsert_property_setter(DT, "sr_encounter_source", "reqd", "0", "Check")
     upsert_property_setter(DT, "sr_encounter_status", "reqd", "0", "Check")
-
     upsert_property_setter(DT, "practitioner", "reqd", "0", "Check")
 
     # --------------------------
@@ -246,16 +235,8 @@ def _apply_encounter_ui_customizations():
         "naming_series",
         "appointment",
         "get_applicable_treatment_plans",
-        # Hide Advance Payment fields
-        "sr_advance_payment_sb",
-        "sr_pe_paid_amount",
-        "sr_advance_payment_cb",
-        "sr_pe_mode_of_payment",
-        "sr_payment_receipt_sb",
-        "sr_pe_payment_reference_no",
-        "sr_pe_payment_proof",
-        "sr_payment_receipt_cb",
-        "sr_pe_payment_reference_date"
+        # keep the new multi-payments UI visible (enc_mmp_sb & enc_multi_payments)
+        # don't include deleted legacy single-advance fields here
     )
     for f in targets:
         cfname = frappe.db.get_value("Custom Field", {"dt": DT, "fieldname": f}, "name")
@@ -274,7 +255,7 @@ def _apply_encounter_ui_customizations():
     # Set title field to patient_name
     upsert_title_field(DT, "patient_name")
 
-    # ensure created_by_agent is hidden
+    # ensure created_by_agent is hidden (but not shown in list)
     upsert_property_setter(DT, "created_by_agent", "hidden", "0", "Check")
     upsert_property_setter(DT, "created_by_agent", "in_list_view", "0", "Check")
     upsert_property_setter(DT, "created_by_agent", "in_standard_filter", "0", "Check")

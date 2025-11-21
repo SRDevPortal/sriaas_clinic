@@ -29,16 +29,17 @@ F_SALES_TYPE = "sr_sales_type" # Link SR Sales Type
 
 F_SOURCE = "sr_encounter_source" # Link Lead Source
 F_DELIVERY_TYPE = "sr_delivery_type" # Link SR Delivery Type (in Draft Invoice tab)
-F_MOP = "sr_pe_mode_of_payment" # Link Mode of Payment
-F_PAID_AMT = "sr_pe_paid_amount" # Currency
-F_REF_NO = "sr_pe_payment_reference_no" # Data
-F_REF_DATE = "sr_pe_payment_reference_date" # Date
+# F_MOP = "sr_pe_mode_of_payment" # Link Mode of Payment
+# F_PAID_AMT = "sr_pe_paid_amount" # Currency
+# F_REF_NO = "sr_pe_payment_reference_no" # Data
+# F_REF_DATE = "sr_pe_payment_reference_date" # Date
 ORDER_ITEMS_TABLE = "sr_pe_order_items" # Table → SR Order Item
 
 # Sales Invoice (your custom fields)
 SI_F_ORDER_SOURCE = "sr_si_order_source"
 SI_F_SALES_TYPE = "sr_si_sales_type"
 SI_F_DELIVERY_TYPE = "sr_si_delivery_type"
+
 SI_F_PAYMENT_TERM = "sr_si_payment_term" # Select: Unpaid/Partially Paid/Paid in Full
 SI_F_PAID_AMOUNT = "sr_si_paid_amount"
 SI_F_MOP = "sr_si_mode_of_payment"
@@ -99,17 +100,27 @@ def before_save_patient_encounter(doc, method):
 
 
 def clear_advance_dependent_fields(doc, method):
-    """When advance is blank/zero OR not Order+Online, clear dependent payment fields."""
-    amt = flt(doc.get("sr_pe_paid_amount") or 0)
-    if amt <= 0 or not _is_order_online(doc):
-        for f in ("sr_pe_mode_of_payment",
-                  "sr_pe_payment_proof",
-                  "sr_pe_payment_reference_no",
-                  "sr_pe_payment_reference_date"):
-            if getattr(doc, f, None):
-                setattr(doc, f, None)
-        if getattr(doc, "sr_pe_paid_amount", None) and not _is_order_online(doc):
-            doc.sr_pe_paid_amount = 0
+    """
+    Clear enc_multi_payments unless Encounter is Order + (Online or OPD).
+
+    Note: If you want to treat an empty place as allowed (to match the JS's
+    `|| !place` behaviour), change the `place_allowed` logic to include `not place`.
+    """
+    etype = (str(doc.get(F_ENCOUNTER_TYPE) or "")).strip().lower()
+    place = (str(doc.get(F_ENCOUNTER_PLACE) or "")).strip().lower()
+
+    # Option A: strict — require Order AND place in ("online","opd")
+    place_allowed = place in ("online", "opd")
+
+    # Option B (if you want to match JS which shows when place is empty too):
+    # place_allowed = (place in ("online", "opd")) or (place == "")
+
+    is_order_for_any_place = (etype == "order" and place_allowed)
+
+    if not is_order_for_any_place:
+        # clear child table so payments don't persist accidentally
+        if getattr(doc, "enc_multi_payments", None):
+            doc.enc_multi_payments = []
 
 
 def _has_any_attachment(doc) -> bool:
@@ -123,29 +134,86 @@ def _has_any_attachment(doc) -> bool:
 
 def validate_required_before_submit(doc, method):
     """
-    Block submit if an advance was recorded but required payment info is missing.
-    Runs in before_submit so DRAFT saves (e.g., image autosave) won't be blocked.
+    Validate multi-mode payments when submitting the Encounter.
+
+    Rules:
+      - Only validates for Orders. Change to check place if you want to restrict to Online/OPD.
+      - For each enc_multi_payments row with positive mmp_paid_amount:
+          * mmp_mode_of_payment required
+          * mmp_reference_date required
+          * proof required: either mmp_payment_proof OR any sidebar attachment on the Encounter
     """
-    amt = flt(doc.get("sr_pe_paid_amount") or 0)
-    if amt > 0:
-        missing = []
-        if not (doc.get("sr_pe_mode_of_payment") or "").strip():
-            missing.append("Mode of Payment")
-        if not doc.get("sr_pe_payment_reference_date"):
-            missing.append("Payment Reference Date")
+    try:
+        # Only validate for Orders — switch to `_is_order_online(doc)` if you want Online/OPD only
+        if str(doc.get(F_ENCOUNTER_TYPE) or "").strip().lower() != "order":
+            return
 
-        # Accept either the field or ANY sidebar attachment
-        has_proof = bool(doc.get("sr_pe_payment_proof")) or _has_any_attachment(doc)
-        if not has_proof:
-            missing.append("Payment Proof (upload via field or the Attachments sidebar)")
+        multi = getattr(doc, "enc_multi_payments", []) or []
 
-        if missing:
-            frappe.throw("Please complete before submit: " + ", ".join(missing))
+        # Collect rows that have positive amount (only these must be validated)
+        rows_to_check = []
+        for idx, r in enumerate(multi, start=1):
+            # r may be dict-like (from UI) or object-like (frappe doc)
+            try:
+                amt = flt(r.get("mmp_paid_amount") if isinstance(r, dict) else getattr(r, "mmp_paid_amount", 0) or 0)
+            except Exception:
+                amt = flt((getattr(r, "mmp_paid_amount", 0) if not isinstance(r, dict) else r.get("mmp_paid_amount", 0)) or 0)
+            if amt > 0:
+                rows_to_check.append((idx, r))
+
+        if not rows_to_check:
+            return
+
+        missing_msgs = []
+        for idx, r in rows_to_check:
+            if isinstance(r, dict):
+                mop = (r.get("mmp_mode_of_payment") or "").strip()
+                ref_date = r.get("mmp_reference_date")
+                proof = r.get("mmp_payment_proof")
+                ref_no = r.get("mmp_reference_no")
+            else:
+                mop = (getattr(r, "mmp_mode_of_payment", None) or "").strip()
+                ref_date = getattr(r, "mmp_reference_date", None)
+                proof = getattr(r, "mmp_payment_proof", None)
+                ref_no = getattr(r, "mmp_reference_no", None)
+
+            row_missing = []
+
+            # --- NEW LOGIC ---
+            # If mode is Cash → no reference fields or proof required
+            if mop.lower() == "cash":
+                pass  # nothing required
+
+            else:
+                # Mode ≠ Cash → all reference fields required
+                if not ref_no:
+                    row_missing.append("Reference No")
+                if not ref_date:
+                    row_missing.append("Reference Date")
+
+                # Proof required: either row-level OR sidebar attachment
+                has_proof = bool(proof) or _has_any_attachment(doc)
+                if not has_proof:
+                    row_missing.append("Payment Proof")
+
+            if row_missing:
+                missing_msgs.append(f"Row {idx}: " + ", ".join(row_missing))
+
+        if missing_msgs:
+            frappe.throw("Please complete payment rows before submit: " + " ; ".join(missing_msgs))
+
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "validate_required_before_submit_error")
+        # Re-raise to block submit if validation code itself fails.
+        raise
 
 
 def _is_order_online(doc) -> bool:
-    return (str(doc.get(F_ENCOUNTER_TYPE) or "").lower() == "order"
-            and str(doc.get(F_ENCOUNTER_PLACE) or "").lower() == "online")
+    # Treat Encounter as billable when type == "Order" AND place is either "online" or "opd"
+    return (
+        str(doc.get(F_ENCOUNTER_TYPE) or "").strip().lower() == "order"
+        and str(doc.get(F_ENCOUNTER_PLACE) or "").strip().lower() in ("online", "opd")
+    )
 
 
 def create_billing_on_submit(doc, method):
@@ -157,10 +225,215 @@ def create_billing_on_submit(doc, method):
     _create_billing_drafts_from_encounter(doc)
 
 
+# def _create_billing_drafts_from_encounter(doc):
+#     """The old create_billing_on_save body, but callable from on_submit."""
+#     # import frappe
+#     # from frappe.utils import flt, nowdate
+
+#     # Don’t duplicate
+#     if getattr(doc, "sales_invoice", None):
+#         return
+#     existing = frappe.get_all(
+#         "Sales Invoice",
+#         filters={"docstatus": 0, "remarks": ["like", f"%Patient Encounter: {doc.name}%"]},
+#         pluck="name",
+#         limit=1,
+#     )
+#     if existing:
+#         return
+
+#     # Build SI (DRAFT)
+#     customer = _get_or_create_customer_from_patient(doc)
+#     item_rows = _find_item_rows(doc)
+#     if not item_rows:
+#         return  # no items → skip
+
+#     si = frappe.new_doc("Sales Invoice")
+#     si.update({
+#         "customer": customer,
+#         "company": doc.company,
+#         "posting_date": nowdate(),
+#         "due_date": nowdate(),
+#         "remarks": f"Created from Patient Encounter: {doc.name}",
+#     })
+
+#     si_meta = frappe.get_meta("Sales Invoice")
+#     if si_meta.has_field("patient") and doc.get("patient"):
+#         si.patient = doc.patient
+#         if si_meta.has_field("patient_name"):
+#             si.patient_name = frappe.db.get_value("Patient", doc.patient, "patient_name")
+
+#     if si_meta.has_field(SI_F_SOURCE_ENCOUNTER):
+#         setattr(si, SI_F_SOURCE_ENCOUNTER, doc.name)
+
+#     addr = _get_company_primary_address(doc.company)
+#     if addr:
+#         si.company_address = addr
+
+#     if hasattr(si, "set_warehouse"):
+#         si.set_warehouse = None
+
+#     added = 0
+#     for it in item_rows:
+#         item_code = _row_get(it, "item_code")
+#         if not item_code:
+#             continue
+
+#         qty = flt(_row_get(it, "qty") or 1)
+#         rate = flt(_row_get(it, "rate") or 0)
+#         uom = _row_get(it, "uom")
+#         name = _row_get(it, "item_name")
+#         req_wh = _row_get(it, "warehouse")
+
+#         safe_wh = _coalesce_warehouse(
+#             requested_wh=req_wh,
+#             company=doc.company,
+#             item_code=item_code,
+#         )
+
+#         row = {
+#             "item_code": item_code,
+#             "item_name": name,
+#             "description": it.get("description"),
+#             "uom": uom,
+#             "qty": qty,
+#             "rate": rate,
+#             "conversion_factor": it.get("conversion_factor") or 1,
+#             "income_account": it.get("income_account"),
+#             "cost_center": it.get("cost_center"),
+#         }
+#         if safe_wh:
+#             row["warehouse"] = safe_wh
+
+#         si.append("items", row)
+#         added += 1
+
+#     if added == 0:
+#         frappe.throw("No valid items found in Draft Invoice → Items List. Please enter Item Code, Qty and Rate.")
+
+#     # Map Encounter → SI custom fields
+#     if si_meta.has_field(SI_F_ORDER_SOURCE) and doc.get(F_SOURCE):
+#         setattr(si, SI_F_ORDER_SOURCE, doc.get(F_SOURCE))
+#     if si_meta.has_field(SI_F_SALES_TYPE) and doc.get(F_SALES_TYPE):
+#         setattr(si, SI_F_SALES_TYPE, doc.get(F_SALES_TYPE))
+#     if si_meta.has_field(SI_F_DELIVERY_TYPE) and doc.get(F_DELIVERY_TYPE):
+#         setattr(si, SI_F_DELIVERY_TYPE, doc.get(F_DELIVERY_TYPE))
+
+#     # Taxes & totals
+#     _set_tax_template_by_state(si, customer)
+#     _apply_company_tax_template(si)
+#     si.set_missing_values()
+#     si.calculate_taxes_and_totals()
+#     _company_safe_tax_rows(si)
+#     si.calculate_taxes_and_totals()
+#     _sanitize_si_warehouses(si, doc.company)
+
+#     # UI summary (non-GL)
+#     pre_amt = flt(doc.get(F_PAID_AMT) or 0)
+#     mop = (doc.get(F_MOP) or "").strip()
+#     total = flt(si.rounded_total or si.grand_total or 0)
+
+#     if si_meta.has_field(SI_F_PAID_AMOUNT):
+#         setattr(si, SI_F_PAID_AMOUNT, pre_amt)
+#     if si_meta.has_field(SI_F_MOP):
+#         setattr(si, SI_F_MOP, mop)
+#     if si_meta.has_field(SI_F_PAYMENT_TERM):
+#         if pre_amt <= 0:
+#             setattr(si, SI_F_PAYMENT_TERM, "Unpaid")
+#         elif total > 0 and pre_amt + 1e-6 < total:
+#             setattr(si, SI_F_PAYMENT_TERM, "Partially Paid")
+#         else:
+#             setattr(si, SI_F_PAYMENT_TERM, "Paid in Full")
+#     if si_meta.has_field(SI_F_OUTSTANDING):
+#         setattr(si, SI_F_OUTSTANDING, max(total - pre_amt, 0))
+
+#     # Final guard on warehouses
+#     for r in si.items:
+#         if r.warehouse and not _valid_warehouse(r.warehouse, doc.company):
+#             r.warehouse = None
+
+#     si.flags.ignore_permissions = True
+#     si.insert(ignore_permissions=True)  # KEEP DRAFT
+
+#     # Optional: Draft PE (no references yet) if advance present
+#     # pe_name = None
+#     # if pre_amt > 0 and mop:
+#     #     pe_name = _create_draft_payment_entry(doc, customer, mop, pre_amt, si.name)
+
+#     # Optional: create Draft Payment Entries from enc_multi_payments (one PE per row)
+#     pe_names = []
+#     # enc_multi_payments is the table field you added; adjust if your fieldname differs
+#     multi_rows = getattr(doc, "enc_multi_payments", []) or []
+
+#     # patient display name for nicer party_name on Payment Entry
+#     patient_name = None
+#     try:
+#         patient_name = frappe.db.get_value("Patient", doc.get("patient"), "patient_name") or getattr(doc, "patient_name", None) or getattr(doc, "patient", None)
+#     except Exception:
+#         patient_name = getattr(doc, "patient_name", None) or getattr(doc, "patient", None)
+
+#     # If the encounter has the legacy single-advance fields still set (pre_amt/mop),
+#     # we can also create a PE for that single amount (optional). Here we prioritize multi rows.
+#     # Create a PE per multi payment row where amount > 0
+#     for m in multi_rows:
+#         try:
+#             m_amt = flt(getattr(m, "mmp_paid_amount", 0) or 0)
+#             if m_amt <= 0:
+#                 continue
+#             m_mop = getattr(m, "mmp_mode_of_payment", None) or (doc.get(F_MOP) or None)
+            
+#             # create draft PE for this row
+#             pe_name = _create_draft_payment_entry(doc, customer, m_mop, m_amt, si.name)
+
+#             if not pe_name:
+#                 continue
+
+#             # ensure readable party_name on the PE
+#             try:
+#                 if patient_name:
+#                     frappe.db.set_value("Payment Entry", pe_name, "party_name", patient_name, update_modified=False)
+#             except Exception:
+#                 # non-fatal
+#                 pass
+
+#             pe_names.append(pe_name)
+
+#             # record created PE back on the child row (SR Multi Mode Payment)
+#             try:
+#                 frappe.db.set_value("SR Multi Mode Payment", m.name, {
+#                     "mmp_payment_entry": pe_name,
+#                     "mmp_posting_date": frappe.db.get_value("Payment Entry", pe_name, "posting_date")
+#                 }, update_modified=False)
+#             except Exception:
+#                 frappe.log_error(frappe.get_traceback(),
+#                                  f"Failed linking PE {pe_name} back to encounter child row {m.name}")
+#         except Exception:
+#             frappe.log_error(frappe.get_traceback(), "Failed creating PE from encounter multi payment row")
+
+#     # commit DB changes if any PEs created
+#     if pe_names:
+#         frappe.db.commit()
+
+#     # Back-links on Encounter, if fields exist
+#     if hasattr(doc, "sales_invoice"):
+#         doc.db_set("sales_invoice", si.name, update_modified=False)
+
+#     # set encounter.payment_entry to first created PE (if you still use that field)
+#     if pe_names and hasattr(doc, "payment_entry"):
+#         doc.db_set("payment_entry", pe_names[0], update_modified=False)
+
+#     # show message
+#     if pe_names:
+#         frappe.msgprint(
+#             f"Created Draft Sales Invoice <b>{si.name}</b> and Draft Payment Entry(s) <b>{', '.join(pe_names)}</b>",
+#             alert=True
+#         )
+#     else:
+#         frappe.msgprint(f"Created Draft Sales Invoice <b>{si.name}</b>", alert=True)
+
+
 def _create_billing_drafts_from_encounter(doc):
     """The old create_billing_on_save body, but callable from on_submit."""
-    # import frappe
-    # from frappe.utils import flt, nowdate
 
     # Don’t duplicate
     if getattr(doc, "sales_invoice", None):
@@ -260,24 +533,43 @@ def _create_billing_drafts_from_encounter(doc):
     si.calculate_taxes_and_totals()
     _sanitize_si_warehouses(si, doc.company)
 
-    # UI summary (non-GL)
-    pre_amt = flt(doc.get(F_PAID_AMT) or 0)
-    mop = (doc.get(F_MOP) or "").strip()
-    total = flt(si.rounded_total or si.grand_total or 0)
+    # --- NEW: compute advance summary from enc_multi_payments child table ---
+    multi_rows = getattr(doc, "enc_multi_payments", []) or []
+    total_advance = 0.0
+    mop_list = []
+    for m in multi_rows:
+        try:
+            amt = flt(getattr(m, "mmp_paid_amount", 0) or 0)
+        except Exception:
+            amt = flt((m.get("mmp_paid_amount") if isinstance(m, dict) else getattr(m, "mmp_paid_amount", 0)) or 0)
+        if amt > 0:
+            total_advance += amt
+            # collect mode of payment strings (skip empty)
+            mop_val = (getattr(m, "mmp_mode_of_payment", None) if not isinstance(m, dict) else m.get("mmp_mode_of_payment")) or None
+            if mop_val:
+                mop_list.append(str(mop_val).strip())
 
-    if si_meta.has_field(SI_F_PAID_AMOUNT):
-        setattr(si, SI_F_PAID_AMOUNT, pre_amt)
-    if si_meta.has_field(SI_F_MOP):
-        setattr(si, SI_F_MOP, mop)
-    if si_meta.has_field(SI_F_PAYMENT_TERM):
-        if pre_amt <= 0:
-            setattr(si, SI_F_PAYMENT_TERM, "Unpaid")
-        elif total > 0 and pre_amt + 1e-6 < total:
-            setattr(si, SI_F_PAYMENT_TERM, "Partially Paid")
-        else:
-            setattr(si, SI_F_PAYMENT_TERM, "Paid in Full")
-    if si_meta.has_field(SI_F_OUTSTANDING):
-        setattr(si, SI_F_OUTSTANDING, max(total - pre_amt, 0))
+    # Set SI UI summary fields from the multi-payments (if fields exist)
+    # if si_meta.has_field(SI_F_PAID_AMOUNT):
+    #     setattr(si, SI_F_PAID_AMOUNT, total_advance)
+    # if si_meta.has_field(SI_F_MOP):
+    #     # store comma-joined MOPs (or None)
+    #     setattr(si, SI_F_MOP, ", ".join(dict.fromkeys([m for m in mop_list if m])) or None)
+
+    # Payment term determination using total_advance
+    # pre_amt = total_advance
+    # mop = None  # no single mop at encounter level anymore
+    # total = flt(si.rounded_total or si.grand_total or 0)
+
+    # if si_meta.has_field(SI_F_PAYMENT_TERM):
+    #     if pre_amt <= 0:
+    #         setattr(si, SI_F_PAYMENT_TERM, "Unpaid")
+    #     elif total > 0 and pre_amt + 1e-6 < total:
+    #         setattr(si, SI_F_PAYMENT_TERM, "Partially Paid")
+    #     else:
+    #         setattr(si, SI_F_PAYMENT_TERM, "Paid in Full")
+    # if si_meta.has_field(SI_F_OUTSTANDING):
+    #     setattr(si, SI_F_OUTSTANDING, max(total - pre_amt, 0))
 
     # Final guard on warehouses
     for r in si.items:
@@ -287,35 +579,28 @@ def _create_billing_drafts_from_encounter(doc):
     si.flags.ignore_permissions = True
     si.insert(ignore_permissions=True)  # KEEP DRAFT
 
-    # Optional: Draft PE (no references yet) if advance present
-    # pe_name = None
-    # if pre_amt > 0 and mop:
-    #     pe_name = _create_draft_payment_entry(doc, customer, mop, pre_amt, si.name)
-
-    # Optional: create Draft Payment Entries from enc_multi_payments (one PE per row)
+    # --- CREATE DRAFT PAYMENT ENTRY PER enc_multi_payments ROW (one PE per row) ---
     pe_names = []
-    # enc_multi_payments is the table field you added; adjust if your fieldname differs
-    multi_rows = getattr(doc, "enc_multi_payments", []) or []
-
-    # patient display name for nicer party_name on Payment Entry
     patient_name = None
     try:
         patient_name = frappe.db.get_value("Patient", doc.get("patient"), "patient_name") or getattr(doc, "patient_name", None) or getattr(doc, "patient", None)
     except Exception:
         patient_name = getattr(doc, "patient_name", None) or getattr(doc, "patient", None)
 
-    # If the encounter has the legacy single-advance fields still set (pre_amt/mop),
-    # we can also create a PE for that single amount (optional). Here we prioritize multi rows.
-    # Create a PE per multi payment row where amount > 0
     for m in multi_rows:
         try:
             m_amt = flt(getattr(m, "mmp_paid_amount", 0) or 0)
             if m_amt <= 0:
                 continue
-            m_mop = getattr(m, "mmp_mode_of_payment", None) or (doc.get(F_MOP) or None)
-            
-            # create draft PE for this row
-            pe_name = _create_draft_payment_entry(doc, customer, m_mop, m_amt, si.name)
+            # prefer row-level mop, fallback to None (no doc-level mop)
+            m_mop = getattr(m, "mmp_mode_of_payment", None) or None
+
+            # row-level reference fields (if present)
+            m_ref_no = getattr(m, "mmp_reference_no", None) or (m.get("mmp_reference_no") if isinstance(m, dict) else None)
+            m_ref_date = getattr(m, "mmp_reference_date", None) or (m.get("mmp_reference_date") if isinstance(m, dict) else None)
+
+            # create draft PE for this row, pass row-level references
+            pe_name = _create_draft_payment_entry(doc, customer, m_mop, m_amt, si.name, reference_no=m_ref_no, reference_date=m_ref_date)
 
             if not pe_name:
                 continue
@@ -332,13 +617,14 @@ def _create_billing_drafts_from_encounter(doc):
 
             # record created PE back on the child row (SR Multi Mode Payment)
             try:
+                # m.name should be the child row name (frappe child doc)
                 frappe.db.set_value("SR Multi Mode Payment", m.name, {
                     "mmp_payment_entry": pe_name,
                     "mmp_posting_date": frappe.db.get_value("Payment Entry", pe_name, "posting_date")
                 }, update_modified=False)
             except Exception:
                 frappe.log_error(frappe.get_traceback(),
-                                 f"Failed linking PE {pe_name} back to encounter child row {m.name}")
+                                 f"Failed linking PE {pe_name} back to encounter child row {getattr(m,'name', '<no-name>')}")
         except Exception:
             frappe.log_error(frappe.get_traceback(), "Failed creating PE from encounter multi payment row")
 
@@ -413,8 +699,11 @@ def link_pending_payment_entries(si, method):
 
 
 # ---------------- Helpers ----------------
-def _create_draft_payment_entry(encounter, customer, mop, amount, intended_si_name) -> str:
-    """Create a draft Payment Entry (ignore_permissions) and return name."""
+def _create_draft_payment_entry(encounter, customer, mop, amount, intended_si_name, reference_no=None, reference_date=None) -> str:
+    """Create a draft Payment Entry (ignore_permissions) and return name.
+
+    Now accepts optional reference_no and reference_date (from multi-payment row).
+    """
     pe = frappe.new_doc("Payment Entry")
     pe.update({
         "payment_type": "Receive",
@@ -427,8 +716,9 @@ def _create_draft_payment_entry(encounter, customer, mop, amount, intended_si_na
         "party_name": getattr(encounter, "patient_name", None) or (frappe.db.get_value("Patient", encounter.get("patient"), "patient_name") if encounter.get("patient") else None),
         "paid_amount": amount,
         "received_amount": amount,
-        "reference_no": encounter.get(F_REF_NO),
-        "reference_date": encounter.get(F_REF_DATE),
+        # row-level reference fields (may be None)
+        "reference_no": reference_no,
+        "reference_date": reference_date,
     })
 
     # HRMS override expects party_account prefilled

@@ -6,6 +6,14 @@ from frappe.model.naming import make_autoname
 # Match series: HLC-PAT-2025-000001
 _SERIES_RX = re.compile(r"^HLC-PAT-\d{4}-\d+$")
 
+# ----------------------------------
+# small helper: set_created_by_agent
+# ----------------------------------
+def set_created_by_agent(doc, method):
+    """Populate created_by_agent on insert only (so edits don't override)."""
+    if not getattr(doc, "created_by_agent", None):
+        doc.created_by_agent = frappe.session.user
+
 # ----------------------------
 # A) Patient ID auto-generator
 # ----------------------------

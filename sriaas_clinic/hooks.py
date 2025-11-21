@@ -109,8 +109,9 @@ doc_events = {
         # "on_update": "sriaas_clinic.api.patient_appointment.on_update_create_payments",
     },
     "Patient": {
-        "before_insert": [
+        "before_insert": [            
             "sriaas_clinic.api.patient.set_sr_patient_id",
+            "sriaas_clinic.api.patient.set_created_by_agent",
             "sriaas_clinic.api.patient.validate_unique_contact_mobile",
         ],
         "autoname": "sriaas_clinic.api.patient.force_patient_series",

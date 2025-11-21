@@ -26,7 +26,6 @@ def set_created_by_agent(doc, method):
 F_ENCOUNTER_TYPE = "sr_encounter_type" # "Followup" / "Order"
 F_ENCOUNTER_PLACE = "sr_encounter_place" # "Online" / "OPD"
 F_SALES_TYPE = "sr_sales_type" # Link SR Sales Type
-
 F_SOURCE = "sr_encounter_source" # Link Lead Source
 F_DELIVERY_TYPE = "sr_delivery_type" # Link SR Delivery Type (in Draft Invoice tab)
 # F_MOP = "sr_pe_mode_of_payment" # Link Mode of Payment
@@ -37,6 +36,7 @@ ORDER_ITEMS_TABLE = "sr_pe_order_items" # Table → SR Order Item
 
 # Sales Invoice (your custom fields)
 SI_F_ORDER_SOURCE = "sr_si_order_source"
+SI_F_ENCOUNTER_PLACE = "sr_si_encounter_place"
 SI_F_SALES_TYPE = "sr_si_sales_type"
 SI_F_DELIVERY_TYPE = "sr_si_delivery_type"
 
@@ -519,6 +519,8 @@ def _create_billing_drafts_from_encounter(doc):
     # Map Encounter → SI custom fields
     if si_meta.has_field(SI_F_ORDER_SOURCE) and doc.get(F_SOURCE):
         setattr(si, SI_F_ORDER_SOURCE, doc.get(F_SOURCE))
+    if si_meta.has_field(SI_F_ENCOUNTER_PLACE) and doc.get(F_ENCOUNTER_PLACE):
+        setattr(si, SI_F_ENCOUNTER_PLACE, doc.get(F_ENCOUNTER_PLACE))
     if si_meta.has_field(SI_F_SALES_TYPE) and doc.get(F_SALES_TYPE):
         setattr(si, SI_F_SALES_TYPE, doc.get(F_SALES_TYPE))
     if si_meta.has_field(SI_F_DELIVERY_TYPE) and doc.get(F_DELIVERY_TYPE):
@@ -601,6 +603,20 @@ def _create_billing_drafts_from_encounter(doc):
 
             # create draft PE for this row, pass row-level references
             pe_name = _create_draft_payment_entry(doc, customer, m_mop, m_amt, si.name, reference_no=m_ref_no, reference_date=m_ref_date)
+
+            pe_name = _create_draft_payment_entry(
+                doc,
+                customer,
+                m_mop,
+                m_amt,
+                si.name,
+                reference_no=m_ref_no,
+                reference_date=m_ref_date,
+                order_source=doc.get(F_SOURCE),
+                encounter_place=doc.get(F_ENCOUNTER_PLACE),
+                sales_type=doc.get(F_SALES_TYPE),
+                delivery_type=doc.get(F_DELIVERY_TYPE),
+            )
 
             if not pe_name:
                 continue
@@ -699,9 +715,22 @@ def link_pending_payment_entries(si, method):
 
 
 # ---------------- Helpers ----------------
-def _create_draft_payment_entry(encounter, customer, mop, amount, intended_si_name, reference_no=None, reference_date=None) -> str:
-    """Create a draft Payment Entry (ignore_permissions) and return name.
-
+# def _create_draft_payment_entry(encounter, customer, mop, amount, intended_si_name, reference_no=None, reference_date=None) -> str:
+def _create_draft_payment_entry(
+    encounter,
+    customer,
+    mop,
+    amount,
+    intended_si_name,
+    reference_no=None,
+    reference_date=None,
+    order_source=None,
+    encounter_place=None,
+    sales_type=None,
+    delivery_type=None,
+) -> str:
+    """
+    Create a draft Payment Entry (ignore_permissions) and return name.
     Now accepts optional reference_no and reference_date (from multi-payment row).
     """
     pe = frappe.new_doc("Payment Entry")
@@ -713,10 +742,12 @@ def _create_draft_payment_entry(encounter, customer, mop, amount, intended_si_na
         "party_type": "Customer",
         "party": customer,
         # set readable party_name so list view shows friendly name
-        "party_name": getattr(encounter, "patient_name", None) or (frappe.db.get_value("Patient", encounter.get("patient"), "patient_name") if encounter.get("patient") else None),
+        "party_name": getattr(encounter, "patient_name", None) or (
+            frappe.db.get_value("Patient", encounter.get("patient"), "patient_name")
+            if encounter.get("patient") else None
+        ),
         "paid_amount": amount,
         "received_amount": amount,
-        # row-level reference fields (may be None)
         "reference_no": reference_no,
         "reference_date": reference_date,
     })
@@ -735,6 +766,21 @@ def _create_draft_payment_entry(encounter, customer, mop, amount, intended_si_na
     # store intended SI id so we can auto-link on SI submit
     if hasattr(pe, "intended_sales_invoice"):
         pe.intended_sales_invoice = intended_si_name
+    
+    # --- NEW: map Encounter custom fields onto Payment Entry IF those fields exist ---
+    try:
+        pe_meta = frappe.get_meta("Payment Entry")
+        if order_source and pe_meta.has_field("sr_pe_order_source"):
+            pe.sr_pe_order_source = order_source
+        if encounter_place and pe_meta.has_field("sr_pe_encounter_place"):
+            pe.sr_pe_encounter_place = encounter_place
+        if sales_type and pe_meta.has_field("sr_pe_sales_type"):
+            pe.sr_pe_sales_type = sales_type
+        if delivery_type and pe_meta.has_field("sr_pe_delivery_type"):
+            pe.sr_pe_delivery_type = delivery_type
+    except Exception:
+        # non-fatal if meta lookup fails
+        frappe.log("Failed to map encounter meta fields to Payment Entry (non-fatal)")
 
     pe.set_missing_values()
     pe.flags.ignore_permissions = True

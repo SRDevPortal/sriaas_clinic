@@ -1,6 +1,6 @@
 # sriaas_clinic/setup/sales_invoice.py
 import frappe
-from .utils import create_cf_with_module, upsert_property_setter, upsert_title_field
+from .utils import create_cf_with_module, upsert_property_setter, upsert_title_field, ensure_field_after
 
 PARENT = "Sales Invoice"
 CHILD = "Sales Invoice Item"
@@ -9,7 +9,7 @@ RIGHT_COL_CB = "column_break1"
 
 def apply():
     _make_invoice_fields()
-    _setup_payment_history_section()
+    # _setup_payment_history_section()
     # _setup_advance_payment_tab()
     if frappe.db.exists("DocType", PARENT) and frappe.db.exists("DocType", CHILD):
         _setup_cost_section()
@@ -42,10 +42,15 @@ def _make_invoice_fields():
     create_cf_with_module({
         PARENT: [
             {"fieldname": "sr_si_patient_id","label": "Patient ID","fieldtype": "Data","read_only": 1,"insert_after": "customer_name","fetch_from": "patient.sr_patient_id"},
-            {"fieldname": "sr_si_patient_department","label": "Department","fieldtype": "Link","options": "Medical Department","in_list_view":1,"in_standard_filter":1,"read_only": 1,"insert_after": "sr_si_patient_id","fetch_from": "patient.sr_medical_department"},
+            
+            {"fieldname": "sr_si_patient_department","label": "Patient Department","fieldtype": "Link","options": "Medical Department","in_list_view":1,"in_standard_filter":1,"read_only": 1,"insert_after": "sr_si_patient_id","fetch_from": "patient.sr_medical_department"},
 
             {"fieldname": "sr_si_order_source","label": "Order Source","fieldtype": "Link","options": lead_source_dt,"in_list_view":1,"in_standard_filter":1,"insert_after": insert_anchor},
+
+            {"fieldname": "sr_si_encounter_place","label": "Encounter Place","fieldtype": "Data","in_list_view":1,"in_standard_filter":1,"insert_after": "sr_si_delivery_type",},
+
             {"fieldname": "sr_si_sales_type","label": "Sales Type","fieldtype": "Link","options": "SR Sales Type","in_list_view":1,"in_standard_filter":1,"insert_after": "sr_si_order_source",},
+            
             {"fieldname": "sr_si_delivery_type","label": "Delivery Type","fieldtype": "Link","options": "SR Delivery Type","in_list_view":1,"in_standard_filter":1,"allow_on_submit":1,"insert_after": "sr_si_sales_type"},
 
             {
@@ -57,29 +62,32 @@ def _make_invoice_fields():
                 # do NOT set default here — we populate per-doc in before_insert
                 "insert_after": "due_date"
             },
+
+            {"fieldname":"sr_si_track_sb","label":"Order Tracking Details","fieldtype":"Section Break","collapsible":1,"insert_after":"gst_breakup_table"},
         ]
     })
 
 
-def _setup_payment_history_section():
-    """
-    Add 'Payment History' section after 'advances' with read-only summary fields.
-    """
-    create_cf_with_module({
-        PARENT: [
-            {"fieldname": "sr_si_payment_history_sb","label": "Payment History","fieldtype": "Section Break","insert_after": "advances"},
+# def _setup_payment_history_section():
+#     """
+#     Add 'Payment History' section after 'advances' with read-only summary fields.
+#     """
+#     create_cf_with_module({
+#         PARENT: [
+#             {"fieldname": "sr_si_payment_history_sb","label": "Payment History","fieldtype": "Section Break","insert_after": "advances"},
             
-            {"fieldname": "sr_si_payment_term","label": "Payment Term","fieldtype": "Select","options": "\nUnpaid\nPartially Paid\nPaid in Full","in_list_view":1,"in_standard_filter":1,"read_only": 1,"insert_after": "sr_si_payment_history_sb"},
+#             {"fieldname": "sr_si_payment_term","label": "Payment Term","fieldtype": "Select","options": "\nUnpaid\nPartially Paid\nPaid in Full","in_list_view":1,"in_standard_filter":1,"read_only": 1,"insert_after": "sr_si_payment_history_sb"},
             
-            {"fieldname": "sr_si_paid_amount","label": "Paid Amount","fieldtype": "Currency","read_only": 1,"insert_after": "sr_si_payment_term"},
+#             {"fieldname": "sr_si_paid_amount","label": "Paid Amount","fieldtype": "Currency","read_only": 1,"insert_after": "sr_si_payment_term"},
             
-            {"fieldname": "sr_si_payment_history_cb","fieldtype": "Column Break","insert_after": "sr_si_paid_amount"},
+#             {"fieldname": "sr_si_payment_history_cb","fieldtype": "Column Break","insert_after": "sr_si_paid_amount"},
             
-            {"fieldname": "sr_si_mode_of_payment","label": "Mode of Payment","fieldtype": "Link","options": "Mode of Payment","read_only": 1,"insert_after": "sr_si_payment_history_cb"},
+#             {"fieldname": "sr_si_mode_of_payment","label": "Mode of Payment","fieldtype": "Link","options": "Mode of Payment","read_only": 1,"insert_after": "sr_si_payment_history_cb"},
             
-            {"fieldname": "sr_si_outstanding_amount","label": "Outstanding Amount","fieldtype": "Currency","read_only": 1,"insert_after": "sr_si_mode_of_payment"},
-        ]
-    })
+#             {"fieldname": "sr_si_outstanding_amount","label": "Outstanding Amount","fieldtype": "Currency","read_only": 1,"insert_after": "sr_si_mode_of_payment"},
+#         ]
+#     })
+
 
 # def _setup_advance_payment_tab():
 #     """
@@ -207,6 +215,12 @@ def _setup_invoice_item_fields():
 
 def _apply_invoice_ui_customizations():
     """Apply various UI customizations to Sales Invoice"""
+
+    ensure_field_after(PARENT, "sr_si_order_source", "sr_si_track_sb")
+    ensure_field_after(PARENT, "sr_si_encounter_place", "sr_si_order_source")
+    ensure_field_after(PARENT, "sr_si_sales_type", "sr_si_encounter_place")
+    ensure_field_after(PARENT, "sr_si_delivery_type", "sr_si_sales_type")
+
 
     # Hide unwanted flags/fields
     targets = (

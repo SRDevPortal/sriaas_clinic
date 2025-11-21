@@ -56,6 +56,16 @@ def _make_patient_fields():
             {"fieldname": "sr_followup_marker_tab","label":"Follow-up Marker","fieldtype":"Tab Break","insert_after":"sr_pex_launcher_html"},
             {"fieldname": "sr_followup_day","label": "Follow-up Day","fieldtype": "Select","options": "\nMon\nTue\nWed\nThu\nFri\nSat","insert_after": "sr_followup_marker_tab","read_only": 1,"in_list_view": 1,"in_standard_filter": 1},
             {"fieldname": "sr_followup_id","label": "Follow-up ID","fieldtype": "Select","options": "\n0\n1\n2\n3\n4\n5\n6\n7\n8\n9","insert_after": "sr_followup_day","read_only": 1,"in_list_view": 1,"in_standard_filter": 1},
+
+            {
+                "fieldname": "created_by_agent",
+                "label": "Created By",
+                "fieldtype": "Link",
+                "options": "User",
+                "read_only": 1,
+                # do NOT set default here — we populate per-doc in before_insert
+                "insert_after": "sr_followup_status",
+            },
         ]
     })
 

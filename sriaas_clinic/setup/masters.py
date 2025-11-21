@@ -30,6 +30,8 @@ def apply():
     _ensure_sr_lead_platform()
     _ensure_sr_lead_source()
     _ensure_sr_lead_disposition()
+    _ensure_dpt_disease()
+    _ensure_dpt_language()
     _ensure_sr_medical_report_doctype()
     create_bulk_clearance_doctype()
 
@@ -622,6 +624,56 @@ def _ensure_sr_lead_disposition():
         "permissions": [
             { "role": "System Manager", "read":1, "write":1, "create":1, "delete":1, "print":1, "email":1, "export":1 },
             { "role": "Healthcare Administrator", "read":1, "write":1, "create":1, "delete":1 },
+        ],
+    }).insert(ignore_permissions=True)
+
+def _ensure_dpt_disease():
+    """Create DPT Disease master."""
+    if frappe.db.exists("DocType", "DPT Disease"):
+        return
+
+    frappe.get_doc({
+        "doctype": "DocType",
+        "name": "DPT Disease",
+        "module": MODULE_DEF_NAME,
+        "naming_rule": "By fieldname",
+        "autoname": "field:dept_disease_name",
+        "title_field": "dept_disease_name",
+        "field_order": ["dept_disease_name"],
+        "fields":[
+            {
+                "fieldname":"dept_disease_name","label":"Disease Name","fieldtype":"Data","reqd":1,"in_list_view":1,"unique":1
+            }
+        ],
+        "permissions":[
+            {
+                "role":"System Manager","read":1,"write":1,"create":1,"delete":1,"print":1,"email":1,"export":1
+            }
+        ],
+    }).insert(ignore_permissions=True)
+
+def _ensure_dpt_language():
+    """Create DPT Language master."""
+    if frappe.db.exists("DocType", "DPT Language"):
+        return
+
+    frappe.get_doc({
+        "doctype": "DocType",
+        "name": "DPT Language",
+        "module": MODULE_DEF_NAME,
+        "naming_rule": "By fieldname",
+        "autoname": "field:dept_language_name",
+        "title_field": "dept_language_name",
+        "field_order": ["dept_language_name"],
+        "fields":[
+            {
+                "fieldname":"dept_language_name","label":"Language","fieldtype":"Data","reqd":1,"in_list_view":1,"unique":1
+            }
+        ],
+        "permissions":[
+            {
+                "role":"System Manager","read":1,"write":1,"create":1,"delete":1,"print":1,"email":1,"export":1
+            }
         ],
     }).insert(ignore_permissions=True)
 

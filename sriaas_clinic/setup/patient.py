@@ -1,5 +1,5 @@
 # sriaas_clinic/setup/patient.py
-from .utils import create_cf_with_module, upsert_property_setter, set_label
+from .utils import create_cf_with_module, upsert_property_setter, ensure_field_after
 
 DT = "Patient"
 
@@ -15,10 +15,32 @@ def _make_patient_fields():
             
             {"fieldname": "sr_patient_id","label": "Patient ID","fieldtype": "Data","insert_after": "sr_medical_department","read_only": 1,"unique": 1,"in_list_view": 1,"in_standard_filter": 1,"search_index": 1},
             
-            {"fieldname": "sr_practo_id","label": "Practo ID","fieldtype": "Data", "insert_after": "sr_patient_id","in_standard_filter": 0},
+            {"fieldname": "sr_practo_id","label": "Practo ID","fieldtype": "Data","in_standard_filter": 0, "insert_after": "sr_patient_id"},
             
-            {"fieldname": "sr_patient_age","label":"Patient Age","fieldtype":"Data","insert_after":"age_html","allow_in_quick_entry":1},
-            
+            {"fieldname": "sr_patient_age","label":"Patient Age","fieldtype":"Data","allow_in_quick_entry":1,"insert_after":"age_html"},
+
+            {"fieldname": "sr_dpt_disease",
+             "label":"Disease",
+             "fieldtype":"Link",
+             "options":"DPT Disease",
+             "depends_on": 'eval:doc.sr_medical_department=="Regional"',
+             "mandatory_depends_on": 'eval:doc.sr_medical_department=="Regional"',
+             "in_list_view":1,
+             "in_standard_filter":1,
+             "allow_in_quick_entry":1,
+             "insert_after":"sr_patient_age"},
+
+            {"fieldname": "sr_dpt_language",
+             "label":"Language",
+             "fieldtype":"Link",
+             "options":"DPT Language",
+             "depends_on": 'eval:doc.sr_medical_department=="Regional"',
+             "mandatory_depends_on": 'eval:doc.sr_medical_department=="Regional"',
+             "in_list_view":1,
+             "in_standard_filter":1,
+             "allow_in_quick_entry":1,
+             "insert_after":"sr_dpt_disease"},
+
             {"fieldname": "sr_followup_disable_reason","label":"Followup Disable Reason","fieldtype":"Link","options":"SR Patient Disable Reason","insert_after":"status","depends_on":'eval:doc.status=="Disabled"',"mandatory_depends_on":'eval:doc.status=="Disabled"'},
             {"fieldname": "sr_followup_status","label":"Followup Status","fieldtype":"Select","options":"\nPending\nDone","insert_after":"user_id","in_list_view":1,"in_standard_filter":1},
 
@@ -54,6 +76,9 @@ def _apply_patient_ui_customizations():
     upsert_property_setter(DT, "age", "in_list_view", "0", "Check")
     upsert_property_setter(DT, "age", "in_standard_filter", "0", "Check")
     upsert_property_setter(DT, "uid", "in_standard_filter", "0", "Check")
+
+    ensure_field_after(DT, "sr_dpt_disease", "sr_medical_department")
+    ensure_field_after(DT, "sr_dpt_language", "sr_dpt_disease")
 
     # Disable Allow Rename on Patient DocType
     upsert_property_setter(DT, "allow_rename", "default", "0", "Check")

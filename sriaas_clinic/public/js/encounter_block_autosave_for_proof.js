@@ -1,6 +1,6 @@
 // sriaas_clinic/public/js/patient_encounter_block_autosave_for_proof.js
 (function () {
-  const FIELD = 'sr_pe_payment_proof';
+  const FIELD = 'mmp_payment_proof';
   const CLEAR_AFTER_MS = 1500; // safety window to skip only the next autosave
 
   frappe.ui.form.on('Patient Encounter', {

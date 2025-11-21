@@ -16,12 +16,14 @@ def apply():
         _setup_invoice_item_fields()
     _apply_invoice_ui_customizations()
 
+
 def _lead_source_dt() -> str:
     if frappe.db.exists("DocType", "SR Lead Source"):
         return "SR Lead Source"
     if frappe.db.exists("DocType", "CRM Lead Source"):
         return "CRM Lead Source"
     return "Lead Source"
+
 
 def _make_invoice_fields():
     """
@@ -58,6 +60,7 @@ def _make_invoice_fields():
         ]
     })
 
+
 def _setup_payment_history_section():
     """
     Add 'Payment History' section after 'advances' with read-only summary fields.
@@ -65,10 +68,15 @@ def _setup_payment_history_section():
     create_cf_with_module({
         PARENT: [
             {"fieldname": "sr_si_payment_history_sb","label": "Payment History","fieldtype": "Section Break","insert_after": "advances"},
+            
             {"fieldname": "sr_si_payment_term","label": "Payment Term","fieldtype": "Select","options": "\nUnpaid\nPartially Paid\nPaid in Full","in_list_view":1,"in_standard_filter":1,"read_only": 1,"insert_after": "sr_si_payment_history_sb"},
+            
             {"fieldname": "sr_si_paid_amount","label": "Paid Amount","fieldtype": "Currency","read_only": 1,"insert_after": "sr_si_payment_term"},
+            
             {"fieldname": "sr_si_payment_history_cb","fieldtype": "Column Break","insert_after": "sr_si_paid_amount"},
+            
             {"fieldname": "sr_si_mode_of_payment","label": "Mode of Payment","fieldtype": "Link","options": "Mode of Payment","read_only": 1,"insert_after": "sr_si_payment_history_cb"},
+            
             {"fieldname": "sr_si_outstanding_amount","label": "Outstanding Amount","fieldtype": "Currency","read_only": 1,"insert_after": "sr_si_mode_of_payment"},
         ]
     })
@@ -125,6 +133,7 @@ def _setup_payment_history_section():
 #     for f in ["si_dp_mode_of_payment", "si_dp_reference_date"]:
 #         upsert_property_setter(PARENT, f, "reqd", "0", "Check")
 
+
 def _setup_cost_section():
     create_cf_with_module({
         PARENT: [
@@ -165,6 +174,7 @@ def _setup_cost_section():
         ]
     })
 
+
 def _setup_invoice_item_fields():
     create_cf_with_module({
         CHILD: [
@@ -194,6 +204,7 @@ def _setup_invoice_item_fields():
         ]
     })
 
+
 def _apply_invoice_ui_customizations():
     """Apply various UI customizations to Sales Invoice"""
 
@@ -208,7 +219,24 @@ def _apply_invoice_ui_customizations():
         "allocate_advances_automatically",
         "get_advances",
         "advances",
-        "redeem_loyalty_points"
+        "redeem_loyalty_points",
+        # Hide payment history fields (we have our own section)
+        "sr_si_payment_history_sb",
+        "sr_si_payment_term",
+        "sr_si_paid_amount",
+        "sr_si_payment_history_cb",
+        "sr_si_mode_of_payment",
+        "sr_si_outstanding_amount",
+        # "si_draft_payment_tab",
+        # "si_dp_section",
+        # "si_dp_paid_amount",
+        # "si_dp_cb",
+        # "si_dp_mode_of_payment",
+        # "si_dp_receipt_section",
+        # "si_dp_reference_no",
+        # "si_dp_cb2",
+        # "si_dp_reference_date",
+        # "si_dp_payment_proof",
     )
 
     meta = frappe.get_meta(PARENT)

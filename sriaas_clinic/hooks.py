@@ -30,6 +30,7 @@ doctype_js = {
         "public/js/patient_payments.js",
         "public/js/patient_pex_launcher.js",
         "public/js/clinical_history_modal.js",
+        "public/js/patient_regional.js",
     ],
     "Healthcare Practitioner": [
         "public/js/healthcare_practitioner.js",

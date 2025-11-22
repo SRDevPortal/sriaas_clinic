@@ -20,23 +20,15 @@ web_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
 
 # include js in doctype views
 doctype_js = {
-    "CRM Lead": [
-        "public/js/crm_lead_disposition_filter.js",
-        "public/js/crm_lead_lock_fields.js",
-        "public/js/crm_lead_pex_launcher.js",
-    ],
     "Patient": [
         "public/js/patient_invoices.js",
         "public/js/patient_payments.js",
         "public/js/patient_pex_launcher.js",
-        "public/js/clinical_history_modal.js",
         "public/js/patient_regional.js",
-    ],
-    "Healthcare Practitioner": [
-        "public/js/healthcare_practitioner.js",
+        "public/js/clinical_history_modal.js",
     ],
     "Patient Encounter": [
-        # "public/js/encounter_clear_advance.js",
+        # "public/js/_encounter_clear_advance.js",
         "public/js/encounter_draft_invoice.js",
         "public/js/encounter_order_item.js",
         "public/js/encounter_practitioner_filters.js",
@@ -44,20 +36,28 @@ doctype_js = {
         "public/js/encounter_medication_manual.js",
         "public/js/encounter_medication_filters.js",
         "public/js/encounter_block_autosave_for_proof.js",
-        "public/js/encounter_attachments.js"
+        "public/js/encounter_attachments.js",
         "public/js/clinical_history_modal.js",
+    ],
+    "Healthcare Practitioner": [
+        "public/js/healthcare_practitioner.js",
+    ],
+    "CRM Lead": [
+        "public/js/crm_lead_disposition_filter.js",
+        "public/js/crm_lead_lock_fields.js",
+        "public/js/crm_lead_pex_launcher.js",
     ],
     "Item": [
         "public/js/item_package_weight.js",
     ],
     "Sales Invoice": [
-        # "public/js/sales_invoice_draft_payment.js",
+        # "public/js/_sales_invoice_draft_payment.js",
         "public/js/sales_invoice_actions.js",
     ],
     "Payment Entry": [
         "public/js/payment_entry_outstanding_dialog.js",
         "public/js/payment_entry_actions.js",
-        # "public/js/payment_entry_extend.js",
+        # "public/js/_payment_entry_extend.js",
     ],
 }
 

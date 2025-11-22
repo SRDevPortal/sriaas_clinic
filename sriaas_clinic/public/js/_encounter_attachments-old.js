@@ -1,6 +1,14 @@
-// sriaas_clinic/public/js/encounter_attachments.js
+// encounter_attachments.js
+// Option A — safe multi-file upload: upload via upload_file, DO NOT add child rows.
+// Renders gallery from File doctype, supports private-file thumbnails by fetching blobs,
+// and opens images in a modal gallery. Blocks autosave while upload is happening.
 
-(function () {  
+(function () {
+  // const PAYMENT_PROOF_FIELD = 'sr_pe_payment_proof';
+  // const PREVIEW_FIELD = 'sr_medical_reports_preview';
+  // const CLEAR_AFTER_MS = 4000;
+  // const RENDER_DEBOUNCE_MS = 250;
+
   const CHILD_TABLE_FIELD = 'enc_multi_payments'; // child table fieldname on Patient Encounter
   const CHILD_FILE_FIELD = 'mmp_payment_proof';   // file fieldname inside SR Multi Mode Payment child
   const PREVIEW_FIELD = 'sr_medical_reports_preview';
@@ -82,15 +90,20 @@
 
   // -------------------------
   // Build a thumbnail element for file record `f`.
+  // If private image: fetch blob and use object URL.
+  // Returns a Promise resolving to {el, info} where el is jQuery element, info contains {isImage, url, name, blobUrl?}
   // -------------------------
   async function build_thumb_element(f) {
+    // f contains: file_url, file_name, is_private
     let rawUrl = f.file_url || '';
     let useDownloadWrapper = false;
 
+    // consider private OR private-like paths
     if (f.is_private || rawUrl.startsWith('/private') || rawUrl.startsWith('private') || rawUrl.startsWith('/files') || rawUrl.startsWith('files')) {
       useDownloadWrapper = true;
     }
 
+    // compute endpoint to use for link (we will use download wrapper for clicking too)
     let linkUrl = rawUrl;
     if (useDownloadWrapper) {
       linkUrl = '/api/method/frappe.utils.file_manager.download_file?file_url=' + encodeURIComponent(rawUrl);
@@ -104,19 +117,26 @@
     const isImage = ['png','jpg','jpeg','gif','webp','bmp'].indexOf(ext) !== -1;
     const isPdf = ext === 'pdf';
 
+    // create container and placeholder
     const $div = $('<div style="width:120px;text-align:center"></div>');
+
+    // Create clickable anchor (opens in new tab for downloads) but for image clicking we will open modal
     const $a = $(`<a href="${linkUrl}" target="_blank" style="display:inline-block;text-align:center;width:120px"></a>`);
 
     if (isImage) {
+      // Create placeholder img element
       const $img = $(`<img style="height:96px;max-width:120px;border:1px solid #e7e7e7;padding:4px;border-radius:4px;object-fit:cover">`);
       $a.append($img);
       $div.append($a);
+      // Caption
       $div.append($(`<div style="font-size:12px;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${frappe.utils.escape_html(filename)}</div>`));
 
+      // For private images, fetch blob and createObjectURL
       if (useDownloadWrapper) {
         try {
           const res = await fetch(linkUrl, { credentials: 'same-origin' });
           if (!res.ok) {
+            // failed fetch — show generic icon
             $img.attr('src', '');
             $img.css('background', '#f5f5f5');
             return { el: $div, info: { isImage, url: linkUrl, name: filename, error: res.status } };
@@ -124,6 +144,7 @@
           const blob = await res.blob();
           const objUrl = URL.createObjectURL(blob);
           $img.attr('src', objUrl);
+          // attach data for modal
           $a.data('sr_blob_url', objUrl);
           return { el: $div, info: { isImage, url: linkUrl, name: filename, blobUrl: objUrl } };
         } catch (err) {
@@ -133,7 +154,9 @@
           return { el: $div, info: { isImage, url: linkUrl, name: filename, error: err } };
         }
       } else {
+        // non-private images: set src directly
         $img.attr('src', linkUrl);
+        // attach url for modal
         $a.data('sr_blob_url', linkUrl);
         return { el: $div, info: { isImage, url: linkUrl, name: filename } };
       }
@@ -186,26 +209,33 @@
         return;
       }
 
+      // prepare modal DOM
       create_modal_dom();
       const modal = document.getElementById('sr-report-modal');
 
       const gallery = $('<div style="display:flex;flex-wrap:wrap;gap:8px"></div>');
       const imageItems = []; // for modal gallery
 
+      // Build all thumbs (serially to avoid hammering server), but could be parallel
       for (const f of files) {
         try {
           const result = await build_thumb_element(f);
           gallery.append(result.el);
 
+          // If it's an image, capture source for modal and bind click
           if (result.info && result.info.isImage) {
+            // find anchor inside
             const $anchor = result.el.find('a').first();
             const item = { url: result.info.url, name: result.info.name, src: result.info.blobUrl || result.info.url };
             imageItems.push(item);
 
+            // clicking the anchor should open modal instead of opening new tab
             $anchor.on('click', function (evt) {
               evt.preventDefault();
+              // set items into modal and open index of this clicked item
               const idx = imageItems.findIndex(it => it.src === item.src && it.name === item.name);
               if (idx === -1) return;
+              // ensure modal exists and has utility
               if (modal && modal._set_items) {
                 modal._set_items(imageItems);
                 modal._show(idx);
@@ -345,9 +375,22 @@
       frm._attachmentsPatched = true;
     }
 
+    // const pf = frm.get_field(PAYMENT_PROOF_FIELD);
+    // if (pf && pf.$wrapper) {
+    //   pf.$wrapper.off('change.sr_payment_proof').on('change.sr_payment_proof', 'input[type=file]', function () {
+    //     frm._skipNextSaveDueToAttachment = true;
+    //     if (frm._skipTimer) clearTimeout(frm._skipTimer);
+    //     frm._skipTimer = setTimeout(function () {
+    //       frm._skipNextSaveDueToAttachment = false;
+    //       frm._skipTimer = null;
+    //     }, 1500);
+    //     frappe.show_alert({ message: __('Changes not saved yet'), indicator: 'blue' });
+    //   });
+    // }
+
     // New: listen for file inputs inside the child table rows
     bind_child_table_file_listeners(frm);
-
+    
     // Keep the global fallback listener for any other file inputs on the page
     if (!document._sr_global_file_listener) {
       document.addEventListener('change', function (e) {
@@ -424,5 +467,3 @@
   });
 
 })();
-// clinical_history_modal.js
-// Modal dialog to show clinical history of a patient (all encounters with clinical notes)

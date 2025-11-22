@@ -44,6 +44,7 @@ def _make_encounter_fields():
                 "fieldtype": "Link",
                 "options": "User",
                 "read_only": 1,
+                "in_list_view":1,
                 # do NOT set default here – we populate per-doc in before_insert
                 "insert_after": "sr_encounter_status"
             },
@@ -61,9 +62,9 @@ def _setup_clinical_notes_section():
             {"fieldname":"sr_notes","label":"Notes","fieldtype":"Small Text","insert_after":"sr_investigations"},
             {"fieldname":"sr_diagnosis","label":"Diagnosis","fieldtype":"Small Text","insert_after":"sr_notes"},
             # Use a child Table for multiple reports (one row per report)
-            {"fieldname":"sr_medical_reports_table","label":"Attach Medical Report","fieldtype":"Table","options":"SR Medical Report","insert_after":"sr_diagnosis"},
+            # {"fieldname":"sr_medical_reports_table","label":"Attach Medical Report","fieldtype":"Table","options":"SR Medical Report","insert_after":"sr_diagnosis"},
             # HTML preview area for gallery (JS will render here)
-            {"fieldname":"sr_medical_reports_preview","label":"Medical Reports/Attachments","fieldtype":"HTML","insert_after":"sr_medical_reports_table"},
+            # {"fieldname":"sr_medical_reports_preview","label":"Medical Reports/Attachments","fieldtype":"HTML","insert_after":"sr_medical_reports_table"},
         ]
     })
 
@@ -235,6 +236,8 @@ def _apply_encounter_ui_customizations():
         "naming_series",
         "appointment",
         "get_applicable_treatment_plans",
+        "sr_medical_reports_table",
+        "sr_medical_reports_preview",
         # keep the new multi-payments UI visible (enc_mmp_sb & enc_multi_payments)
         # don't include deleted legacy single-advance fields here
     )

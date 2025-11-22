@@ -1,0 +1,376 @@
+{# ================= Purchase Order New (SRIAAS Clinic) ================= #}
+
+{# Reference PDF (local file) - deployer may transform this path to a URL #}
+{% set ref_pdf = "/mnt/data/PUR-ORD-2025-00004.pdf" %}
+
+{# --- self-contained address renderer (no external includes) --- #}
+{% macro render_addr(address_name) -%}
+  {% if address_name %}
+    {% set a = frappe.get_doc("Address", address_name) %}
+    <div class="addr">
+      <!-- {% if a.address_title %}<b>{{ a.address_title }}</b>{% endif %} -->
+      <!-- {% if a.address_type %}{% if a.address_title %} {% endif %}({{ a.address_type }}){% endif %} -->
+      <!-- {% if a.address_title or a.address_type %}<br>{% endif %} -->
+
+      {{ a.address_line1 or "" }}
+      {% if a.address_line2 %}<br>{{ a.address_line2 }}{% endif %}
+
+      {% if a.city %}<br>{{ a.city }}{% endif %}
+      {% if a.state %}{% if a.city %}, {% else %}<br>{% endif %}{{ a.state }}{% endif %}
+      {% if a.pincode %} {{ a.pincode }}{% endif %}
+
+      {% if a.country %}<br>{{ a.country }}{% endif %}
+
+      <!-- {% set gstin = a.gstin or a.gstin_uin %}
+      {% if gstin %}<br><b>GSTIN:</b> {{ gstin }}{% endif %} -->
+    </div>
+  {% endif %}
+{%- endmacro %}
+
+{# ========== COMPANY + PURCHASE ORDER HEADER ========== #}
+{% set company  = frappe.get_doc("Company", doc.company) %}
+{% set logo     = company.company_logo %}
+{% set currency = doc.currency or company.default_currency or "INR" %}
+{% set grand    = (doc.rounded_total if doc.rounded_total else doc.grand_total) or 0 %}
+
+{# Prefer the address linked on document; else first Company address #}
+{% set comp_addr_name = doc.company_address %}
+{% if not comp_addr_name %}
+  {% set comp_addr_link = frappe.get_all(
+      "Dynamic Link",
+      filters={"parenttype":"Address","link_doctype":"Company","link_name":doc.company},
+      fields=["parent"], limit=1
+  ) %}
+  {% set comp_addr_name = comp_addr_link[0].parent if comp_addr_link else None %}
+{% endif %}
+{% set comp_addr = frappe.get_doc("Address", comp_addr_name) if comp_addr_name else None %}
+
+{# helpers #}
+{% macro line(v) -%}{% if v %}{{ v }}<br>{% endif %}{%- endmacro %}
+{% set reg_add_1      = (comp_addr.address_line1 if comp_addr else "") %}
+{% set reg_add_2      = (comp_addr.address_line2 if comp_addr else "") %}
+{% set reg_city       = (comp_addr.city if comp_addr else "") %}
+{% set reg_state      = (comp_addr.state if comp_addr else "") %}
+{% set reg_pin        = (comp_addr.pincode if comp_addr else "") %}
+{% set gst_state_code = (comp_addr.gst_state_number if comp_addr and comp_addr.gst_state_number else "") %}
+{% set company_email  = company.email_id or company.company_email or "accounts@sriaas.com" %}
+{% set company_cin    = company.cin or company.company_cin or company.custom_cin or "" %}
+{% set company_gstin  = doc.company_gstin or (comp_addr.gstin if comp_addr and comp_addr.gstin else "") %}
+
+{# ==== overall GST rate default (keep same as Sales template) ==== #}
+{% set overall_gst_pct = 5 %}
+
+<style>
+:root{ --sr-border:#e8ebf0; }
+
+/* Reuse same style system as Sales Invoice for perfect parity */
+.po-wrap{
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 10pt;
+  line-height: 1.35;
+  color: #111;
+}
+.po-wrap *{ font-size: inherit !important; line-height: inherit; }
+.po-wrap h1, .po-wrap h2, .po-wrap h3, .po-wrap h4{ font-weight:600; font-size:10pt !important; margin:0 0 6pt; }
+
+.po-head{
+  width:100%;
+  border:1px solid var(--sr-border);
+  border-collapse: collapse;
+  margin-bottom:10pt;
+}
+.po-head td{
+  padding:6pt 8pt;
+  border-right:1px solid var(--sr-border);
+  border-bottom:1px solid var(--sr-border);
+  vertical-align: top;
+}
+.po-head tr:last-child td{ border-bottom:0; }
+.po-head td:last-child{ border-right:0; }
+
+.po-co-name{ font-weight:700; margin-bottom:4pt; }
+.po-left-lines{ line-height:1.45; }
+
+.po-right-title{ text-align:right; font-weight:700; margin-bottom:6pt; }
+.po-meta{ width:100%; border-collapse:collapse; }
+.po-meta tr { border-bottom: 1px solid var(--sr-border); }
+.po-meta td{ padding:4pt 0; border:0; }
+.po-meta .lbl{ background: transparent; color:#444; width:40%; text-align:left; padding-right:10px; }
+.po-meta .val{ width:60%; text-align:right; }
+
+/* Items and blocks */
+.card{ width:100%; border:1.25pt solid #cfd6e4; border-collapse:collapse; table-layout:fixed; margin-bottom:10pt; }
+.kv td{ padding:4pt 6pt; border-bottom:1px solid var(--sr-border); vertical-align:top; }
+.kv tr:last-child td{ border-bottom:0; }
+.tbl{ width:100%; border-collapse:collapse; }
+.tbl th,.tbl td{ border:1px solid var(--sr-border); padding:6pt 8pt; vertical-align:top; }
+.lbl{ width:120px; color:#444; background:#fafbfc; }
+.right{ text-align:right; }
+.muted{ color:#666; }
+.addr{ line-height:1.4; }
+
+/* Totals */
+.sum{ width:100%; }
+.sum td{ padding:6pt 8pt; border-bottom:1px solid #f0f2f5; }
+.sum td.k{ color:#444; }
+.sum td.v{ text-align:right; white-space:nowrap; }
+.sum tr.total td{ border-top:1px solid #e5e7eb; font-weight:700; }
+.sum tr.bold td{ font-weight:700; }
+
+/* Terms */
+.blk{ margin-bottom:10pt; }
+.blk h4{ margin:0 0 6pt; text-transform:uppercase; }
+.blk .box{ border:1px solid #e5e7eb; padding:5pt 2pt; }
+
+/* Signature */
+.sign-box{ width:auto; border:1px solid #e5e7eb; border-radius:4pt; background:#fafbfc; padding:6pt; display:inline-block; }
+</style>
+
+<div class="po-wrap">
+
+  <table class="po-head">
+    <tr>
+      <td class="left" style="width:60%;">
+        {% if logo %}<img class="po-logo" src="{{ logo }}" style="max-height:64px;">{% endif %}
+        <div class="po-co-name">{{ company.company_name or doc.company }}</div>
+        <div class="po-left-lines">
+          {{ line("Reg Add: " ~ (reg_add_1 or "")) }}
+          {{ line(reg_add_2) }}
+          {% set _loc = reg_city or "" %}
+          {% if reg_state %}
+            {% if _loc %}{% set _loc = _loc ~ ", " ~ reg_state %}{% else %}{% set _loc = reg_state %}{% endif %}
+          {% endif %}
+          {% if reg_pin %}
+            {% if _loc %}{% set _loc = _loc ~ " " ~ reg_pin %}{% else %}{% set _loc = reg_pin %}{% endif %}
+          {% endif %}
+          {{ line(_loc) }}
+          {{ line("CIN No: " ~ company_cin) }}
+          {{ line("GSTIN/UIN: " ~ company_gstin) }}
+          {% if reg_state %}{{ line("State Name: " ~ reg_state ~ (", Code: " ~ gst_state_code if gst_state_code else "")) }}{% endif %}
+          {{ line("E-mail: " ~ company_email) }}
+        </div>
+      </td>
+
+      <td class="right" style="width:40%;">
+        <div class="po-right-title">Purchase Order</div>
+        <table class="po-meta">
+          <tr><td class="lbl">PO No.</td><td class="val">{{ doc.name }}</td></tr>
+          <tr><td class="lbl">PO Date</td><td class="val">{{ frappe.format(doc.transaction_date or doc.posting_date or nowdate(), {"fieldtype":"Date"}) }}</td></tr>
+          <!-- <tr><td class="lbl">Delivery Date</td><td class="val">{% if doc.delivery_date %}{{ frappe.format(doc.delivery_date, {"fieldtype":"Date"}) }}{% elif doc.expected_delivery_date %}{{ frappe.format(doc.expected_delivery_date, {"fieldtype":"Date"}) }}{% else %}-{% endif %}</td></tr> -->
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  {# ===== Supplier + Company ===== #}
+  {% set sup = frappe.get_doc("Supplier", doc.supplier) if doc.supplier else None %}
+  {% set sup_contact = doc.contact_display or (sup.contact if (sup and sup.contact) else (sup.contact_person if (sup and sup.contact_person) else None)) %}
+  {% set sup_mobile = doc.supplier_mobile or (sup.mobile_no if sup and sup.mobile_no else "") %}
+  {% set company_pan = company.pan or company.tax_id or company.company_pan or "" %}
+
+  <table class="card kv">
+    <tr>
+      <td class="lbl">Supplier</td>
+      <td>
+        <div><strong>{{ doc.supplier_name or doc.supplier or (sup and sup.supplier_name) }}</strong></div>
+        <!-- <div class="muted">{{ sup_contact or "-" }}</div> -->
+      </td>
+
+      <td class="lbl">Company</td>
+      <td>
+        <div><strong>{{ company.company_name or doc.company }}</strong></div>
+        <!-- <div class="muted">{{ company.email_id or company.company_email or company_email }}</div> -->
+      </td>
+    </tr>
+
+    <tr>
+      <td class="lbl">Supplier Contact</td>
+      <td>
+        <div>{{ doc.contact_display or doc.contact_person or "-" }}</div>
+        <div class="muted">{{ doc.contact_mobile or sup_mobile or "-" }}</div>
+      </td>
+
+      <td class="lbl">Company Contact</td>
+      <td>
+        <div>Md. Zahid</div>
+        <div class="muted">{{ company.phone or company.phone_no or company.contact_no or "-" }}</div>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="lbl">Supplier Address</td>
+      <td>{{ render_addr(doc.supplier_address) }}</td>
+
+      <td class="lbl">Company Billing Address</td>
+      <td>
+        {# Prefer explicit company address linked on document, otherwise use the resolved comp_addr #}
+        {% if doc.company_address %}
+          {{ render_addr(doc.company_address) }}
+        {% elif comp_addr %}
+          {{ render_addr(comp_addr.name) }}
+        {% else %}
+          <div class="muted">No billing address set</div>
+        {% endif %}
+      </td>
+    </tr>
+
+    <tr>
+      <td class="lbl">GST / PAN (Supplier)</td>
+      <td>
+        {% if doc.supplier_gstin %}<div>GSTIN: {{ doc.supplier_gstin }}</div>
+        {% elif sup and sup.gstin %}<div>GSTIN: {{ sup.gstin }}</div>
+        {% else %}-{% endif %}
+        {% if sup and (sup.pan or sup.tax_id) %}<div>PAN: {{ sup.pan or sup.tax_id }}</div>{% endif %}
+      </td>
+
+      <td class="lbl">GST / PAN (Company)</td>
+      <td>
+        {% if company_gstin %}<div>GSTIN: {{ company_gstin }}</div>{% else %}-{% endif %}
+        {% if company_pan %}<div>PAN: {{ company_pan }}</div>{% endif %}
+      </td>
+    </tr>
+
+    <tr>
+      <td class="lbl">Place of Supply</td>
+      <td colspan="3">
+        {% set pos_name = doc.place_of_supply or doc.supplier_place_of_supply or "" %}
+        {% if not pos_name and doc.company_address %}
+          {% set pos_addr = frappe.get_doc("Address", doc.company_address) %}
+          {% set pos_name = pos_addr.state if pos_addr and pos_addr.state else pos_name %}
+        {% elif not pos_name and comp_addr %}
+          {% set pos_name = comp_addr.state if comp_addr and comp_addr.state else pos_name %}
+        {% endif %}
+        {{ pos_name or "-" }}
+      </td>
+    </tr>
+  </table>
+
+  {# ===== Items Table ===== #}
+  <table class="tbl" width="100%" style="margin-top:10pt; table-layout:fixed; border-collapse:collapse;">
+    <thead>
+      <tr style="background:#fafbfc;">
+        <th style="width:36px;">#</th>
+        <th>Item</th>
+        <th style="width:90px;">HSN/SAC</th>
+        <th style="width:60px;" class="right">UOM</th>
+        <th style="width:80px;" class="right">Qty</th>
+        <th style="width:90px;" class="right">Rate</th>
+        <th style="width:120px;" class="right">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for it in (doc.items or []) %}
+      {% set name = it.item_name or it.item_code %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td><div><b>{{ name }}</b></div></td>
+        <td>{{ it.gst_hsn_code or it.sac or "" }}</td>
+        <td class="right">{{ it.uom or it.stock_uom or "-" }}</td>
+        <td class="right">{{ frappe.utils.fmt_money(it.qty or 0, 0) }}</td>
+        <td class="right">{{ frappe.utils.fmt_money(it.rate or 0, currency=currency) }}</td>
+        <td class="right">{{ frappe.utils.fmt_money(it.amount or ( (it.qty or 0) * (it.rate or 0) ), currency=currency) }}</td>
+      </tr>
+      {% endfor %}
+      {% if not doc.items or doc.items|length == 0 %}
+      <tr><td colspan="7" class="muted">No items</td></tr>
+      {% endif %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="6" class="right"><b>Subtotal</b></td>
+        <td class="right">{{ frappe.utils.fmt_money(doc.total or doc.net_total or 0, currency=currency) }}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  {# ===== Bottom Right: Summary / Terms / Signature ===== #}
+  <table style="width:100%; table-layout:fixed; border-collapse:collapse; margin-top:10pt;">
+    <tr>
+      <!-- LEFT: Terms and Remarks -->
+      <td style="width:55%; padding-right:10pt; vertical-align:top;">
+        {% if doc.remarks %}
+        <div class="blk">
+          <h4>Notes</h4>
+          <div class="box">
+            <div class="stack value">{{ doc.remarks }}</div>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="blk">
+          <h4>Terms & Conditions</h4>
+          <div class="box">
+            {% if doc.terms %}
+              {{ doc.terms }}
+            {% else %}
+              1. Delivery as per specification and schedule.<br>
+              2. Invoice must reference this PO number.<br>
+              3. Goods to be properly packed and insured during transit.<br>
+              4. Payment terms as agreed.
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="blk">
+          <h4>Supplier Remarks</h4>
+          <div class="box">
+            {{ doc.supplier_remarks or "-" }}
+          </div>
+        </div>
+      </td>
+
+      <!-- RIGHT: Totals / Signature -->
+      <td style="width:45%; padding-left:10pt; vertical-align:top;">
+        <table class="sum">
+          <tr>
+            <td class="k">Taxable Amount</td>
+            <td class="v">{{ frappe.format(doc.net_total or doc.total or 0, {'fieldtype':'Currency','options': doc.currency}) }}</td>
+          </tr>
+
+          {% if doc.taxes and doc.taxes|length %}
+            {% for t in doc.taxes %}
+              {% set rate = (t.rate if t.rate is not none else 0) %}
+              {% set raw  = (t.description or t.account_head or '')|trim %}
+              {% if 'CGST' in raw %}{% set taxname = 'CGST' %}
+              {% elif 'SGST' in raw %}{% set taxname = 'SGST' %}
+              {% elif 'IGST' in raw %}{% set taxname = 'IGST' %}
+              {% elif 'CESS' in raw %}{% set taxname = 'CESS' %}
+              {% else %}
+                {% set taxname = raw
+                  | replace(' @0.0%','') | replace('@0.0%','')
+                  | replace(' @ 0.0%','') | replace(' @0%','') | replace('@0%','') %}
+              {% endif %}
+              <tr>
+                <td class="k">{{ taxname }}{% if rate %} @{{ frappe.format(rate, {'fieldtype':'Percent'}) }}{% endif %}</td>
+                <td class="v">{{ frappe.format(t.tax_amount or 0, {'fieldtype':'Currency','options': doc.currency}) }}</td>
+              </tr>
+            {% endfor %}
+          {% endif %}
+
+          <tr class="total">
+            <td class="k">Total Amount</td>
+            <td class="v">{{ (doc.rounded_total and doc.get_formatted('rounded_total')) or doc.get_formatted('grand_total') }}</td>
+          </tr>
+        </table>
+
+        <div style="margin-top:12pt; gap:12pt; align-items:flex-end; justify-content:flex-end;">
+          <div class="sign-box">
+            {# If you have an authorised signature image, use it here, else keep blank box #}
+            {% if doc.authorised_signature %}
+              <img src="{{ doc.authorised_signature }}" alt="Authorised Sign" style="max-height:48px;">
+            {% else %}
+              <div>
+                <img src="{{ frappe.utils.get_url('/files/sriaas-sign-and-stam.jpg') }}" alt="Authorised Signatory">
+              </div>
+            {% endif %}
+          </div>
+          <div style="text-align:right; margin-top: 5pt">
+            <div class="sign-caption">Authorised Signature for</div>
+            <div class="sign-company">{{ doc.company }}</div>
+          </div>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+</div>

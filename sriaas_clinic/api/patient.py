@@ -17,45 +17,145 @@ def set_created_by_agent(doc, method):
 # ----------------------------
 # A) Patient ID auto-generator
 # ----------------------------
-def _dept_prefix(doc) -> str:
-    """
-    Use first 4 uppercase chars of sr_medical_department as prefix.
-    e.g., "Cardiology" -> "CARD", "Dermatology" -> "DERM"
-    """
-    md = (doc.get("sr_medical_department") or "").strip()
-    return md[:4].upper()
+# def _dept_prefix(doc) -> str:
+#     """
+#     Use first 4 uppercase chars of sr_medical_department as prefix.
+#     e.g., "Cardiology" -> "CARD", "Dermatology" -> "DERM"
+#     """
+#     md = (doc.get("sr_medical_department") or "").strip()
+#     return md[:4].upper()
+
+
+# def set_sr_patient_id(doc, method=None):
+#     # Respect manual entry (e.g., data import)
+#     if doc.get("sr_patient_id"):
+#         return
+
+#     # Require department (adjust/remove if optional)
+#     if not doc.get("sr_medical_department"):
+#         frappe.throw("Please select a Medical Department to auto-generate Patient ID.")
+
+#     prefix = _dept_prefix(doc)         # e.g., "CARD"
+#     start_idx = len(prefix) + 1        # numeric part right after the prefix
+
+#     # Find largest existing number for this prefix (no padding)
+#     max_row = frappe.db.sql(
+#         """
+#         SELECT COALESCE(MAX(CAST(SUBSTRING(sr_patient_id, %s) AS SIGNED)), 0) AS max_n
+#         FROM `tabPatient`
+#         WHERE sr_patient_id LIKE %s
+#         """,
+#         (start_idx, f"{prefix}%"),
+#         as_dict=True,
+#     )
+#     last_num = int(max_row[0].max_n if max_row else 0)
+
+#     # Increment until free (handles rare races)
+#     while True:
+#         last_num += 1
+#         candidate = f"{prefix}{last_num}"   # CARD1, DERM5, ...
+#         if not frappe.db.exists("Patient", {"sr_patient_id": candidate}):
+#             doc.sr_patient_id = candidate
+#             break
+
+
+# def set_sr_patient_id(doc, method=None):
+#     """
+#     Auto-generate Patient ID in the format:
+#     SR1000, SR1001, SR1002, ...
+#     Always prefix with 'SR', start numbering from 1000.
+#     """
+
+#     # If user manually set it, do not override
+#     if doc.get("sr_patient_id"):
+#         return
+
+#     prefix = "SR"
+#     start_number = 1000
+#     prefix_like = f"{prefix}%"
+
+#     # Numeric part begins after "SR" → which is index 3 in SQL (1-based)
+#     numeric_start_pos = len(prefix) + 1   # = 3
+
+#     # Find the highest existing numeric part for IDs starting with "SR"
+#     max_row = frappe.db.sql(
+#         """
+#         SELECT COALESCE(MAX(CAST(SUBSTRING(sr_patient_id, %s) AS SIGNED)), 0) AS max_n
+#         FROM `tabPatient`
+#         WHERE sr_patient_id LIKE %s
+#         """,
+#         (numeric_start_pos, prefix_like),
+#         as_dict=True,
+#     )
+
+#     last_num = int(max_row[0].max_n or 0)
+
+#     # If no record exists, begin from 999 so next becomes 1000
+#     if last_num < start_number:
+#         last_num = start_number - 1
+
+#     # Generate next available number
+#     while True:
+#         last_num += 1
+#         candidate = f"{prefix}{last_num}"
+#         if not frappe.db.exists("Patient", {"sr_patient_id": candidate}):
+#             doc.sr_patient_id = candidate
+#             break
+
 
 def set_sr_patient_id(doc, method=None):
-    # Respect manual entry (e.g., data import)
+    """
+    Auto-generate Patient ID using Company.abbr as prefix.
+    Example:
+      If Company.abbr = 'SR' -> SR1000, SR1001, ...
+      If Company.abbr = 'HC' -> HC1000, HC1001, ...
+    """
+
+    # Do not override manual entry
     if doc.get("sr_patient_id"):
         return
 
-    # Require department (adjust/remove if optional)
-    if not doc.get("sr_medical_department"):
-        frappe.throw("Please select a Medical Department to auto-generate Patient ID.")
+    # Get company abbr safely
+    company_abbr = None
+    if doc.get("company"):
+        try:
+            company_abbr = frappe.db.get_value("Company", doc.company, "abbr")
+        except Exception:
+            company_abbr = None
 
-    prefix = _dept_prefix(doc)         # e.g., "CARD"
-    start_idx = len(prefix) + 1        # numeric part right after the prefix
+    prefix = (company_abbr or "SR").strip().upper()
 
-    # Find largest existing number for this prefix (no padding)
+    # Starting number
+    start_number = 1000
+
+    prefix_like = f"{prefix}%"
+    numeric_start_pos = len(prefix) + 1  # numeric part starts after prefix
+
+    # Get highest existing number under this prefix
     max_row = frappe.db.sql(
         """
         SELECT COALESCE(MAX(CAST(SUBSTRING(sr_patient_id, %s) AS SIGNED)), 0) AS max_n
         FROM `tabPatient`
         WHERE sr_patient_id LIKE %s
         """,
-        (start_idx, f"{prefix}%"),
+        (numeric_start_pos, prefix_like),
         as_dict=True,
     )
-    last_num = int(max_row[0].max_n if max_row else 0)
 
-    # Increment until free (handles rare races)
+    last_num = int(max_row[0].max_n or 0)
+
+    # ensure at least starting number
+    if last_num < start_number:
+        last_num = start_number - 1
+
+    # Find next free ID
     while True:
         last_num += 1
-        candidate = f"{prefix}{last_num}"   # CARD1, DERM5, ...
+        candidate = f"{prefix}{last_num}"
         if not frappe.db.exists("Patient", {"sr_patient_id": candidate}):
             doc.sr_patient_id = candidate
             break
+
 
 # -------------------------------------------
 # B) Phone-like fields whitespace normalizer

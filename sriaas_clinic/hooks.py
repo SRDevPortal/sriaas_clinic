@@ -95,21 +95,8 @@ has_permission = {
 # Hook on document methods and events
 
 doc_events = {
-    "CRM Lead": {
-        "before_save": "sriaas_clinic.api.crm_lead.normalize_phoneish_fields",
-        # block illegal edits depending on role + new/existing state
-        "validate":"sriaas_clinic.api.crm_lead_field_guard.guard_restricted_fields",
-        # keep Assignment + DocShare in sync with lead_owner
-        "after_insert":"sriaas_clinic.api.crm_lead_assignment.after_insert",
-        "on_update":"sriaas_clinic.api.crm_lead_assignment.on_update",
-    },
-    "Patient Appointment": {
-        "before_insert": "sriaas_clinic.api.patient_appointment.set_created_by_agent",
-        # "on_update": "sriaas_clinic.api.patient_appointment.create_payment_entries_from_child_table",
-        # "on_update": "sriaas_clinic.api.patient_appointment.on_update_create_payments",
-    },
     "Patient": {
-        "before_insert": [            
+        "before_insert": [
             "sriaas_clinic.api.patient.set_sr_patient_id",
             "sriaas_clinic.api.patient.set_created_by_agent",
             "sriaas_clinic.api.patient.validate_unique_contact_mobile",
@@ -134,9 +121,6 @@ doc_events = {
     "Contact": {
         "before_save": "sriaas_clinic.api.contact.normalize_phoneish_fields",
     },
-    "Healthcare Practitioner": {
-        "before_validate": "sriaas_clinic.api.practitioner.compose_full_name",
-    },
     "Patient Encounter": {
         # Save creator only once
         "before_insert": "sriaas_clinic.api.encounter_flow.handlers.set_created_by_agent",
@@ -150,8 +134,13 @@ doc_events = {
         # Billing (Sales Invoice + Multi-Mode Draft Payment Entries)
         "on_submit":   "sriaas_clinic.api.encounter_flow.handlers.create_billing_on_submit",
     },
-    "Item": {
-        "validate": "sriaas_clinic.api.item_package_weight.calculate_pkg_weights",
+    "Patient Appointment": {
+        "before_insert": "sriaas_clinic.api.patient_appointment.set_created_by_agent",
+        # "on_update": "sriaas_clinic.api.patient_appointment.create_payment_entries_from_child_table",
+        # "on_update": "sriaas_clinic.api.patient_appointment.on_update_create_payments",
+    },
+    "Healthcare Practitioner": {
+        "before_validate": "sriaas_clinic.api.practitioner.compose_full_name",
     },
     "Sales Invoice": {
         "before_insert": "sriaas_clinic.api.si_payment_flow.handlers.set_created_by_agent",
@@ -173,6 +162,9 @@ doc_events = {
         #     "sriaas_clinic.api.si_payment_flow.handlers.refresh_payment_history",
         # ],
     },
+    "Item": {
+        "validate": "sriaas_clinic.api.item_package_weight.calculate_pkg_weights",
+    },
     "Payment Entry": {
         "before_insert": "sriaas_clinic.api.payment_entry.set_created_by_agent",
         # "before_save": "sriaas_clinic.api.payment_entry.sync_parent_mode_from_children_server",
@@ -183,6 +175,14 @@ doc_events = {
     "Medical Department": {
         "after_insert": "sriaas_clinic.api.medical_department.after_insert",
         # "on_rename": "sriaas_clinic.api.medical_department.on_rename",
+    },
+    "CRM Lead": {
+        "before_save": "sriaas_clinic.api.crm_lead.normalize_phoneish_fields",
+        # block illegal edits depending on role + new/existing state
+        "validate":"sriaas_clinic.api.crm_lead_field_guard.guard_restricted_fields",
+        # keep Assignment + DocShare in sync with lead_owner
+        "after_insert":"sriaas_clinic.api.crm_lead_assignment.after_insert",
+        "on_update":"sriaas_clinic.api.crm_lead_assignment.on_update",
     },
     # Protect assignment/unassignment rights & keep shares tidy
     "ToDo": {

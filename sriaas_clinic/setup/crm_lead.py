@@ -92,6 +92,7 @@ def _apply_crm_lead_ui_customizations():
 
     # Standard label/filters
     upsert_property_setter(DT, "status", "in_standard_filter", "1", "Check")
+    upsert_property_setter(DT, "status", "default", "Fresh", "Data")
     
     upsert_property_setter(DT, "first_name", "reqd", "0", "Check")
     
@@ -104,6 +105,9 @@ def _apply_crm_lead_ui_customizations():
     upsert_property_setter(DT, "source", "in_standard_filter", "1", "Check")
 
     upsert_property_setter(DT, "person_tab", "label", "Patient Details", "Data")
+
+    upsert_property_setter(DT, "sr_lead_pipeline", "reqd", "1", "Check")
+    upsert_property_setter(DT, "sr_lead_platform", "reqd", "1", "Check")
 
     ensure_field_after(DT, "middle_name", "first_name")
     ensure_field_after(DT, "lead_name", "last_name")

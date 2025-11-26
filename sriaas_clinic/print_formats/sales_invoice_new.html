@@ -5,9 +5,9 @@
   {% if address_name %}
     {% set a = frappe.get_doc("Address", address_name) %}
     <div class="addr">
-      {% if a.address_title %}<b>{{ a.address_title }}</b>{% endif %}
+      <!-- {% if a.address_title %}<b>{{ a.address_title }}</b>{% endif %}
       {% if a.address_type %}{% if a.address_title %} {% endif %}({{ a.address_type }}){% endif %}
-      {% if a.address_title or a.address_type %}<br>{% endif %}
+      {% if a.address_title or a.address_type %}<br>{% endif %} -->
 
       {{ a.address_line1 or "" }}
       {% if a.address_line2 %}<br>{{ a.address_line2 }}{% endif %}
@@ -130,7 +130,7 @@
 .kv tr:last-child td{ border-bottom:0; }
 .tbl{ width:100%; border-collapse:collapse; }
 .tbl th,.tbl td{ border:1px solid var(--sr-border); padding:6pt 8pt; vertical-align:top; }
-.lbl{ width:120px; color:#444; background:#fafbfc; }
+.lbl{ width:120px; color:#222; background:#fafbfc; font-weight: 600; }
 .right{ text-align:right; }
 .muted{ color:#666; }
 .addr{ line-height:1.4; }
@@ -228,7 +228,7 @@
   <table class="card kv">
     <tr>
       <td class="lbl">Customer</td>
-      <td>{{ doc.customer_name or doc.customer }}</td>
+      <td><b>{{ doc.customer_name or doc.customer }}</b></td>
       <td class="lbl">Place of Supply</td>
       <td>
         {% if pos_name %}{{ pos_name }}{% if pos_code %} (Code: {{ pos_code }}){% endif %}{% else %}-{% endif %}
@@ -271,8 +271,11 @@
       <tr>
         <td>{{ loop.index }}</td>
         <td>
-          <div><b>{{ name }}</b>{% if it.uom %} <span class="muted">({{ it.uom }})</span>{% endif %}</div>
-          {% if it.description %}<div class="muted">{{ it.description }}</div>{% endif %}
+          <div>
+            <b>{{ name }}</b>
+            <!-- {% if it.uom %}<span class="muted">({{ it.uom }})</span>{% endif %} -->
+          </div>
+          <!-- {% if it.description %}<div class="muted">{{ it.description }}</div>{% endif %} -->
         </td>
         <td>{{ it.gst_hsn_code or it.sac or "" }}</td>
         <td class="right">{{ "{0:.1f}%".format((overall_gst_pct or 0)|float) }}</td>

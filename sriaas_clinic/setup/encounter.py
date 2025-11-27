@@ -1,12 +1,13 @@
 # apps/sriaas_clinic/sriaas_clinic/setup/encounter.py
 import frappe
-from .utils import create_cf_with_module, upsert_property_setter, collapse_section, set_label, upsert_title_field
+from .utils import create_cf_with_module, upsert_property_setter, collapse_section, set_label, upsert_title_field, ensure_field_after
 
 DT = "Patient Encounter"
 
 def apply():
     _make_encounter_fields()
     _setup_clinical_notes_section()
+    _add_diet_chart_link_to_encounter()
     _setup_ayurvedic_section()
     _setup_homeopathy_section()
     _setup_allopathy_section()
@@ -59,12 +60,31 @@ def _setup_clinical_notes_section():
             {"fieldname":"sr_complaints","label":"Complaints","fieldtype":"Small Text","insert_after":"sr_clinical_notes_sb"},
             {"fieldname":"sr_observations","label":"Observations","fieldtype":"Small Text","insert_after":"sr_complaints"},
             {"fieldname":"sr_investigations","label":"Investigations","fieldtype":"Small Text","insert_after":"sr_observations"},
-            {"fieldname":"sr_notes","label":"Notes","fieldtype":"Small Text","insert_after":"sr_investigations"},
-            {"fieldname":"sr_diagnosis","label":"Diagnosis","fieldtype":"Small Text","insert_after":"sr_notes"},
+            {"fieldname":"sr_diagnosis","label":"Diagnosis","fieldtype":"Small Text","insert_after":"sr_investigations"},
+            {"fieldname":"sr_notes","label":"Notes","fieldtype":"Small Text","insert_after":"sr_diagnosis"},
             # Use a child Table for multiple reports (one row per report)
-            # {"fieldname":"sr_medical_reports_table","label":"Attach Medical Report","fieldtype":"Table","options":"SR Medical Report","insert_after":"sr_diagnosis"},
+            # {"fieldname":"sr_medical_reports_table","label":"Attach Medical Report","fieldtype":"Table","options":"SR Medical Report","insert_after":"sr_notes"},
             # HTML preview area for gallery (JS will render here)
             # {"fieldname":"sr_medical_reports_preview","label":"Medical Reports/Attachments","fieldtype":"HTML","insert_after":"sr_medical_reports_table"},
+        ]
+    })
+
+def _add_diet_chart_link_to_encounter():
+    """
+    Add Diet Chart link field inside Encounter Doctype using the shared helper.
+    Safe to run multiple times.
+    """
+    create_cf_with_module({
+        DT: [
+            {
+                "fieldname": "diet_chart",
+                "label": "Diet Chart",
+                "fieldtype": "Link",
+                "options": "Diet Chart",
+                "insert_after": "sr_notes",
+                "reqd": 0,
+                "in_list_view": 0
+            }
         ]
     })
 
@@ -218,6 +238,8 @@ def _apply_encounter_ui_customizations():
     upsert_property_setter(DT, "sr_encounter_source", "reqd", "0", "Check")
     upsert_property_setter(DT, "sr_encounter_status", "reqd", "0", "Check")
     upsert_property_setter(DT, "practitioner", "reqd", "0", "Check")
+
+    ensure_field_after(DT, "sr_diagnosis", "sr_notes")
 
     # --------------------------
     # 2) Hide unwanted flags/fields

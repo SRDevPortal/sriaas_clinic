@@ -32,6 +32,7 @@ def apply():
     _ensure_sr_lead_disposition()
     _ensure_dpt_disease()
     _ensure_dpt_language()
+    _ensure_diet_chart_dt()
     _ensure_sr_medical_report_doctype()
     create_bulk_clearance_doctype()
 
@@ -673,6 +674,61 @@ def _ensure_dpt_language():
         "permissions":[
             {
                 "role":"System Manager","read":1,"write":1,"create":1,"delete":1,"print":1,"email":1,"export":1
+            }
+        ],
+    }).insert(ignore_permissions=True)
+
+def _ensure_diet_chart_dt():
+    """Create DPT Language master."""
+    if frappe.db.exists("DocType", "Diet Chart"):
+        return
+
+    frappe.get_doc({
+        "doctype": "DocType",
+        "name": "Diet Chart",
+        "module": MODULE_DEF_NAME,
+        "naming_rule": "By fieldname",
+        "autoname": "field:diet_chart_name",
+        "title_field": "diet_chart_name",
+        "is_submittable": 0,
+        "editable_grid": 0,
+        "track_changes": 1,
+        "field_order": [
+            "diet_chart_name",
+            "instructions",
+            "allowed_foods",
+            "restricted_foods"
+        ],
+        "fields": [
+            {
+                "fieldname": "diet_chart_name",
+                "label": "Diet Chart Name",
+                "fieldtype": "Data",
+                "reqd": 1,
+                "in_list_view": 1,
+                "unique": 1
+            },
+            {
+                "fieldname": "instructions",
+                "label": "General Instructions",
+                "fieldtype": "Long Text"
+            },
+            {
+                "fieldname": "allowed_foods",
+                "label": "Allowed Foods",
+                "fieldtype": "Long Text"
+            },
+            {
+                "fieldname": "restricted_foods",
+                "label": "Restricted Foods",
+                "fieldtype": "Long Text"
+            }
+        ],
+        "permissions": [
+            {
+                "role": "System Manager",
+                "read": 1, "write": 1, "create": 1,
+                "delete": 1, "export": 1
             }
         ],
     }).insert(ignore_permissions=True)

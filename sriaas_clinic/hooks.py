@@ -12,8 +12,12 @@ app_license = "mit"
 # ------------------
 
 # include js, css files in header of desk.html
-app_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
-app_include_js = "/assets/sriaas_clinic/js/patient_quick_entry_patch.js"
+app_include_css = [
+    "/assets/sriaas_clinic/css/theme_overrides.css",
+]
+app_include_js = [
+    "/assets/sriaas_clinic/js/patient_quick_entry_patch.js",
+]
 
 # include js, css files in header of web template
 web_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
@@ -196,6 +200,9 @@ doc_events = {
     },
     "User Group": {
         "before_save": "sriaas_clinic.api.user_group_backlink.user_group_before_save",
+    },
+    "Purchase Order": {
+        "before_submit": "sriaas_clinic.api.purchase_order.create_batches_before_submit"
     },
 }
 

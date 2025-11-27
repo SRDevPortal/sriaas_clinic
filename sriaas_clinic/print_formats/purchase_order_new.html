@@ -1,8 +1,5 @@
 {# ================= Purchase Order New (SRIAAS Clinic) ================= #}
 
-{# Reference PDF (local file) - deployer may transform this path to a URL #}
-{% set ref_pdf = "/mnt/data/PUR-ORD-2025-00004.pdf" %}
-
 {# --- self-contained address renderer (no external includes) --- #}
 {% macro render_addr(address_name) -%}
   {% if address_name %}
@@ -252,6 +249,7 @@
         <th style="width:36px;">#</th>
         <th>Item</th>
         <th style="width:90px;">HSN/SAC</th>
+        <th>Batch No</th>
         <th style="width:60px;" class="right">UOM</th>
         <th style="width:80px;" class="right">Qty</th>
         <th style="width:90px;" class="right">Rate</th>
@@ -265,6 +263,7 @@
         <td>{{ loop.index }}</td>
         <td><div><b>{{ name }}</b></div></td>
         <td>{{ it.gst_hsn_code or it.sac or "" }}</td>
+        <td class="right">{{ it.batch_no or "-" }}</td>
         <td class="right">{{ it.uom or it.stock_uom or "-" }}</td>
         <td class="right">{{ frappe.utils.fmt_money(it.qty or 0, 0) }}</td>
         <td class="right">{{ frappe.utils.fmt_money(it.rate or 0, currency=currency) }}</td>

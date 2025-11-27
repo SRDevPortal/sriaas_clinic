@@ -5,7 +5,7 @@ from . import (
     patient_appointment, practitioner,
     drug_prescription, item_price, item_package,
     sales_invoice, payment_entry,
-    crm_lead, user,
+    crm_lead, user, purchase_order,
     print_formats, ui,
 )
 
@@ -48,6 +48,9 @@ def setup_all():
 
     # User customizations
     user.apply()
+
+    # Purchase Order customizations
+    purchase_order.apply()
 
     # Print Formats (Patient Encounter New etc.)
     print_formats.apply()

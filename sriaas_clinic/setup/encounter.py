@@ -239,13 +239,16 @@ def _apply_encounter_ui_customizations():
     upsert_property_setter(DT, "sr_encounter_status", "reqd", "0", "Check")
     upsert_property_setter(DT, "practitioner", "reqd", "0", "Check")
 
+    upsert_property_setter(DT, "company", "reqd", "1", "Check")
+    upsert_property_setter(DT, "company", "hidden", "0", "Check")
+    upsert_property_setter(DT, "company", "read_only", "0", "Check")
+
     ensure_field_after(DT, "sr_diagnosis", "sr_notes")
 
     # --------------------------
     # 2) Hide unwanted flags/fields
     # --------------------------
     targets = (
-        "company",
         "practitioner",
         "invoiced",
         "submit_orders_on_save",

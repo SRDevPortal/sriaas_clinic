@@ -1,6 +1,6 @@
 # apps/sriaas_clinic/sriaas_clinic/setup/utils.py
-import json
 import frappe
+import json
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields as _ccf
 
 MODULE_DEF_NAME = "SRIAAS Clinic"   # Desk Module Def label

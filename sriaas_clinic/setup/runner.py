@@ -1,59 +1,43 @@
 # apps/sriaas_clinic/sriaas_clinic/setup/runner.py
 from . import (
     masters,
-    patient, customer, encounter,
-    patient_appointment, practitioner,
+    patient, customer, practitioner, contact,
+    encounter, crm_lead, patient_appointment,
     drug_prescription, item_price, item_package,
-    sales_invoice, payment_entry,
-    crm_lead, user, purchase_order,
-    print_formats, ui,
+    sales_invoice, payment_entry, purchase_order, user,
+    print_formats,
 )
 
 def setup_all():
-    # Apply masters (create/update seed records, workspaces, etc.) if missing
+    # Master Data fields/customizations
     masters.apply()
-
     # Patient fields/customizations
     patient.apply()
-
     # Customer fields/customizations
     customer.apply()
-
-    # Patient Encounter customizations
-    encounter.apply()
-
-    # Healthcare Practitioner customizations
+    # Practitioner fields/customizations
     practitioner.apply()
-
-    # Drug Prescription customizations
-    drug_prescription.apply()
-
-    # Item Price customizations (Cost Price field)
-    item_price.apply()
-
-    # Item Package customizations
-    item_package.apply()
-
-    # Sales Invoice customizations
-    sales_invoice.apply()
-
-    # Payment Entry customizations
-    payment_entry.apply()
-
-    # CRM Lead custom fields
+    # Contact/Address fields/customizations
+    contact.apply()
+    # Patient Encounter fields/customizations
+    encounter.apply()
+    # CRM Lead fields/customizations
     crm_lead.apply()
-
-    # Appointment custom fields
+    # Patient Appointment fields/customizations
     patient_appointment.apply()
-
-    # User customizations
-    user.apply()
-
-    # Purchase Order customizations
+    # Drug Prescription fields/customizations
+    drug_prescription.apply()    
+    # Item Price fields/customizations
+    item_price.apply()
+    # Item Package fields/customizations
+    item_package.apply()
+    # Sales Invoice fields/customizations
+    sales_invoice.apply()
+    # Payment Entry fields/customizations
+    payment_entry.apply()    
+    # Purchase Order fields/customizations
     purchase_order.apply()
-
-    # Print Formats (Patient Encounter New etc.)
+    # User fields/customizations
+    user.apply()
+    # Print Format fields/customizations
     print_formats.apply()
-
-    # UI customizations (desk, workspace, tweaks, hide flags, status etc)
-    ui.apply()

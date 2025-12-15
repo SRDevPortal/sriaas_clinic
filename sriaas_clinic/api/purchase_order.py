@@ -116,7 +116,7 @@ def create_batches_before_submit(doc, method=None):
             created.append(created_batch_id)
 
         except Exception:
-            frappe.log_error(traceback.format_exc(), "sriaas_clinic.create_batches_before_submit")
+            frappe.log_error(traceback.format_exc(), "sriaas_clinic.api.purchase_order.create_batches_before_submit")
             # continue collecting other errors
 
     # If any skipped items found, block submit with a clear message

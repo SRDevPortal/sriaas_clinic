@@ -42,10 +42,20 @@ def _ensure_sr_patient_disable_reason():
         return
 
     frappe.get_doc({
-        "doctype": "DocType","name": "SR Patient Disable Reason","module": MODULE_DEF_NAME,
-        "custom": 0,"istable": 0,"issingle": 0,"editable_grid": 0,"track_changes": 1,"allow_rename": 0,"allow_import": 1,
+        "doctype": "DocType",
+        "name": "SR Patient Disable Reason",
+        "module": MODULE_DEF_NAME,
+        "custom": 0,
+        "istable": 0,
+        "issingle": 0,
+        "editable_grid": 0,
+        "track_changes": 1,
+        "allow_rename": 0,
+        "allow_import": 1,
         "naming_rule": "By fieldname","autoname": "field:sr_reason_name","title_field": "sr_reason_name",
-        "field_order": ["sr_reason_name", "is_active", "description"],
+        "field_order": [
+            "sr_reason_name", "is_active", "description"
+        ],
         "fields": [
             {"fieldname":"sr_reason_name","label":"Reason Name","fieldtype":"Data","reqd":1,"in_list_view":1,"in_standard_filter":1,"unique":1},
             {"fieldname":"is_active","label":"Is Active","fieldtype":"Check","default":"1"},
@@ -217,11 +227,19 @@ def _ensure_sr_sales_type():
         return
 
     frappe.get_doc({
-        "doctype":"DocType","name":"SR Sales Type","module":MODULE_DEF_NAME,
+        "doctype":"DocType",
+        "name":"SR Sales Type",
+        "module":MODULE_DEF_NAME,
         "naming_rule":"By fieldname","autoname":"field:sr_sales_type_name","title_field":"sr_sales_type_name",
-        "field_order":["sr_sales_type_name"],
-        "fields":[{"fieldname":"sr_sales_type_name","label":"Sales Type","fieldtype":"Data","reqd":1,"in_list_view":1,"unique":1}],
-        "permissions":[{"role":"System Manager","read":1,"write":1,"create":1,"delete":1,"print":1,"email":1,"export":1}],
+        "field_order":[
+            "sr_sales_type_name"
+        ],
+        "fields":[
+            {"fieldname":"sr_sales_type_name","label":"Sales Type","fieldtype":"Data","reqd":1,"in_list_view":1,"unique":1}
+        ],
+        "permissions":[
+            {"role":"System Manager","read":1,"write":1,"create":1,"delete":1,"print":1,"email":1,"export":1}
+        ],
     }).insert(ignore_permissions=True)
 
 def _ensure_sr_encounter_status():
@@ -230,11 +248,19 @@ def _ensure_sr_encounter_status():
         return
 
     frappe.get_doc({
-        "doctype":"DocType","name":"SR Encounter Status","module":MODULE_DEF_NAME,
+        "doctype":"DocType",
+        "name":"SR Encounter Status",
+        "module":MODULE_DEF_NAME,
         "naming_rule":"By fieldname","autoname":"field:sr_status_name","title_field":"sr_status_name",
-        "field_order":["sr_status_name"],
-        "fields":[{"fieldname":"sr_status_name","label":"Status Name","fieldtype":"Data","unique":1}],
-        "permissions":[{"role":"System Manager","read":1,"write":1,"create":1,"delete":1,"print":1,"email":1,"export":1}],
+        "field_order":[
+            "sr_status_name"
+        ],
+        "fields":[
+            {"fieldname":"sr_status_name","label":"Status Name","fieldtype":"Data","unique":1}
+        ],
+        "permissions":[
+            {"role":"System Manager","read":1,"write":1,"create":1,"delete":1,"print":1,"email":1,"export":1}
+        ],
     }).insert(ignore_permissions=True)
 
 def _ensure_sr_order_item():
@@ -243,9 +269,17 @@ def _ensure_sr_order_item():
         return
 
     frappe.get_doc({
-        "doctype":"DocType","name":"SR Order Item","module":MODULE_DEF_NAME,
-        "custom":0,"istable":1,"editable_grid":1,"issingle":0,"track_changes":1,
-        "field_order":["sr_item_code","sr_item_name","sr_item_description","sr_item_uom","sr_item_qty","sr_item_rate","sr_item_amount"],
+        "doctype":"DocType",
+        "name":"SR Order Item",
+        "module":MODULE_DEF_NAME,
+        "custom":0,
+        "istable":1,
+        "editable_grid":1,
+        "issingle":0,
+        "track_changes":1,
+        "field_order":[
+            "sr_item_code","sr_item_name","sr_item_description","sr_item_uom","sr_item_qty","sr_item_rate","sr_item_amount"
+        ],
         "fields":[
             {"fieldname":"sr_item_code","label":"Item","fieldtype":"Link","options":"Item","reqd":1,"in_list_view":1},
             {"fieldname":"sr_item_name","label":"Item Name","fieldtype":"Data","read_only":1,"fetch_from":"sr_item_code.item_name"},
@@ -264,15 +298,22 @@ def _ensure_sr_instruction():
         return
 
     frappe.get_doc({
-        "doctype":"DocType","name":"SR Instruction","module":MODULE_DEF_NAME,
+        "doctype":"DocType",
+        "name":"SR Instruction",
+        "module":MODULE_DEF_NAME,
+        "track_changes":1,
+        "allow_import":1,
         "naming_rule":"By fieldname","autoname":"field:sr_title","title_field":"sr_title",
-        "track_changes":1,"allow_import":1,
-        "field_order":["sr_title","sr_description"],
+        "field_order":[
+            "sr_title","sr_description"
+        ],
         "fields":[
             {"fieldname":"sr_title","label":"Title","fieldtype":"Data","reqd":1,"in_list_view":1,"unique":1},
             {"fieldname":"sr_description","label":"Description","fieldtype":"Small Text"},
         ],
-        "permissions":[{"role":"System Manager","read":1,"write":1,"create":1,"delete":1,"print":1,"email":1,"export":1}],
+        "permissions":[
+            {"role":"System Manager","read":1,"write":1,"create":1,"delete":1,"print":1,"email":1,"export":1}
+        ],
     }).insert(ignore_permissions=True)
 
 def _ensure_sr_medication_template_item():
@@ -281,9 +322,14 @@ def _ensure_sr_medication_template_item():
         return
 
     frappe.get_doc({
-        "doctype":"DocType","name":"SR Medication Template Item","module":MODULE_DEF_NAME,
-        "istable":1,"track_changes":1,
-        "field_order":["sr_medication","sr_drug_code","sr_dosage","sr_period","sr_dosage_form","sr_instruction"],
+        "doctype":"DocType",
+        "name":"SR Medication Template Item",
+        "module":MODULE_DEF_NAME,
+        "istable":1,
+        "track_changes":1,
+        "field_order":[
+            "sr_medication","sr_drug_code","sr_dosage","sr_period","sr_dosage_form","sr_instruction"
+        ],
         "fields":[
             {"fieldname":"sr_medication","label":"Medication","fieldtype":"Link","options":"Medication","reqd":1,"in_list_view":1},
             {"fieldname":"sr_drug_code","label":"Drug Code","fieldtype":"Link","options":"Item"},
@@ -300,16 +346,23 @@ def _ensure_sr_medication_template():
         return
 
     frappe.get_doc({
-        "doctype":"DocType","name":"SR Medication Template","module":MODULE_DEF_NAME,
+        "doctype":"DocType",
+        "name":"SR Medication Template",
+        "module":MODULE_DEF_NAME,
+        "track_changes":1,
+        "allow_import":1,
         "naming_rule":"By fieldname","autoname":"field:sr_template_name","title_field":"sr_template_name",
-        "track_changes":1,"allow_import":1,
-        "field_order":["sr_template_name","sr_tmpl_instruction","sr_medications"],
+        "field_order":[
+            "sr_template_name","sr_tmpl_instruction","sr_medications"
+        ],
         "fields":[
             {"fieldname":"sr_template_name","label":"Template Name","fieldtype":"Data","reqd":1,"in_list_view":1,"unique":1},
             {"fieldname":"sr_tmpl_instruction","label":"Instruction","fieldtype":"Small Text"},
             {"fieldname":"sr_medications","label":"Medications","fieldtype":"Table","options":"SR Medication Template Item"},
         ],
-        "permissions":[{"role":"System Manager","read":1,"write":1,"create":1,"delete":1,"print":1,"email":1,"export":1}],
+        "permissions":[
+            {"role":"System Manager","read":1,"write":1,"create":1,"delete":1,"print":1,"email":1,"export":1}
+        ],
     }).insert(ignore_permissions=True)
 
 def _ensure_sr_delivery_type():
@@ -318,11 +371,19 @@ def _ensure_sr_delivery_type():
         return
 
     frappe.get_doc({
-        "doctype":"DocType","name":"SR Delivery Type","module":MODULE_DEF_NAME,
+        "doctype":"DocType",
+        "name":"SR Delivery Type",
+        "module":MODULE_DEF_NAME,
         "naming_rule":"By fieldname","autoname":"field:sr_delivery_type_name","title_field":"sr_delivery_type_name","track_changes":1,
-        "field_order":["sr_delivery_type_name"],
-        "fields":[{"fieldname":"sr_delivery_type_name","label":"Delivery / Service Type","fieldtype":"Data","reqd":1,"unique":1,"in_list_view":1}],
-        "permissions":[{"role":"System Manager","read":1,"write":1,"create":1,"delete":1,"print":1,"email":1,"export":1}],
+        "field_order":[
+            "sr_delivery_type_name"
+        ],
+        "fields":[
+            {"fieldname":"sr_delivery_type_name","label":"Delivery / Service Type","fieldtype":"Data","reqd":1,"unique":1,"in_list_view":1}
+        ],
+        "permissions":[
+            {"role":"System Manager","read":1,"write":1,"create":1,"delete":1,"print":1,"email":1,"export":1}
+        ],
     }).insert(ignore_permissions=True)
 
 def _ensure_sr_practitioner_pathy():
@@ -417,17 +478,33 @@ def _ensure_sr_state():
 
     # States + UTs
     states = [
-        ("Andhra Pradesh", False), ("Arunachal Pradesh", False),
-        ("Assam", False), ("Bihar", False), ("Chhattisgarh", False),
-        ("Goa", False), ("Gujarat", False), ("Haryana", False),
-        ("Himachal Pradesh", False), ("Jharkhand", False), ("Karnataka", False),
-        ("Kerala", False), ("Madhya Pradesh", False), ("Maharashtra", False),
-        ("Manipur", False), ("Meghalaya", False), ("Mizoram", False),
-        ("Nagaland", False), ("Odisha", False), ("Punjab", False),
-        ("Rajasthan", False), ("Sikkim", False), ("Tamil Nadu", False),
-        ("Telangana", False), ("Tripura", False), ("Uttar Pradesh", False),
-        ("Uttarakhand", False), ("West Bengal", False),
-        # UTs
+        ("Andhra Pradesh", False),
+        ("Arunachal Pradesh", False),
+        ("Assam", False),
+        ("Bihar", False),
+        ("Chhattisgarh", False),
+        ("Goa", False),("Gujarat", False),
+        ("Haryana", False),
+        ("Himachal Pradesh", False),
+        ("Jharkhand", False),
+        ("Karnataka", False),
+        ("Kerala", False),
+        ("Madhya Pradesh", False),
+        ("Maharashtra", False),
+        ("Manipur", False),
+        ("Meghalaya", False),
+        ("Mizoram", False),
+        ("Nagaland", False),
+        ("Odisha", False),
+        ("Punjab", False),
+        ("Rajasthan", False),
+        ("Sikkim", False),
+        ("Tamil Nadu", False),
+        ("Telangana", False),
+        ("Tripura", False),
+        ("Uttar Pradesh", False),
+        ("Uttarakhand", False),
+        ("West Bengal", False),
         ("Andaman and Nicobar Islands", True),
         ("Chandigarh", True),
         ("Dadra and Nagar Haveli and Daman and Diu", True),
@@ -467,12 +544,12 @@ def _ensure_sr_lead_pipeline():
         "track_changes": 1,
         "allow_rename": 0,
         "allow_import": 1,
-
         "naming_rule": "By fieldname",
         "autoname": "field:sr_pipeline_name",
         "title_field": "sr_pipeline_name",
-
-        "field_order": ["sr_pipeline_name", "is_active", "description"],
+        "field_order": [
+            "sr_pipeline_name", "is_active", "description"
+        ],
         "fields": [
             {
                 "fieldname": "sr_pipeline_name",
@@ -495,10 +572,8 @@ def _ensure_sr_lead_pipeline():
                 "fieldtype": "Small Text",
             },
         ],
-
         "search_fields": "sr_pipeline_name",
         "show_name_in_global_search": 1,
-
         "permissions": [
             {"role": "System Manager", "read":1, "write":1, "create":1, "delete":1, "print":1, "email":1, "export":1},
             {"role": "Healthcare Administrator", "read":1, "write":1, "create":1, "delete":1},
@@ -522,7 +597,9 @@ def _ensure_sr_lead_platform():
         "naming_rule":"By fieldname",
         "autoname":"field:sr_platform_name",
         "title_field":"sr_platform_name",
-        "field_order":["sr_platform_name","sr_platform_details"],
+        "field_order":[
+            "sr_platform_name","sr_platform_details"
+        ],
         "fields": [
             {"fieldname": "sr_platform_name","fieldtype": "Data","label": "Platform Name","reqd": 1,"in_list_view": 1,"unique": 1},
             {"fieldname": "sr_platform_details","fieldtype": "Text Editor","label": "Platform Details"},
@@ -550,7 +627,9 @@ def _ensure_sr_lead_source():
         "naming_rule":"By fieldname",
         "autoname":"field:sr_source_name",
         "title_field":"sr_source_name",
-        "field_order":["sr_source_name","sr_source_details"],
+        "field_order":[
+            "sr_source_name","sr_source_details"
+        ],
         "fields": [
             {"fieldname": "sr_source_name","fieldtype": "Data","label": "Source Name","reqd": 1,"in_list_view": 1,"unique": 1},
             {"fieldname": "sr_source_details","fieldtype": "Text Editor","label": "Source Details"},
@@ -577,12 +656,10 @@ def _ensure_sr_lead_disposition():
         "track_changes": 1,
         "allow_rename": 0,
         "allow_import": 1,
-
         # Naming / title
         "naming_rule": "By fieldname",
         "autoname": "field:sr_disposition_name",
         "title_field": "sr_disposition_name",
-
         # Layout
         "field_order": [
             "sr_disposition_name",
@@ -590,7 +667,6 @@ def _ensure_sr_lead_disposition():
             "is_active",
             "description"
         ],
-
         "fields": [
             {
                 "fieldname": "sr_disposition_name",
@@ -620,7 +696,6 @@ def _ensure_sr_lead_disposition():
                 "fieldtype": "Small Text"
             },
         ],
-
         # Permissions (adjust to your roles)
         "permissions": [
             { "role": "System Manager", "read":1, "write":1, "create":1, "delete":1, "print":1, "email":1, "export":1 },
@@ -640,7 +715,9 @@ def _ensure_dpt_disease():
         "naming_rule": "By fieldname",
         "autoname": "field:dept_disease_name",
         "title_field": "dept_disease_name",
-        "field_order": ["dept_disease_name"],
+        "field_order": [
+            "dept_disease_name"
+        ],
         "fields":[
             {
                 "fieldname":"dept_disease_name","label":"Disease Name","fieldtype":"Data","reqd":1,"in_list_view":1,"unique":1
@@ -665,7 +742,9 @@ def _ensure_dpt_language():
         "naming_rule": "By fieldname",
         "autoname": "field:dept_language_name",
         "title_field": "dept_language_name",
-        "field_order": ["dept_language_name"],
+        "field_order": [
+            "dept_language_name"
+        ],
         "fields":[
             {
                 "fieldname":"dept_language_name","label":"Language","fieldtype":"Data","reqd":1,"in_list_view":1,"unique":1
@@ -694,10 +773,7 @@ def _ensure_diet_chart_dt():
         "editable_grid": 0,
         "track_changes": 1,
         "field_order": [
-            "diet_chart_name",
-            "instructions",
-            "allowed_foods",
-            "restricted_foods"
+            "diet_chart_name", "instructions", "allowed_foods", "restricted_foods"
         ],
         "fields": [
             {
@@ -802,6 +878,14 @@ def create_bulk_clearance_doctype():
         "name": doctype_name,
         "module": MODULE_DEF_NAME,
         "custom": 1,
+        # use hash autoname to avoid needing naming series setup
+        "autoname": "hash",
+        "is_table": 0,
+        "issingle": 0,
+        "istable": 0,
+        "show_in_calendar": 0,
+        "track_changes": 1,
+        "allow_rename": 0,
         "fields": [
             {
                 "label": "CSV File",
@@ -843,16 +927,6 @@ def create_bulk_clearance_doctype():
             {"role": "System Manager", "read": 1, "write": 1, "create": 1},
             {"role": "Accounts Manager", "read": 1, "write": 1, "create": 1}
         ],
-
-        # use hash autoname to avoid needing naming series setup
-        "autoname": "hash",
-        "is_table": 0,
-        "issingle": 0,
-        "istable": 0,
-        "show_in_calendar": 0,
-        "track_changes": 1,
-        "allow_rename": 0,
-        "module": MODULE_DEF_NAME,
     }).insert(ignore_permissions=True)
     frappe.db.commit()
     print(f"Created DocType '{doctype_name}' in module '{MODULE_DEF_NAME}'.")

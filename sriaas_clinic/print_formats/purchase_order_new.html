@@ -58,7 +58,7 @@
 {% set overall_gst_pct = 5 %}
 
 <style>
-:root{ --sr-border:#e8ebf0; }
+:root{ --sr-border:#939393; }
 
 /* Reuse same style system as Sales Invoice for perfect parity */
 .po-wrap{
@@ -96,31 +96,31 @@
 .po-meta .val{ width:60%; text-align:right; }
 
 /* Items and blocks */
-.card{ width:100%; border:1.25pt solid #cfd6e4; border-collapse:collapse; table-layout:fixed; margin-bottom:10pt; }
+.card{ width:100%; border:1.25pt solid #939393; border-collapse:collapse; table-layout:fixed; margin-bottom:10pt; }
 .kv td{ padding:4pt 6pt; border-bottom:1px solid var(--sr-border); vertical-align:top; }
 .kv tr:last-child td{ border-bottom:0; }
 .tbl{ width:100%; border-collapse:collapse; }
 .tbl th,.tbl td{ border:1px solid var(--sr-border); padding:6pt 8pt; vertical-align:top; }
-.lbl{ width:120px; color:#444; background:#fafbfc; }
+.lbl{ width:120px; color:#444; background:#eeeeee; }
 .right{ text-align:right; }
 .muted{ color:#666; }
 .addr{ line-height:1.4; }
 
 /* Totals */
 .sum{ width:100%; }
-.sum td{ padding:6pt 8pt; border-bottom:1px solid #f0f2f5; }
+.sum td{ padding:6pt 8pt; border-bottom:1px solid #939393; }
 .sum td.k{ color:#444; }
 .sum td.v{ text-align:right; white-space:nowrap; }
-.sum tr.total td{ border-top:1px solid #e5e7eb; font-weight:700; }
+.sum tr.total td{ border-top:1px solid #939393; font-weight:700; }
 .sum tr.bold td{ font-weight:700; }
 
 /* Terms */
 .blk{ margin-bottom:10pt; }
 .blk h4{ margin:0 0 6pt; text-transform:uppercase; }
-.blk .box{ border:1px solid #e5e7eb; padding:5pt 2pt; }
+.blk .box{ border:1px solid #939393; padding:5pt 2pt; }
 
 /* Signature */
-.sign-box{ width:auto; border:1px solid #e5e7eb; border-radius:4pt; background:#fafbfc; padding:6pt; display:inline-block; }
+.sign-box{ width:auto; border:1px solid #939393; border-radius:0pt; padding:2pt; display:inline-block; }
 </style>
 
 <div class="po-wrap">
@@ -245,15 +245,15 @@
   {# ===== Items Table ===== #}
   <table class="tbl" width="100%" style="margin-top:10pt; table-layout:fixed; border-collapse:collapse;">
     <thead>
-      <tr style="background:#fafbfc;">
+      <tr style="background:#eeeeee;">
         <th style="width:36px;">#</th>
         <th>Item</th>
-        <th style="width:90px;">HSN/SAC</th>
-        <th>Batch No</th>
-        <th style="width:60px;" class="right">UOM</th>
-        <th style="width:80px;" class="right">Qty</th>
-        <th style="width:90px;" class="right">Rate</th>
-        <th style="width:120px;" class="right">Amount</th>
+        <th style="width:80px;">HSN/SAC</th>
+        <th style="width:100px;">Batch No</th>
+        <th style="width:50px;">UOM</th>
+        <th style="width:50px;">Qty</th>
+        <th style="width:80px;" class="right">Rate</th>
+        <th style="width:100px;" class="right">Amount</th>
       </tr>
     </thead>
     <tbody>
@@ -261,11 +261,11 @@
       {% set name = it.item_name or it.item_code %}
       <tr>
         <td>{{ loop.index }}</td>
-        <td><div><b>{{ name }}</b></div></td>
+        <td>{{ name }}</td>
         <td>{{ it.gst_hsn_code or it.sac or "" }}</td>
-        <td class="right">{{ it.batch_no or "-" }}</td>
-        <td class="right">{{ it.uom or it.stock_uom or "-" }}</td>
-        <td class="right">{{ frappe.utils.fmt_money(it.qty or 0, 0) }}</td>
+        <td>{{ it.batch_no or "-" }}</td>
+        <td>{{ it.uom or it.stock_uom or "-" }}</td>
+        <td>{{ frappe.utils.fmt_money(it.qty or 0, 0) }}</td>
         <td class="right">{{ frappe.utils.fmt_money(it.rate or 0, currency=currency) }}</td>
         <td class="right">{{ frappe.utils.fmt_money(it.amount or ( (it.qty or 0) * (it.rate or 0) ), currency=currency) }}</td>
       </tr>
@@ -276,7 +276,7 @@
     </tbody>
     <tfoot>
       <tr>
-        <td colspan="6" class="right"><b>Subtotal</b></td>
+        <td colspan="7" class="right"><b>Subtotal</b></td>
         <td class="right">{{ frappe.utils.fmt_money(doc.total or doc.net_total or 0, currency=currency) }}</td>
       </tr>
     </tfoot>

@@ -54,14 +54,45 @@ def _make_encounter_fields():
 
 def _setup_clinical_notes_section():
     """Add Clinical Notes section to Patient Encounter"""
+
+    show_cond = 'eval:!(doc.sr_encounter_type=="Followup" && doc.sr_encounter_place=="Online")'
+
     create_cf_with_module({
         DT: [
-            {"fieldname":"sr_clinical_notes_sb","label":"Clinical Notes","fieldtype":"Section Break","collapsible":0,"insert_after":"submit_orders_on_save"},
-            {"fieldname":"sr_complaints","label":"Complaints","fieldtype":"Small Text","insert_after":"sr_clinical_notes_sb"},
-            {"fieldname":"sr_observations","label":"Observations","fieldtype":"Small Text","insert_after":"sr_complaints"},
-            {"fieldname":"sr_investigations","label":"Investigations","fieldtype":"Small Text","insert_after":"sr_observations"},
-            {"fieldname":"sr_diagnosis","label":"Diagnosis","fieldtype":"Small Text","insert_after":"sr_investigations"},
-            {"fieldname":"sr_notes","label":"Notes","fieldtype":"Small Text","insert_after":"sr_diagnosis"},
+            {
+                "fieldname":"sr_clinical_notes_sb",
+                "label":"Clinical Notes",
+                "fieldtype":"Section Break",
+                "collapsible":0,
+                "insert_after":"submit_orders_on_save",
+            },
+            {
+                "fieldname":"sr_complaints",
+                "label":"Complaints",
+                "fieldtype":"Small Text",
+                "insert_after":"sr_clinical_notes_sb",
+                "depends_on": show_cond
+            },
+            {
+                "fieldname":"sr_observations",
+                "label":"Observations",
+                "fieldtype":"Small Text",
+                "insert_after":"sr_complaints",
+                "depends_on": show_cond
+            },
+            {
+                "fieldname":"sr_diagnosis",
+                "label":"Diagnosis",
+                "fieldtype":"Small Text",
+                "insert_after":"sr_investigations",
+                "depends_on": show_cond
+            },
+            {
+                "fieldname":"sr_notes",
+                "label":"Notes",
+                "fieldtype":"Small Text",
+                "insert_after":"sr_diagnosis"
+            },
             # Use a child Table for multiple reports (one row per report)
             # {"fieldname":"sr_medical_reports_table","label":"Attach Medical Report","fieldtype":"Table","options":"SR Medical Report","insert_after":"sr_notes"},
             # HTML preview area for gallery (JS will render here)
@@ -243,7 +274,7 @@ def _apply_encounter_ui_customizations():
     upsert_property_setter(DT, "company", "hidden", "0", "Check")
     upsert_property_setter(DT, "company", "read_only", "0", "Check")
 
-    ensure_field_after(DT, "sr_diagnosis", "sr_notes")
+    ensure_field_after(DT, "sr_notes", "sr_diagnosis")
 
     # --------------------------
     # 2) Hide unwanted flags/fields

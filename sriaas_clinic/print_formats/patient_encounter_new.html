@@ -300,6 +300,23 @@
 </div>
 {% endif %}
 
+{% if doc.diet_chart %}
+<div class="hdr-wrap">
+  <table class="card">
+    <tr>
+      <td colspan="2" class="stack">
+        <div class="title">Diet Chart</div>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding:10px;">
+        {{ doc.diet_chart }}
+      </td>
+    </tr>
+  </table>
+</div>
+{% endif %}
+
 {# ---------- Ayurvedic: Only show if practitioner name exists AND table has at least one non-empty row ---------- #}
 {% set ayu_prac = doc.sr_ayurvedic_practitioner_name or "" %}
 

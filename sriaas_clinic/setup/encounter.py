@@ -81,6 +81,12 @@ def _setup_clinical_notes_section():
                 "depends_on": show_cond
             },
             {
+                "fieldname":"sr_investigations",
+                "label":"Investigations",
+                "fieldtype":"Small Text",
+                "insert_after":"sr_observations"
+            },
+            {
                 "fieldname":"sr_diagnosis",
                 "label":"Diagnosis",
                 "fieldtype":"Small Text",

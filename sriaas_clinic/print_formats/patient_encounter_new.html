@@ -41,13 +41,20 @@
   .kv tr > td    { padding:3px 0; vertical-align:top; border-bottom:1px solid #e8ebf0; }
   .kv tr:last-child > td { border-bottom:0; }
 
-  .lbl     { color:#444; width:100pt; white-space:nowrap; border-right:1px solid #e8ebf0; padding-right:0; background:#fafbfc; }
+  .lbl     { color:#444; white-space:nowrap; border-right:1px solid #e8ebf0; padding-right:0; background:#fafbfc; }
   .val     { padding-left:0; }
   .val b   { font-weight:700; }
   .addr    { line-height:1.4; }
   .stack         { padding:0 !important; border-bottom:1px solid #e8ebf0; }
   .stack .title  { font-weight:600; color:#444; background:#fafbfc; padding:5px 0 !important; }
   .stack .value  { padding:4px 0 8px 0; }
+
+  .clinical-notes td {
+    border: 1.25pt solid #cfd6e4;
+  }
+  .clinical-notes td.lbl {
+    font-weight: 600;
+  }
 
   @media print { .hdr-wrap, .card, .card td, .kv, .kv td { font-size:10pt !important; } }
 </style>
@@ -240,6 +247,58 @@
     </tr>
   </table>
 </div>
+
+{# ---------- Clinical Notes (Encounter) ---------- #}
+{% if doc.sr_complaints or doc.sr_observations or doc.sr_investigations or doc.sr_diagnosis or doc.sr_notes %}
+<div class="hdr-wrap">
+  <table class="card clinical-notes">
+    <colgroup>
+      <col style="width: 20%;">
+      <col style="width: 80%;">
+    </colgroup>
+    <tr>
+      <td colspan="2" class="stack">
+        <div class="title">Clinical Notes</div>
+      </td>
+    </tr>
+
+    {% if doc.sr_complaints %}
+    <tr>
+      <td class="lbl">Complaints</td>
+      <td class="val">{{ doc.sr_complaints }}</td>
+    </tr>
+    {% endif %}
+
+    {% if doc.sr_observations %}
+    <tr>
+      <td class="lbl">Observations</td>
+      <td class="val">{{ doc.sr_observations }}</td>
+    </tr>
+    {% endif %}
+
+    {% if doc.sr_investigations %}
+    <tr>
+      <td class="lbl">Investigations</td>
+      <td class="val">{{ doc.sr_investigations }}</td>
+    </tr>
+    {% endif %}
+
+    {% if doc.sr_diagnosis %}
+    <tr>
+      <td class="lbl">Diagnosis</td>
+      <td class="val">{{ doc.sr_diagnosis }}</td>
+    </tr>
+    {% endif %}
+
+    {% if doc.sr_notes %}
+    <tr>
+      <td class="lbl">Notes</td>
+      <td class="val">{{ doc.sr_notes }}</td>
+    </tr>
+    {% endif %}
+  </table>
+</div>
+{% endif %}
 
 {# ---------- Ayurvedic: Only show if practitioner name exists AND table has at least one non-empty row ---------- #}
 {% set ayu_prac = doc.sr_ayurvedic_practitioner_name or "" %}

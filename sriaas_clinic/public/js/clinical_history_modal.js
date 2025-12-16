@@ -22,7 +22,7 @@ function _css_block() {
   return `
   <style>
     body { font-family: Arial, sans-serif; }
-    .history-wrap { padding: 16px 16px 0; }
+    /* .history-wrap { padding: 16px 16px 0; } */
     .header { border-bottom: 1px solid #e7e7e7; margin-bottom: 12px; padding-bottom: 8px; }
     .meta { margin: 6px 0; font-size: 14px; color: #333; }
     .section-title { font-size: 15px; margin: 10px 0 6px; font-weight: 600; }
@@ -52,6 +52,10 @@ function _css_block() {
       justify-content: flex-end;
       gap: 8px;
       margin-top: 12px;
+    }
+
+    .dialog-actions [data-action="print-history"] {
+      display: none !important;
     }
 
     /* Print tidy */

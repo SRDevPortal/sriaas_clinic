@@ -108,7 +108,7 @@
 
 /* Totals */
 .sum{ width:100%; }
-.sum td{ padding:6pt 8pt; border-bottom:1px solid #939393; }
+.sum td{ padding:6pt 8pt; border-bottom:1px solid #939393; font-weight:700; }
 .sum td.k{ color:#444; }
 .sum td.v{ text-align:right; white-space:nowrap; }
 .sum tr.total td{ border-top:1px solid #939393; font-weight:700; }
@@ -249,11 +249,11 @@
         <th style="width:36px;">#</th>
         <th>Item</th>
         <th style="width:80px;">HSN/SAC</th>
-        <th style="width:100px;">Batch No</th>
+        <!-- <th style="width:100px;">Batch No</th> -->
         <th style="width:50px;">UOM</th>
         <th style="width:50px;">Qty</th>
-        <th style="width:80px;" class="right">Rate</th>
-        <th style="width:100px;" class="right">Amount</th>
+        <th style="width:100px;" class="right">Rate</th>
+        <th style="width:120px;" class="right">Amount</th>
       </tr>
     </thead>
     <tbody>
@@ -263,7 +263,7 @@
         <td>{{ loop.index }}</td>
         <td>{{ name }}</td>
         <td>{{ it.gst_hsn_code or it.sac or "" }}</td>
-        <td>{{ it.batch_no or "-" }}</td>
+        <!-- <td>{{ it.batch_no or "-" }}</td> -->
         <td>{{ it.uom or it.stock_uom or "-" }}</td>
         <td>{{ frappe.utils.fmt_money(it.qty or 0, 0) }}</td>
         <td class="right">{{ frappe.utils.fmt_money(it.rate or 0, currency=currency) }}</td>
@@ -276,7 +276,7 @@
     </tbody>
     <tfoot>
       <tr>
-        <td colspan="7" class="right"><b>Subtotal</b></td>
+        <td colspan="6" class="right"><b>Subtotal</b></td>
         <td class="right">{{ frappe.utils.fmt_money(doc.total or doc.net_total or 0, currency=currency) }}</td>
       </tr>
     </tfoot>

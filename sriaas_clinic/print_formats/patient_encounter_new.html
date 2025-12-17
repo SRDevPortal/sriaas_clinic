@@ -249,13 +249,26 @@
 </div>
 
 {# ---------- Clinical Notes (Encounter) ---------- #}
-{% if doc.sr_complaints or doc.sr_observations or doc.sr_investigations or doc.sr_diagnosis or doc.sr_notes %}
+
+{% set show_notes = not (
+    doc.sr_encounter_place == "Online"
+    and doc.sr_encounter_type in ["Followup", "Order"]
+) %}
+
+{% if
+   doc.sr_complaints
+   or doc.sr_observations
+   or doc.sr_investigations
+   or doc.sr_diagnosis
+   or (show_notes and doc.sr_notes)
+%}
 <div class="hdr-wrap">
   <table class="card clinical-notes">
     <colgroup>
       <col style="width: 20%;">
       <col style="width: 80%;">
     </colgroup>
+
     <tr>
       <td colspan="2" class="stack">
         <div class="title">Clinical Notes</div>
@@ -290,16 +303,18 @@
     </tr>
     {% endif %}
 
-    {% if doc.sr_notes %}
+    {% if show_notes and doc.sr_notes %}
     <tr>
       <td class="lbl">Notes</td>
       <td class="val">{{ doc.sr_notes }}</td>
     </tr>
     {% endif %}
+
   </table>
 </div>
 {% endif %}
 
+{# ---------- Diet Chart: Only show if exists ---------- #}
 {% if doc.diet_chart %}
 <div class="hdr-wrap">
   <table class="card">

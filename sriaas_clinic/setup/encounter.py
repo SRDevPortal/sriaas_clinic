@@ -55,7 +55,9 @@ def _make_encounter_fields():
 def _setup_clinical_notes_section():
     """Add Clinical Notes section to Patient Encounter"""
 
-    show_cond = 'eval:!(doc.sr_encounter_type=="Followup" && doc.sr_encounter_place=="Online")'
+    # show_cond = 'eval:!(doc.sr_encounter_type=="Followup" && doc.sr_encounter_place=="Online")'
+
+    hide_cond = 'eval:!(doc.sr_encounter_place=="Online" && ["Followup","Order"].includes(doc.sr_encounter_type))'
 
     create_cf_with_module({
         DT: [
@@ -71,27 +73,28 @@ def _setup_clinical_notes_section():
                 "label":"Complaints",
                 "fieldtype":"Small Text",
                 "insert_after":"sr_clinical_notes_sb",
-                "depends_on": show_cond
+                "depends_on": hide_cond
             },
             {
                 "fieldname":"sr_observations",
                 "label":"Observations",
                 "fieldtype":"Small Text",
                 "insert_after":"sr_complaints",
-                "depends_on": show_cond
+                "depends_on": hide_cond
             },
             {
                 "fieldname":"sr_investigations",
                 "label":"Investigations",
                 "fieldtype":"Small Text",
-                "insert_after":"sr_observations"
+                "insert_after":"sr_observations",
+                "depends_on": hide_cond
             },
             {
                 "fieldname":"sr_diagnosis",
                 "label":"Diagnosis",
                 "fieldtype":"Small Text",
                 "insert_after":"sr_investigations",
-                "depends_on": show_cond
+                "depends_on": hide_cond
             },
             {
                 "fieldname":"sr_notes",

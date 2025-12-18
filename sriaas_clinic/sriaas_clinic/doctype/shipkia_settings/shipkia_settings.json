@@ -1,0 +1,64 @@
+{
+  "doctype": "DocType",
+  "name": "Shipkia Settings",
+  "module": "SRIAAS Clinic",
+  "issingle": 1,
+  "autoname": "prompt",
+  "engine": "InnoDB",
+  "editable_grid": 0,
+  "track_changes": 1,
+  "field_order": [
+    "enable_sync",
+    "webhook_url",
+    "api_token",
+    "header_key",
+    "pickup_address",
+    "order_channel"
+  ],
+  "fields": [
+    {
+      "fieldname": "enable_sync",
+      "fieldtype": "Check",
+      "label": "Enable Shipkia Sync",
+      "default": "0"
+    },
+    {
+      "fieldname": "webhook_url",
+      "fieldtype": "Data",
+      "label": "Shipkia Webhook URL",
+      "reqd": 1
+    },
+    {
+      "fieldname": "api_token",
+      "fieldtype": "Password",
+      "label": "Shipkia API Token"
+    },
+    {
+      "fieldname": "header_key",
+      "fieldtype": "Data",
+      "label": "Auth Header Key",
+      "default": "x-api-key"
+    },
+    {
+      "fieldname": "pickup_address",
+      "fieldtype": "Data",
+      "label": "Pickup Address Code",
+      "reqd": 1
+    },
+    {
+      "fieldname": "order_channel",
+      "fieldtype": "Data",
+      "label": "Order Channel",
+      "default": "erpsriaas"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0
+    }
+  ]
+}

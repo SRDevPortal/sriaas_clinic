@@ -83,6 +83,12 @@ def apply():
     # --------------------------------------------------------
     create_bulk_clearance()
 
+    # --------------------------------------------------------
+    # Integration / Shipping Settings
+    # --------------------------------------------------------
+    _ensure_shipkia_settings()
+
+
 def _ensure_sr_patient_disable_reason():
     """Create SR Patient Disable Reason master."""
     if frappe.db.exists("DocType", "SR Patient Disable Reason"):
@@ -1435,3 +1441,76 @@ def create_bulk_clearance():
 
     frappe.db.commit()
     print(f"Created DocType '{doctype_name}' in module '{MODULE_DEF_NAME}'.")
+
+def _ensure_shipkia_settings():
+    """Create Shipkia Settings (Single Doctype)."""
+
+    if frappe.db.exists("DocType", "Shipkia Settings"):
+        return
+
+    frappe.get_doc({
+        "doctype": "DocType",
+        "name": "Shipkia Settings",
+        "module": MODULE_DEF_NAME,
+        "issingle": 1,
+        "custom": 0,
+        "track_changes": 1,
+        "allow_rename": 0,
+        "field_order": [
+            "enable_sync",
+            "webhook_url",
+            "api_token",
+            "header_key",
+            "pickup_address",
+            "order_channel",
+        ],
+        "fields": [
+            {
+                "fieldname": "enable_sync",
+                "label": "Enable Shipkia Sync",
+                "fieldtype": "Check",
+                "default": "0",
+            },
+            {
+                "fieldname": "webhook_url",
+                "label": "Shipkia Webhook URL",
+                "fieldtype": "Data",
+                "reqd": 1,
+            },
+            {
+                "fieldname": "api_token",
+                "label": "Shipkia API Token",
+                "fieldtype": "Password",
+            },
+            {
+                "fieldname": "header_key",
+                "label": "Auth Header Key",
+                "fieldtype": "Data",
+                "default": "x-api-key",
+            },
+            {
+                "fieldname": "pickup_address",
+                "label": "Pickup Address Code",
+                "fieldtype": "Data",
+                "reqd": 1,
+            },
+            {
+                "fieldname": "order_channel",
+                "label": "Order Channel",
+                "fieldtype": "Data",
+                "default": "erpsriaas",
+            },
+        ],
+        "permissions": [
+            {
+                "role": "System Manager",
+                "read": 1,
+                "write": 1,
+                "create": 1,
+                "delete": 0,
+            }
+        ],
+    }).insert(ignore_permissions=True)
+
+    frappe.db.commit()
+    frappe.logger().info("Shipkia Settings DocType created successfully.")

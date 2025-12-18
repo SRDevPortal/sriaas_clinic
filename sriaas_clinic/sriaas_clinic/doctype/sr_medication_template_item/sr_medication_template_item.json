@@ -1,13 +1,14 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2025-09-22 17:08:05.921338",
+ "creation": "2025-12-17 16:13:25.672938",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
   "sr_medication",
   "sr_drug_code",
+  "sr_medication_class",
   "sr_dosage",
   "sr_period",
   "sr_dosage_form",
@@ -15,6 +16,7 @@
  ],
  "fields": [
   {
+   "columns": 2,
    "fieldname": "sr_medication",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -29,6 +31,18 @@
    "options": "Item"
   },
   {
+   "columns": 2,
+   "fetch_from": "sr_medication.medication_class",
+   "fieldname": "sr_medication_class",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Medication Class",
+   "options": "Medication Class",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "columns": 1,
    "fieldname": "sr_dosage",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -37,6 +51,7 @@
    "reqd": 1
   },
   {
+   "columns": 1,
    "fieldname": "sr_period",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -45,6 +60,7 @@
    "reqd": 1
   },
   {
+   "columns": 1,
    "fieldname": "sr_dosage_form",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -53,6 +69,7 @@
    "reqd": 1
   },
   {
+   "columns": 3,
    "fieldname": "sr_instruction",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -65,7 +82,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-09-22 17:08:05.921338",
+ "modified": "2025-12-17 16:13:25.672938",
  "modified_by": "Administrator",
  "module": "Sriaas Clinic",
  "name": "SR Medication Template Item",

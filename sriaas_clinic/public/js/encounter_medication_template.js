@@ -1,30 +1,48 @@
 // Patient Encounter — Load meds from SR Medication Template
-// Maps:
-//   Template header:  sr_tmpl_instruction  → Patient Encounter.sr_pe_instruction
-//   Template item:    sr_instruction       → Drug Prescription.sr_drug_instruction
-// Also computes quantity, per-day, and a pretty label for sr_medication_name_print.
+// Routing based on Medication Class
+// Ayurvedic   → drug_prescription
+// Homeopathic → sr_homeopathy_drug_prescription
+// Allopathic  → sr_allopathy_drug_prescription
 
 frappe.ui.form.on('Patient Encounter', {
+
+  /* ---------------- TRIGGERS ---------------- */
   sr_medication_template(frm) {
     frm.trigger('load_template_medication');
   },
 
+  /* ---------------- MAIN LOADER ---------------- */
   load_template_medication(frm) {
     if (!frm.doc.sr_medication_template) return;
+
+    /* ---------------- HELPERS ---------------- */
+
+    const resolve_child_table = (medication_class = "") => {
+      switch ((medication_class || "").trim()) {
+        case "Ayurvedic Medicine":
+          return "drug_prescription";
+        case "Homeopathic Medicine":
+          return "sr_homeopathy_drug_prescription";
+        case "Allopathic Medicine":
+          return "sr_allopathy_drug_prescription";
+        default:
+          return null;
+      }
+    };
 
     const parse_days = (period_str = "") => {
       const p = (period_str || "").toLowerCase().trim();
       const n = parseInt(p) || 1;
       if (p.includes("month")) return n * 30;
-      if (p.includes("week"))  return n * 7;
-      if (p.includes("day"))   return n;
+      if (p.includes("week")) return n * 7;
+      if (p.includes("day")) return n;
       return n;
     };
 
-    // "1-0-1" -> 2; OD/BD/TDS/QID; HS/bed time -> 1; "alternate day" -> 0.5
     const parse_per_day = (dosage_str = "") => {
       const d = (dosage_str || "").toLowerCase().trim();
       const nums = d.match(/\d+/g);
+
       if (nums && (/[-\s/]/.test(d) || nums.length > 1)) {
         return nums.map(n => parseInt(n) || 0).reduce((a, b) => a + b, 0);
       }
@@ -38,35 +56,60 @@ frappe.ui.form.on('Patient Encounter', {
 
     const short_form = (dosage_form = "") => {
       const f = (dosage_form || "").toLowerCase();
-      if (f.includes("tablet"))  return "Tab";
+      if (f.includes("tablet")) return "Tab";
       if (f.includes("capsule")) return "Cap";
       return "";
     };
 
-    const childTableField = "drug_prescription";
-    const grid = frm.fields_dict[childTableField]?.grid;
-    if (!grid) return;
-    const childDoctype = grid.doctype;
-    const hasField = (df) => frappe.meta.has_field(childDoctype, df);
+    /* ---------------- CLEAR EXISTING ---------------- */
+
+    [
+      "drug_prescription",
+      "sr_homeopathy_drug_prescription",
+      "sr_allopathy_drug_prescription"
+    ].forEach(table => {
+      if (frm.fields_dict[table]) {
+        frm.clear_table(table);
+      }
+    });
+
+    /* ---------------- FETCH TEMPLATE ---------------- */
 
     frappe.call({
       method: "frappe.client.get",
-      args: { doctype: "SR Medication Template", name: frm.doc.sr_medication_template },
+      args: {
+        doctype: "SR Medication Template",
+        name: frm.doc.sr_medication_template
+      },
       callback(r) {
         const tmpl = r.message;
         if (!tmpl) return;
 
-        // Header → PE field
-        if (tmpl.sr_tmpl_instruction && frm.doc.sr_pe_instruction !== tmpl.sr_tmpl_instruction) {
+        // Header instruction → Encounter instruction
+        if (tmpl.sr_tmpl_instruction) {
           frm.set_value("sr_pe_instruction", tmpl.sr_tmpl_instruction);
         }
 
-        frm.clear_table(childTableField);
+        /* ---------------- LOAD MEDICATIONS ---------------- */
 
         (tmpl.sr_medications || []).forEach(row => {
-          const med = frm.add_child(childTableField);
 
-          // Source fields (template item)
+          const target_table = resolve_child_table(row.sr_medication_class);
+          if (!target_table || !frm.fields_dict[target_table]) {
+            console.warn(
+              "Skipped medication due to invalid class:",
+              row.sr_medication,
+              row.sr_medication_class
+            );
+            return;
+          }
+
+          const grid = frm.fields_dict[target_table].grid;
+          const childDoctype = grid.doctype;
+          const hasField = (df) => frappe.meta.has_field(childDoctype, df);
+
+          const med = frm.add_child(target_table);
+
           const medication_name = row.sr_medication || "";
           const dosage          = row.sr_dosage || "";
           const period_str      = row.sr_period || "";
@@ -74,31 +117,33 @@ frappe.ui.form.on('Patient Encounter', {
           const code            = row.sr_drug_code || "";
           const instr           = row.sr_instruction || "";
 
-          // Calculations
           const per_day   = parse_per_day(dosage);
           const days      = parse_days(period_str);
           const total_qty = Math.ceil(per_day * days);
           const short     = short_form(dosage_form);
-          const is_countable = ["tablet","capsule"].includes((dosage_form||"").toLowerCase());
+          const is_countable = ["tablet","capsule"].includes(
+            (dosage_form || "").toLowerCase()
+          );
 
-          // Keep Link clean
           med.medication = medication_name;
 
-          // Map fields that exist in Drug Prescription child
-          if (hasField("drug_code"))   med.drug_code   = code || "";
+          if (hasField("drug_code"))   med.drug_code   = code;
           if (hasField("dosage"))      med.dosage      = dosage;
           if (hasField("period"))      med.period      = period_str;
           if (hasField("dosage_form")) med.dosage_form = dosage_form;
 
-          // Child mapping: sr_instruction → sr_drug_instruction
-          if (hasField("sr_drug_instruction")) med.sr_drug_instruction = instr;
+          if (hasField("sr_drug_instruction")) {
+            med.sr_drug_instruction = instr;
+          }
 
-          if (hasField("no_of_tablets_per_day_for_calculation"))
+          if (hasField("no_of_tablets_per_day_for_calculation")) {
             med.no_of_tablets_per_day_for_calculation = per_day;
+          }
 
-          if (hasField("quantity") && is_countable) med.quantity = total_qty;
+          if (hasField("quantity") && is_countable) {
+            med.quantity = total_qty;
+          }
 
-          // Pretty label
           const pretty = (is_countable && short && total_qty > 0)
             ? `${medication_name} (${total_qty} ${short})`
             : medication_name;
@@ -106,12 +151,19 @@ frappe.ui.form.on('Patient Encounter', {
           if (hasField("sr_medication_name_print")) {
             med.sr_medication_name_print = pretty;
           } else if (hasField("custom_instruction")) {
-            med.custom_instruction = instr ? `${pretty} — ${instr}` : pretty;
+            med.custom_instruction = instr
+              ? `${pretty} — ${instr}`
+              : pretty;
           }
         });
 
-        frm.refresh_field(childTableField);
+        /* ---------------- REFRESH ---------------- */
+
+        frm.refresh_field("drug_prescription");
+        frm.refresh_field("sr_homeopathy_drug_prescription");
+        frm.refresh_field("sr_allopathy_drug_prescription");
       }
     });
   }
 });
+

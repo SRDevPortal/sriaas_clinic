@@ -37,22 +37,28 @@ def _make_invoice_fields():
 
     # Determine where to insert new fields (after right column CB if present)
     meta = frappe.get_meta(PARENT)
-    insert_anchor = RIGHT_COL_CB if meta.get_field(RIGHT_COL_CB) else "posting_date"  # safe fallback
+    insert_anchor = RIGHT_COL_CB if meta.get_field(RIGHT_COL_CB) else "posting_date"  # safe fallback (after posting_date for "sr_si_order_source" field)
     
     create_cf_with_module({
         PARENT: [
-            {"fieldname": "sr_si_patient_id","label": "Patient ID","fieldtype": "Data","read_only": 1,"insert_after": "customer_name","fetch_from": "patient.sr_patient_id"},
-            
-            {"fieldname": "sr_si_patient_department","label": "Patient Department","fieldtype": "Link","options": "Medical Department","in_list_view":1,"in_standard_filter":1,"read_only": 1,"insert_after": "sr_si_patient_id","fetch_from": "patient.sr_medical_department"},
+            {"fieldname": "sr_si_patient_id","label": "Patient ID","fieldtype": "Data","read_only": 1,"fetch_from": "patient.sr_patient_id","insert_after": "customer_name"},            
+            {"fieldname": "sr_si_patient_department","label": "Patient Department","fieldtype": "Link","options": "Medical Department","in_list_view":1,"in_standard_filter":1,"read_only": 1,"fetch_from": "patient.sr_medical_department","insert_after": "sr_si_patient_id"},
 
-            {"fieldname": "sr_si_order_source","label": "Order Source","fieldtype": "Link","options": lead_source_dt,"in_list_view":1,"in_standard_filter":1,"insert_after": insert_anchor},
-
-            {"fieldname": "sr_si_encounter_place","label": "Encounter Place","fieldtype": "Data","in_list_view":1,"in_standard_filter":1,"insert_after": "sr_si_delivery_type",},
-
-            {"fieldname": "sr_si_sales_type","label": "Sales Type","fieldtype": "Link","options": "SR Sales Type","in_list_view":1,"in_standard_filter":1,"insert_after": "sr_si_order_source",},
-            
+            {"fieldname": "sr_si_track_sb","label":"Order Tracking Details","fieldtype":"Section Break","collapsible":1,"insert_after":"gst_breakup_table"},
+            {"fieldname": "sr_si_order_source","label": "Order Source","fieldtype": "Link","options": lead_source_dt,"in_list_view":1,"in_standard_filter":1,"insert_after": "sr_si_track_sb"},
+            {"fieldname": "sr_si_encounter_place","label": "Encounter Place","fieldtype": "Data","in_list_view":1,"in_standard_filter":1,"insert_after": "sr_si_order_source",},
+            {"fieldname": "sr_si_sales_type","label": "Sales Type","fieldtype": "Link","options": "SR Sales Type","in_list_view":1,"in_standard_filter":1,"insert_after": "sr_si_encounter_place",},
             {"fieldname": "sr_si_delivery_type","label": "Delivery Type","fieldtype": "Link","options": "SR Delivery Type","in_list_view":1,"in_standard_filter":1,"allow_on_submit":1,"insert_after": "sr_si_sales_type"},
-
+            {
+                "fieldname": "sent_to_shipkia",
+                "label": "Sent to Shipkia",
+                "fieldtype": "Check",
+                "default": "0",
+                "read_only": 1,
+                "hidden": 1,
+                "print_hide": 1,
+                "insert_after": "sr_si_delivery_type",
+            },
             {
                 "fieldname": "created_by_agent",
                 "label": "Created By",
@@ -63,7 +69,6 @@ def _make_invoice_fields():
                 "insert_after": "due_date"
             },
 
-            {"fieldname":"sr_si_track_sb","label":"Order Tracking Details","fieldtype":"Section Break","collapsible":1,"insert_after":"gst_breakup_table"},
         ]
     })
 
@@ -221,7 +226,6 @@ def _apply_invoice_ui_customizations():
     ensure_field_after(PARENT, "sr_si_sales_type", "sr_si_encounter_place")
     ensure_field_after(PARENT, "sr_si_delivery_type", "sr_si_sales_type")
 
-
     # Hide unwanted flags/fields
     targets = (
         "customer",
@@ -265,11 +269,16 @@ def _apply_invoice_ui_customizations():
     # Tweak list/standard filter visibility
     if meta.get_field("company"):
         upsert_property_setter(PARENT, "company", "in_standard_filter", "0", "Check")  # hide from filters
+
     if meta.get_field("contact_mobile"):
         upsert_property_setter(PARENT, "contact_mobile", "in_list_view", "1", "Check")  # show in list
         upsert_property_setter(PARENT, "contact_mobile", "in_standard_filter", "1", "Check")  # show in filters
 
-    # ensure created_by_agent is hidden and not shown in list/filter
+    if meta.get_field("sent_to_shipkia"):
+        upsert_property_setter(PARENT, "sent_to_shipkia", "hidden", "1", "Check")
+        upsert_property_setter(PARENT, "sent_to_shipkia", "print_hide", "1", "Check")
+        upsert_property_setter(PARENT, "sent_to_shipkia", "in_list_view", "0", "Check")
+
     if meta.get_field("created_by_agent"):
         upsert_property_setter(PARENT, "created_by_agent", "hidden", "0", "Check")
         upsert_property_setter(PARENT, "created_by_agent", "in_list_view", "0", "Check")

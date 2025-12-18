@@ -57,6 +57,8 @@ doctype_js = {
     "Sales Invoice": [
         # "public/js/_sales_invoice_draft_payment.js",
         "public/js/sales_invoice_actions.js",
+        # send sales invoice to Shipkia
+        # "public/js/shipkia_sales_invoice.js",
     ],
     "Payment Entry": [
         "public/js/payment_entry_outstanding_dialog.js",
@@ -161,6 +163,7 @@ doc_events = {
             # "sriaas_clinic.api.si_payment_flow.handlers.create_pe_from_si_dp",
             # "sriaas_clinic.api.si_payment_flow.handlers.refresh_payment_history",
             # "sriaas_clinic.api.integrations.n8n_shiprocket.send_to_n8n_on_submit",
+            # "sriaas_clinic.api.integrations.shipkia_sales_invoice.send_sales_invoice_to_shipkia",
         ],
         # "on_update_after_submit": [
         #     "sriaas_clinic.api.si_payment_flow.handlers.refresh_payment_history",
@@ -201,9 +204,9 @@ doc_events = {
     "User Group": {
         "before_save": "sriaas_clinic.api.user_group_backlink.user_group_before_save",
     },
-    "Purchase Order": {
-        "before_submit": "sriaas_clinic.api.purchase_order.create_batches_before_submit"
-    },
+    # "Purchase Order": {
+    #     "before_submit": "sriaas_clinic.api.purchase_order.create_batches_before_submit"
+    # },
 }
 
 # Overriding Methods

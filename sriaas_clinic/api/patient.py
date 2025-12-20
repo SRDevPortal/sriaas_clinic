@@ -216,28 +216,43 @@ def force_patient_series(doc, method=None):
     frappe.logger().info(f"[Patient] series name -> {doc.name}")
 
 # ---------------------------------
-# D) Unique mobile number validator
+# D) Unique mobile / phone validator
 # ---------------------------------
 def validate_unique_contact_mobile(doc, method):
-    mobile = (doc.mobile or "").strip()
+    """
+    Do not allow Patient creation if any of these fields already exist
+    in Contact or Contact Phone:
+    - mobile
+    - phone
+    - mobile_no
+    """
 
-    if not mobile:
+    fields_to_check = ("mobile", "phone", "mobile_no")
+    numbers = []
+
+    for field in fields_to_check:
+        val = (doc.get(field) or "").strip()
+        if val:
+            numbers.append(val)
+
+    if not numbers:
         return
 
-    # Search in Contact table
-    existing = frappe.db.sql("""
-        SELECT name 
-        FROM `tabContact`
-        WHERE mobile_no = %s
-        OR name IN (
-            SELECT parent FROM `tabContact Phone`
-            WHERE phone = %s
-        )
-        LIMIT 1
-    """, (mobile, mobile), as_dict=True)
+    for num in numbers:
+        existing = frappe.db.sql("""
+            SELECT name 
+            FROM `tabContact`
+            WHERE mobile_no = %s
+            OR phone = %s
+            OR name IN (
+                SELECT parent FROM `tabContact Phone`
+                WHERE phone = %s
+            )
+            LIMIT 1
+        """, (num, num, num), as_dict=True)
 
-    if existing:
-        frappe.throw(
-            f"A Contact with this mobile number already exists ({mobile}). "
-            f"Patient creation is not allowed for duplicate mobile numbers."
-        )
+        if existing:
+            frappe.throw(
+                f"A Contact with this phone number already exists ({num}). "
+                f"Patient creation is not allowed for duplicate phone numbers."
+            )

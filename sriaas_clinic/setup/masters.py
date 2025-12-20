@@ -88,6 +88,11 @@ def apply():
     # --------------------------------------------------------
     _ensure_shipkia_settings()
 
+    # --------------------------------------------------------
+    # Disable Quick Entry for Item
+    # --------------------------------------------------------
+    _disable_item_quick_entry()
+
 
 def _ensure_sr_patient_disable_reason():
     """Create SR Patient Disable Reason master."""
@@ -1514,3 +1519,8 @@ def _ensure_shipkia_settings():
 
     frappe.db.commit()
     frappe.logger().info("Shipkia Settings DocType created successfully.")
+
+def _disable_item_quick_entry():
+    """Disable Quick Entry for Item DocType."""
+    if frappe.db.exists("DocType", "Item"):
+        frappe.db.set_value("DocType", "Item", "quick_entry", 0)

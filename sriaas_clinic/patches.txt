@@ -5,3 +5,4 @@
 # Patches added in this section will be executed after doctypes are migrated
 # sriaas_clinic.patches.v1_0.migrate_patient_created_by_agent
 sriaas_clinic.patches.v1_0.add_sr_medication_class_field
+sriaas_clinic.patches.v1_0.add_batch_barcode

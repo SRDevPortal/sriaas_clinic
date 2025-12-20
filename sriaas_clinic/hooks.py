@@ -65,6 +65,9 @@ doctype_js = {
         "public/js/payment_entry_actions.js",
         # "public/js/_payment_entry_extend.js",
     ],
+    "Stock Entry": [
+        "public/js/stock_entry_barcode.js",
+    ],
 }
 
 # doctype list js

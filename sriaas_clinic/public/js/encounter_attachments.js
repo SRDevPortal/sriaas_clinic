@@ -407,21 +407,21 @@
   // -------------------------
   // Wire into form events
   // -------------------------
-  frappe.ui.form.on('Patient Encounter', {
-    onload(frm) {
-      bind_attach_autosave_block(frm);
-      create_reports_upload_ui(frm);
-      render_medical_reports_preview(frm);
-    },
-    refresh(frm) {
-      bind_attach_autosave_block(frm); // rebind in case child table was dynamically changed
-      create_reports_upload_ui(frm);
-      render_medical_reports_preview(frm);
-    },
-    after_save(frm) {
-      render_medical_reports_preview(frm);
-    }
-  });
+  // frappe.ui.form.on('Patient Encounter', {
+  //   onload(frm) {
+  //     bind_attach_autosave_block(frm);
+  //     create_reports_upload_ui(frm);
+  //     render_medical_reports_preview(frm);
+  //   },
+  //   refresh(frm) {
+  //     bind_attach_autosave_block(frm); // rebind in case child table was dynamically changed
+  //     create_reports_upload_ui(frm);
+  //     render_medical_reports_preview(frm);
+  //   },
+  //   after_save(frm) {
+  //     render_medical_reports_preview(frm);
+  //   }
+  // });
 
 })();
 // clinical_history_modal.js

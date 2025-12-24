@@ -61,14 +61,16 @@ def _make_crm_lead_fields():
 
             # Meta Details - Facebook Tracking
             {"fieldname": "sr_meta_facebook_sb","label":"Facebook Tracking","fieldtype":"Section Break","insert_after":"sr_utm_adgroup_id"},
-            {"fieldname": "sr_f_ad_id","label":"FBCLID","fieldtype":"Data","read_only":1,"insert_after":"sr_meta_facebook_sb"},
-            {"fieldname": "sr_f_ad_name","label":"FBCLID","fieldtype":"Data","read_only":1,"insert_after":"sr_f_ad_id"},
-            {"fieldname": "sr_f_adset_id","label":"FBCLID","fieldtype":"Data","read_only":1,"insert_after":"sr_f_ad_name"},
-            {"fieldname": "sr_f_adset_name","label":"FBCLID","fieldtype":"Data","read_only":1,"insert_after":"sr_f_adset_id"},
-            {"fieldname": "sr_f_campaign_id","label":"FBCLID","fieldtype":"Data","read_only":1,"insert_after":"sr_f_adset_name"},
-            {"fieldname": "sr_f_campaign_name","label":"FBCLID","fieldtype":"Data","read_only":1,"insert_after":"sr_f_campaign_id"},
-            {"fieldname": "sr_f_utm_medium","label":"FBCLID","fieldtype":"Data","read_only":1,"insert_after":"sr_f_campaign_name"},
-            {"fieldname": "sr_fbclid","label":"FBCLID","fieldtype":"Data","read_only":1,"insert_after":"sr_f_utm_medium"},
+            {"fieldname": "sr_f_ad_id","label":"Facebook Ad ID","fieldtype":"Data","read_only":1,"insert_after":"sr_meta_facebook_sb"},
+            {"fieldname": "sr_f_ad_name","label":"Facebook Ad Name","fieldtype":"Data","read_only":1,"insert_after":"sr_f_ad_id"},
+            {"fieldname": "sr_f_adset_id","label":"Facebook Ad Set ID","fieldtype":"Data","read_only":1,"insert_after":"sr_f_ad_name"},
+            {"fieldname": "sr_f_adset_name","label":"Facebook Ad Set Name","fieldtype":"Data","read_only":1,"insert_after":"sr_f_adset_id"},
+            {"fieldname": "sr_f_campaign_id","label":"Facebook Campaign ID","fieldtype":"Data","read_only":1,"insert_after":"sr_f_adset_name"},
+            {"fieldname": "sr_f_campaign_name","label":"Facebook Campaign Name","fieldtype":"Data","read_only":1,"insert_after":"sr_f_campaign_id"},
+            {"fieldname": "sr_f_utm_medium","label":"UTM Medium (Facebook)","fieldtype":"Data","read_only":1,"insert_after":"sr_f_campaign_name"},
+            {"fieldname": "sr_fbclid","label":"FBCLID","fieldtype":"Data","length": 255,"read_only":1,"insert_after":"sr_f_utm_medium"},
+
+
 
             # Meta Details - Interakt Tracking
             {"fieldname": "sr_meta_interakt_sb","label":"Interakt Tracking","fieldtype":"Section Break","insert_after":"sr_fbclid"},

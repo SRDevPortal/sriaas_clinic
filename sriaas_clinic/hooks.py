@@ -210,6 +210,9 @@ doc_events = {
     # "Purchase Order": {
     #     "before_submit": "sriaas_clinic.api.purchase_order.create_batches_before_submit"
     # },
+    "File": {
+        "after_insert": "sriaas_clinic.api.s3.file_hooks.after_file_insert",
+    },
 }
 
 # Overriding Methods

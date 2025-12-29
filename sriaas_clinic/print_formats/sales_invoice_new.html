@@ -296,6 +296,38 @@
     </tfoot>
   </table>
 
+  <!-- <table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>No</th>
+            <th>Item</th>
+            <th>Qty</th>
+            <th>Rate</th>
+            <th>Amount</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% if doc.items and doc.items|length > 0 %}
+            {% set item = doc.items[0] %}
+            <tr>
+                <td>1</td>
+                <td>{{ item.item_name }}</td>
+                <td>{{ item.qty }}</td>
+                <td>{{ frappe.format_value(item.rate, {"fieldtype":"Currency"}) }}</td>
+                <td>{{ frappe.format_value(item.amount, {"fieldtype":"Currency"}) }}</td>
+            </tr>
+        {% endif %}
+    </tbody>
+  </table>
+
+  {% if doc.items and doc.items|length > 0 %}
+    {% set item = doc.items[0] %}
+    <p style="text-align:right; font-size:14px;">
+        <b>Total (INR): {{ frappe.format_value(item.amount, {"fieldtype":"Currency"}) }}</b>
+    </p>
+  {% endif %} -->
+
+
   {# ===== Bottom Right: Summary / Payment / Signature ===== #}
   <table style="width:100%; table-layout:fixed; border-collapse:collapse; margin-top:10pt;">
     <tr>

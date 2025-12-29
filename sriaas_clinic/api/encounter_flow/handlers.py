@@ -75,19 +75,27 @@ def _row_get(row: Dict[str, Any], key: str, default=None):
 # ----------------------------------
 def set_created_by_agent(doc, method):
     """Populate created_by_agent on insert only (so edits don't override)."""
-    if not getattr(doc, "created_by_agent", None):
-        doc.created_by_agent = frappe.session.user
+    # if not getattr(doc, "created_by_agent", None):
+    #     doc.created_by_agent = frappe.session.user
+    doc.created_by_agent = frappe.session.user
 
 
 def enforce_agent_encounter_place(doc, method=None):
     """
-    Force Encounter Place = Online for users with role Agent.
-    Applies on insert and on every save (cannot be changed).
+    Force Encounter Place = Online ONLY for pure Agent users.
+    Admin / Doctor / System Manager are allowed OPD.
     """
     user = frappe.session.user
     roles = frappe.get_roles(user)
 
-    if "Agent" in roles:
+    is_pure_agent = (
+        "Agent" in roles
+        and "System Manager" not in roles
+        and "Administrator" not in roles
+        and "Healthcare Practitioner" not in roles
+    )
+
+    if is_pure_agent:
         doc.sr_encounter_place = "Online"
 
 

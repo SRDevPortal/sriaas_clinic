@@ -1,37 +1,41 @@
 // sriaas_clinic/public/js/clinical_history_modal.js
 
-// ---------- helpers ----------
+// =====================================================
+// 1️⃣ Helper Utilities
+// =====================================================
 function _esc(t) {
   return frappe.utils.escape_html(t || "-").replace(/\n/g, "<br>");
 }
+
 function _clean(t) {
   return (t || "").replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
 }
+
 function _has_notes(e) {
   return (
     _clean(e.sr_complaints).length ||
     _clean(e.sr_observations).length ||
     _clean(e.sr_investigations).length ||
-    _clean(e.sr_notes).length ||
-    _clean(e.sr_diagnosis).length
+    _clean(e.sr_diagnosis).length ||
+    _clean(e.sr_notes).length
   );
 }
 
-// Global + content CSS (cards, sticky footer, etc)
+// =====================================================
+// 2️⃣ Global + Content CSS
+// =====================================================
 function _css_block() {
   return `
   <style>
     body { font-family: Arial, sans-serif; }
-    /* .history-wrap { padding: 16px 16px 0; } */
     .header { border-bottom: 1px solid #e7e7e7; margin-bottom: 12px; padding-bottom: 8px; }
     .meta { margin: 6px 0; font-size: 14px; color: #333; }
     .section-title { font-size: 15px; margin: 10px 0 6px; font-weight: 600; }
     .row-line { margin: 2px 0; }
     .muted { color: #666; }
 
-    /* Card */
     .enc-card {
-      border: 1px solid #eee;
+      border: 1px solid #8b8a8a;
       border-radius: 12px;
       box-shadow: 0 1px 6px rgba(0,0,0,0.06);
       padding: 12px 14px;
@@ -39,8 +43,27 @@ function _css_block() {
       background: #fff;
     }
     .enc-head { margin-bottom: 6px; font-weight: 600; }
+    .enc-card .table { margin: 10px 0px; }
 
-    /* Sticky action bar inside dialog body */
+    .med-table {
+      width: 100%;
+      table-layout: fixed;
+    }
+
+    .med-table th,
+    .med-table td {
+      font-size: 13px;
+      padding: 6px 8px;
+      vertical-align: top;
+      word-wrap: break-word;
+    }
+
+    .med-col-no { width: 6%; text-align: center; }
+    .med-col-name { width: 34%; }
+    .med-col-dosage { width: 15%; text-align: center; }
+    .med-col-period { width: 15%; text-align: center; }
+    .med-col-form { width: 15%; text-align: center; }
+
     .dialog-actions {
       position: sticky;
       bottom: 0;
@@ -58,7 +81,6 @@ function _css_block() {
       display: none !important;
     }
 
-    /* Print tidy */
     @media print {
       .dialog-actions { display:none !important; }
       .enc-card { page-break-inside: avoid; }
@@ -66,47 +88,93 @@ function _css_block() {
   </style>`;
 }
 
-function _build_header(patient, encounter) {
+// =====================================================
+// 3️⃣ UI Builders
+// =====================================================
+
+// Header block
+function _build_header(patient) {
   return `
   <div class="header">
     <div class="meta"><b>Patient Name:</b> ${_esc(patient.patient_name || patient.first_name || patient.name)}</div>
     <div class="meta"><b>Patient ID:</b> ${_esc(patient.sr_patient_id || patient.patient_id || patient.name)}</div>
-    <div class="meta"><b>Gender:</b> ${_esc(patient.sex || patient.gender || "-")} &nbsp;&nbsp; <b>Mobile:</b> ${_esc(patient.mobile || patient.mobile_no || patient.sr_mobile_no || "-")}</div>
-    ${encounter ? `<div class="meta"><b>Encounter:</b> ${_esc(encounter.name)}</div>` : ""}
-    <div class="meta muted">Generated on ${_esc(frappe.datetime.str_to_user(frappe.datetime.nowdate()))}</div>
+    <div class="meta"><b>Gender:</b> ${_esc(patient.sex || patient.gender || "-")}</div>
+    <div class="meta">
+      <b>Mobile:</b> ${_esc(patient.mobile || patient.mobile_no || patient.sr_mobile_no || "-")}
+      &nbsp;&nbsp;
+      <b>Phone:</b> ${_esc(patient.phone || patient.phone_no || patient.sr_phone_no || "-")}
+    </div>
   </div>`;
 }
 
+// Medication table
+function _render_med_table(title, rows) {
+  if (!rows || !rows.length) return "";
+
+  const trs = rows.map((r, i) => `
+    <tr>
+      <td class="med-col-no">${i + 1}</td>
+      <td class="med-col-name">${_esc(r.medication || r.drug || "-")}</td>
+      <td class="med-col-dosage">${_esc(r.dosage || "-")}</td>
+      <td class="med-col-period">${_esc(r.period || "-")}</td>
+      <td class="med-col-form">${_esc(r.dosage_form || "-")}</td>
+    </tr>
+  `).join("");
+
+  return `
+    <div class="section-title">${title}</div>
+    <table class="table table-bordered table-sm med-table">
+      <thead>
+        <tr>
+          <th class="med-col-no">No</th>
+          <th class="med-col-name">Medication</th>
+          <th class="med-col-dosage">Dosage</th>
+          <th class="med-col-period">Period</th>
+          <th class="med-col-form">Form</th>
+        </tr>
+      </thead>
+      <tbody>${trs}</tbody>
+    </table>`;
+}
+
+// Encounter cards
 function _build_blocks(rows) {
   return rows.map((e) => {
-    const date_txt = e.encounter_date ? frappe.datetime.str_to_user(e.encounter_date) : "-";
-    const practitioner = e.practitioner_name || e.practitioner || "-";
-    // &nbsp;&nbsp; <b>Practitioner:</b> ${_esc(practitioner)} ADD THIS LIVE IF NEEDED IN .enc-head SECTION
+    const date_txt = e.encounter_date
+      ? frappe.datetime.str_to_user(e.encounter_date)
+      : "-";
+
+    const section = (title, val) => {
+      const cleaned = _clean(val);
+      if (!cleaned) return "";
+      return `
+        <div class="section-title">${title}</div>
+        <div class="row-line">${_esc(cleaned)}</div>`;
+    };
+
     return `
       <div class="enc-card">
         <div class="enc-head">
-          <b>Encounter:</b> ${_esc(e.name)}
-          &nbsp;&nbsp; <b>Date:</b> ${_esc(date_txt)}
+          <b>Encounter:</b> ${_esc(e.name)} &nbsp;&nbsp;
+          <b>Date:</b> ${_esc(date_txt)}
         </div>
 
-        <div class="section-title">Complaints</div>
-        <div class="row-line">${_esc(_clean(e.sr_complaints))}</div>
+        ${section("Complaints", e.sr_complaints)}
+        ${section("Observations", e.sr_observations)}
+        ${section("Investigations", e.sr_investigations)}
+        ${section("Diagnosis", e.sr_diagnosis)}
+        ${section("Notes", e.sr_notes)}
 
-        <div class="section-title">Observations</div>
-        <div class="row-line">${_esc(_clean(e.sr_observations))}</div>
-
-        <div class="section-title">Investigations</div>
-        <div class="row-line">${_esc(_clean(e.sr_investigations))}</div>
-
-        <div class="section-title">Notes</div>
-        <div class="row-line">${_esc(_clean(e.sr_notes))}</div>
-
-        <div class="section-title">Diagnosis</div>
-        <div class="row-line">${_esc(_clean(e.sr_diagnosis))}</div>
+        ${_render_med_table("Ayurvedic Medications", e.drug_prescription)}
+        ${_render_med_table("Homeopathy Medications", e.sr_homeopathy_drug_prescription)}
+        ${_render_med_table("Allopathy Medications Considered", e.sr_allopathy_drug_prescription)}
       </div>`;
   }).join("");
 }
 
+// =====================================================
+// 4️⃣ Data Fetchers
+// =====================================================
 async function _fetch_patient(patient_name) {
   const { message: patient = {} } = await frappe.call({
     method: "frappe.client.get",
@@ -116,24 +184,33 @@ async function _fetch_patient(patient_name) {
 }
 
 async function _fetch_encounters(patient_name) {
-  const { message: allRows = [] } = await frappe.call({
+  const { message: rows = [] } = await frappe.call({
     method: "frappe.client.get_list",
     args: {
       doctype: "Patient Encounter",
       filters: { patient: patient_name },
-      fields: [
-        "name", "encounter_date", "practitioner", "practitioner_name",
-        "sr_complaints", "sr_observations", "sr_investigations", "sr_notes", "sr_diagnosis"
-      ],
-      order_by: "encounter_date asc, creation asc",
-      limit_page_length: 1000
+      fields: ["name", "encounter_date"],
+      order_by: "encounter_date desc, creation desc",
+      limit_page_length: 100
     }
   });
-  return allRows.filter(_has_notes);
+
+  const full = await Promise.all(
+    rows.map(r =>
+      frappe.call({
+        method: "frappe.client.get",
+        args: { doctype: "Patient Encounter", name: r.name }
+      }).then(res => res.message)
+    )
+  );
+
+  return full.filter(_has_notes);
 }
 
-// opens a modal with history; prints same content on click
-async function openClinicalHistoryDialog({ patient_name, current_encounter = null }) {
+// =====================================================
+// 5️⃣ Main Controller
+// =====================================================
+async function openClinicalHistoryDialog({ patient_name }) {
   try {
     if (!patient_name) {
       frappe.msgprint("No Patient set.");
@@ -146,17 +223,15 @@ async function openClinicalHistoryDialog({ patient_name, current_encounter = nul
       static: true
     });
 
-    // Make dialog extra wide & tall; enable internal scrolling
     const $dlg = d.$wrapper.find(".modal-dialog");
-    $dlg.addClass("modal-xl");                                // Bootstrap 5 wide
+    $dlg.addClass("modal-xl");
     d.$wrapper.find(".modal-body").css({
       maxHeight: "80vh",
       overflow: "auto",
       paddingBottom: 0
     });
 
-    // loading
-    d.$body.html("<div class='text-muted' style='padding:16px;'>Loading clinical history…</div>");
+    d.$body.html("<div class='text-muted' style='padding:16px;'>Loading clinical history...</div>");
     d.show();
 
     const [patient, rows] = await Promise.all([
@@ -164,7 +239,7 @@ async function openClinicalHistoryDialog({ patient_name, current_encounter = nul
       _fetch_encounters(patient_name)
     ]);
 
-    const header = _build_header(patient, current_encounter);
+    const header = _build_header(patient);
     const blocks = rows.length
       ? _build_blocks(rows)
       : "<p class='muted' style='padding:0 16px;'>No encounters with Clinical Notes found.</p>";
@@ -182,22 +257,24 @@ async function openClinicalHistoryDialog({ patient_name, current_encounter = nul
 
     d.$body.html(inner);
 
-    // Print the same content
     d.$body.find('[data-action="print-history"]').on("click", () => {
       const w = window.open("", "_blank");
-      w.document.write(`<html><head><title>Patient Clinical History</title></head><body>${inner}</body></html>`);
+      w.document.write(`<html><body>${inner}</body></html>`);
       w.document.close();
-      setTimeout(() => { try { w.focus(); w.print(); } catch(e) {} }, 150);
+      setTimeout(() => { w.focus(); w.print(); }, 150);
     });
+
     d.$body.find('[data-action="close"]').on("click", () => d.hide());
 
   } catch (err) {
-    console.error("openClinicalHistoryDialog error:", err);
-    frappe.msgprint("Could not load Clinical History (see console).");
+    console.error("Clinical History Error:", err);
+    frappe.msgprint("Could not load Clinical History.");
   }
 }
 
-// ---------- buttons on both doctypes ----------
+// =====================================================
+// 6️⃣ Event Bindings
+// =====================================================
 frappe.ui.form.on("Patient", {
   refresh(frm) {
     if (!frm.doc || frm.is_new()) return;
@@ -211,7 +288,7 @@ frappe.ui.form.on("Patient Encounter", {
   refresh(frm) {
     if (!frm.doc || !frm.doc.patient) return;
     frm.add_custom_button("Clinical History", () =>
-      openClinicalHistoryDialog({ patient_name: frm.doc.patient, current_encounter: frm.doc })
+      openClinicalHistoryDialog({ patient_name: frm.doc.patient })
     );
   },
 });

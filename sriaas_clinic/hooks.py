@@ -33,6 +33,7 @@ doctype_js = {
     ],
     "Patient Encounter": [
         # "public/js/_encounter_clear_advance.js",
+        "public/js/patient_encounter.js",
         "public/js/encounter_draft_invoice.js",
         "public/js/encounter_order_item.js",
         "public/js/encounter_practitioner_filters.js",
@@ -132,16 +133,20 @@ doc_events = {
     },
     "Patient Encounter": {
         # Save creator only once
-        "before_insert": "sriaas_clinic.api.encounter_flow.handlers.set_created_by_agent",
+        "before_insert": [
+            "sriaas_clinic.api.encounter_flow.handlers.set_created_by_agent",
+            "sriaas_clinic.api.encounter_flow.handlers.enforce_agent_encounter_place",
+        ],
         # Clean + prepare order items and clear old advance fields
         "before_save": [
+            "sriaas_clinic.api.encounter_flow.handlers.enforce_agent_encounter_place",
             "sriaas_clinic.api.encounter_flow.handlers.before_save_patient_encounter",
             "sriaas_clinic.api.encounter_flow.handlers.clear_advance_dependent_fields",
         ],
         # Only validation (NOT billing)
         "before_submit": "sriaas_clinic.api.encounter_flow.handlers.validate_required_before_submit",
         # Billing (Sales Invoice + Multi-Mode Draft Payment Entries)
-        "on_submit":   "sriaas_clinic.api.encounter_flow.handlers.create_billing_on_submit",
+        "on_submit": "sriaas_clinic.api.encounter_flow.handlers.create_billing_on_submit",
     },
     "Patient Appointment": {
         "before_insert": "sriaas_clinic.api.patient_appointment.set_created_by_agent",
@@ -211,7 +216,10 @@ doc_events = {
     #     "before_submit": "sriaas_clinic.api.purchase_order.create_batches_before_submit"
     # },
     "File": {
-        "after_insert": "sriaas_clinic.api.s3.file_hooks.after_file_insert",
+        "after_insert": "sriaas_clinic.api.s3.file_hooks.handle_file_after_insert",
+        # ❌ DO NOT use before_insert for S3
+        # "after_insert": "sriaas_clinic.api.s3.file_hooks.after_file_insert",
+        # "on_trash": "sriaas_clinic.api.s3.file_hooks.handle_file_on_trash",
     },
 }
 

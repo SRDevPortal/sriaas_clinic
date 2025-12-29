@@ -12,14 +12,6 @@ import frappe
 from frappe.utils import flt, nowdate
 from erpnext.accounts.party import get_party_account
 
-# ----------------------------------
-# small helper: set_created_by_agent
-# ----------------------------------
-def set_created_by_agent(doc, method):
-    """Populate created_by_agent on insert only (so edits don't override)."""
-    if not getattr(doc, "created_by_agent", None):
-        doc.created_by_agent = frappe.session.user
-
 # ---------------- CONFIG (matches your schema) ----------------
 
 # Encounter
@@ -77,6 +69,28 @@ def _row_get(row: Dict[str, Any], key: str, default=None):
 
 
 # ----------------------- Event handlers -----------------------
+
+# ----------------------------------
+# small helper: set_created_by_agent
+# ----------------------------------
+def set_created_by_agent(doc, method):
+    """Populate created_by_agent on insert only (so edits don't override)."""
+    if not getattr(doc, "created_by_agent", None):
+        doc.created_by_agent = frappe.session.user
+
+
+def enforce_agent_encounter_place(doc, method=None):
+    """
+    Force Encounter Place = Online for users with role Agent.
+    Applies on insert and on every save (cannot be changed).
+    """
+    user = frappe.session.user
+    roles = frappe.get_roles(user)
+
+    if "Agent" in roles:
+        doc.sr_encounter_place = "Online"
+
+
 def before_save_patient_encounter(doc, method):
     """Clean invalid warehouses in Encounter order items; compute amount fallback."""
     rows = _find_item_rows(doc)

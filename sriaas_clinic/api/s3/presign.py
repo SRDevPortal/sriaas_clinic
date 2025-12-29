@@ -3,8 +3,12 @@ import frappe
 from .client import get_s3_client, get_bucket
 from .utils import extract_key
 
+
 @frappe.whitelist()
 def get_presigned_url(file_url, expires=900):
+    """
+    Generate a presigned GET URL for an S3 object.
+    """
     key = extract_key(file_url)
     if not key:
         return file_url
@@ -14,6 +18,9 @@ def get_presigned_url(file_url, expires=900):
 
     return s3.generate_presigned_url(
         ClientMethod="get_object",
-        Params={"Bucket": bucket, "Key": key},
+        Params={
+            "Bucket": bucket,
+            "Key": key
+        },
         ExpiresIn=int(expires)
     )

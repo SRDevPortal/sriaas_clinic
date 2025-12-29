@@ -36,8 +36,12 @@ def _make_crm_lead_fields():
             {"fieldname": "sr_lead_pex_tab","label":"PEX","fieldtype":"Tab Break","insert_after":"status_change_log"},
             {"fieldname": "sr_lead_pex_launcher_html","label":"PEX Launcher","fieldtype":"HTML","read_only":0,"insert_after":"sr_lead_pex_tab"},
 
+            # Patient Appointment
+            {"fieldname": "sr_lead_pa_tab","label":"Appointment","fieldtype":"Tab Break","insert_after":"sr_lead_pex_launcher_html"},
+            {"fieldname": "sr_lead_pa_launcher_html","label":"Patient Appointment Launcher","fieldtype":"HTML","insert_after":"sr_lead_pa_tab"},
+
             # Meta Details fields
-            {"fieldname": "sr_meta_tab","label":"Meta Details","fieldtype":"Tab Break","insert_after":"sr_lead_pex_launcher_html"},
+            {"fieldname": "sr_meta_tab","label":"Meta Details","fieldtype":"Tab Break","insert_after":"sr_lead_pa_launcher_html"},
             
             # Meta Details - General Tracking
             {"fieldname": "sr_meta_general_sb","label":"General Tracking","fieldtype":"Section Break","insert_after":"sr_meta_tab"},

@@ -1,27 +1,31 @@
 // sriaas_clinic/public/js/patient_encounter.js
 
-// --------------------------------------
-// Parent: Patient Encounter
-// --------------------------------------
 frappe.ui.form.on('Patient Encounter', {
     onload(frm) {
-        toggle_encounter_place(frm);
+        handle_encounter_place_access(frm);
     },
-
     refresh(frm) {
-        toggle_encounter_place(frm);
+        handle_encounter_place_access(frm);
     }
 });
 
-function toggle_encounter_place(frm) {
-    const is_agent =
-        frappe.user_roles.includes("Agent") &&
-        !frappe.user_roles.includes("System Manager");
+function handle_encounter_place_access(frm) {
+    const roles = frappe.user_roles || [];
 
-    if (is_agent) {
-        frm.set_value("sr_encounter_place", "Online");
+    const is_pure_agent =
+        roles.includes("Agent") &&
+        !roles.includes("System Manager") &&
+        !roles.includes("Administrator") &&
+        !roles.includes("Healthcare Practitioner");
+
+    if (is_pure_agent) {
+        // Agent-only users → Online only
+        if (frm.doc.sr_encounter_place !== "Online") {
+            frm.set_value("sr_encounter_place", "Online");
+        }
         frm.set_df_property("sr_encounter_place", "read_only", 1);
     } else {
+        // Admin / Doctor / Others → full access
         frm.set_df_property("sr_encounter_place", "read_only", 0);
     }
 }

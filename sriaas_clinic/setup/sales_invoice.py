@@ -14,6 +14,7 @@ def apply():
     if frappe.db.exists("DocType", PARENT) and frappe.db.exists("DocType", CHILD):
         _setup_cost_section()
         _setup_invoice_item_fields()
+    # _setup_invoice_calculation_section()
     _apply_invoice_ui_customizations()
 
 
@@ -69,6 +70,60 @@ def _make_invoice_fields():
                 "insert_after": "due_date"
             },
 
+        ]
+    })
+
+
+def _setup_invoice_calculation_section():
+    create_cf_with_module({
+        PARENT: [
+            {
+                "fieldname": "sr_invoice_calc_sb",
+                "label": "Invoice Calculation",
+                "fieldtype": "Section Break",
+                "insert_after": "ignore_pricing_rule",
+            },
+            {
+                "fieldname": "sr_kit_name",
+                "label": "Kit Name",
+                "fieldtype": "Data",
+                "insert_after": "sr_invoice_calc_sb",
+            },
+            {
+                "fieldname": "sr_kit_total_price",
+                "label": "Kit Total Price",
+                "fieldtype": "Currency",
+                "read_only": 0,
+                "insert_after": "sr_kit_name",
+            },
+            {
+                "fieldname": "sr_total_item_price",
+                "label": "Total Item Price",
+                "fieldtype": "Currency",
+                "read_only": 0,
+                # "fetch_from": "grand_total",
+                "description": "Same as Grand Total (INR)",
+                "insert_after": "sr_kit_total_price",
+            },
+            {
+                "fieldname": "sr_inv_calc_cb",
+                "fieldtype": "Column Break",
+                "insert_after": "sr_total_item_price",
+            },
+            {
+                "fieldname": "sr_discount_amount",
+                "label": "Discount Amount",
+                "fieldtype": "Currency",
+                "read_only": 1,
+                "insert_after": "sr_inv_calc_cb",
+            },
+            {
+                "fieldname": "sr_discount_pct",
+                "label": "Discount %",
+                "fieldtype": "Percent",
+                "read_only": 1,
+                "insert_after": "sr_discount_amount",
+            },
         ]
     })
 
@@ -225,6 +280,14 @@ def _apply_invoice_ui_customizations():
     ensure_field_after(PARENT, "sr_si_encounter_place", "sr_si_order_source")
     ensure_field_after(PARENT, "sr_si_sales_type", "sr_si_encounter_place")
     ensure_field_after(PARENT, "sr_si_delivery_type", "sr_si_sales_type")
+
+    ensure_field_after(PARENT, "sr_invoice_calc_sb", "ignore_pricing_rule")
+    ensure_field_after(PARENT, "sr_kit_name", "sr_invoice_calc_sb")
+    ensure_field_after(PARENT, "sr_kit_total_price", "sr_kit_name")
+    ensure_field_after(PARENT, "sr_total_item_price", "sr_kit_total_price")
+    ensure_field_after(PARENT, "sr_inv_calc_cb", "sr_total_item_price")
+    ensure_field_after(PARENT, "sr_discount_amount", "sr_inv_calc_cb")
+    ensure_field_after(PARENT, "sr_discount_pct", "sr_discount_amount")
 
     # Hide unwanted flags/fields
     targets = (

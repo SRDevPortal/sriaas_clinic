@@ -6,10 +6,12 @@ from frappe.utils.file_manager import get_file_path
 
 from .client import get_s3_client, get_bucket
 
+
 def get_logger():
     logger = frappe.logger("sriaas_s3", allow_site=True)
     logger.setLevel("INFO")
     return logger
+
 
 def _get_company_abbr(file_doc):
     company = None
@@ -30,28 +32,42 @@ def _get_company_abbr(file_doc):
         return frappe.get_cached_value("Company", company, "abbr")
     return "MISC"
 
+
 def upload_file_to_s3(file_doc):
+    """
+    Upload a local Frappe file to S3 and return the S3 key.
+    Safely skips if file is already on S3 or remote URL.
+    """
+
     logger = get_logger()
     s3 = get_s3_client()
     bucket = get_bucket()
 
-    # company_abbr = _get_company_abbr(file_doc)
+    # ✅ If already S3 / remote, do NOT try to read locally
+    if not file_doc.file_url or file_doc.file_url.startswith(("s3://", "http")):
+        if file_doc.file_url and file_doc.file_url.startswith("s3://"):
+            # return existing key
+            return file_doc.file_url.replace("s3://", "", 1)
+        return None
+
     # Use configured prefix if available or fallback to company abbr
     company_abbr = frappe.conf.get("aws_s3_prefix") or _get_company_abbr(file_doc)
-    local_path = get_file_path(file_doc.file_url)
-
-    content_type, _ = mimetypes.guess_type(local_path)
-    content_type = content_type or "application/octet-stream"
-    date = datetime.utcnow().strftime("%Y%m%d")
-
-    key = (
-        f"{company_abbr}/"
-        f"{file_doc.attached_to_doctype or 'misc'}/"
-        f"{date}/"
-        f"{file_doc.name}_{file_doc.file_name}"
-    )
 
     try:
+        # ✅ Only resolve local path for non-S3 URLs
+        local_path = get_file_path(file_doc.file_url)
+
+        content_type, _ = mimetypes.guess_type(local_path)
+        content_type = content_type or "application/octet-stream"
+        date = datetime.utcnow().strftime("%Y%m%d")
+
+        key = (
+            f"{company_abbr}/"
+            f"{file_doc.attached_to_doctype or 'misc'}/"
+            f"{date}/"
+            f"{file_doc.name}_{file_doc.file_name}"
+        )
+
         with open(local_path, "rb") as f:
             s3.put_object(
                 Bucket=bucket,
@@ -78,10 +94,9 @@ def upload_file_to_s3(file_doc):
         return key
 
     except Exception as e:
-        # ❌ Failure log (string)
+        # ❌ Failure log
         logger.error(
             f"S3_UPLOAD_FAILED | file={getattr(file_doc, 'name', None)} | "
             f"error={str(e)}\n{frappe.get_traceback()}"
         )
-
         raise

@@ -58,6 +58,7 @@ doctype_js = {
     "Sales Invoice": [
         # "public/js/_sales_invoice_draft_payment.js",
         "public/js/sales_invoice_actions.js",
+        "public/js/sales_invoice_barcode.js",
         # send sales invoice to Shipkia
         # "public/js/shipkia_sales_invoice.js",
     ],
@@ -215,11 +216,10 @@ doc_events = {
     # "Purchase Order": {
     #     "before_submit": "sriaas_clinic.api.purchase_order.create_batches_before_submit"
     # },
-    "File": {
-        # "after_insert": "sriaas_clinic.api.s3.file_hooks.after_file_insert",
-        "after_insert": "sriaas_clinic.api.s3.file_hooks.handle_file_after_insert",
-        "on_trash": "sriaas_clinic.api.s3.file_hooks.handle_file_on_trash",
-    }
+    # "File": {
+    #     "after_insert": "sriaas_clinic.api.s3.file_hooks.handle_file_after_insert",
+    #     "on_trash": "sriaas_clinic.api.s3.file_hooks.handle_file_on_trash",
+    # }
 }
 
 # Overriding Methods

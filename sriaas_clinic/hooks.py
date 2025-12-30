@@ -216,11 +216,15 @@ doc_events = {
     #     "before_submit": "sriaas_clinic.api.purchase_order.create_batches_before_submit"
     # },
     "File": {
+<<<<<<< HEAD
         # "after_insert": "sriaas_clinic.api.s3.file_hooks.handle_file_after_insert",
         # ❌ DO NOT use before_insert for S3
+=======
+>>>>>>> develop
         # "after_insert": "sriaas_clinic.api.s3.file_hooks.after_file_insert",
-        # "on_trash": "sriaas_clinic.api.s3.file_hooks.handle_file_on_trash",
-    },
+        "after_insert": "sriaas_clinic.api.s3.file_hooks.handle_file_after_insert",
+        "on_trash": "sriaas_clinic.api.s3.file_hooks.handle_file_on_trash",
+    }
 }
 
 # Overriding Methods

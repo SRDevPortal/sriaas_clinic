@@ -74,7 +74,11 @@ doctype_js = {
 
 # doctype list js
 list_js = {
-    "Sales Invoice": "public/js/sales_invoice_list.js"
+    "Sales Invoice": "public/js/sales_invoice_list.js",
+}
+
+doctype_list_js = {
+    "CRM Lead": "public/js/crm_lead_list.js",
 }
 
 # Installation
@@ -93,12 +97,13 @@ after_migrate = "sriaas_clinic.install.after_migrate"
 # Permissions evaluated in scripted ways
 
 # Exactly ONE entry per doctype
+# "Patient Encounter": "sriaas_clinic.permissions.patient_encounter.get_conditions",
 permission_query_conditions = {
-    "CRM Lead": "sriaas_clinic.api.crm_lead_access.crm_lead_pqc",
+    "CRM Lead": "sriaas_clinic.api.crm_lead.access.crm_lead_pqc",
 }
 
 has_permission = {
-    "CRM Lead": "sriaas_clinic.api.crm_lead_access.crm_lead_has_permission",
+    "CRM Lead": "sriaas_clinic.api.crm_lead.access.crm_lead_has_permission",
 }
 
 # Document Events
@@ -158,22 +163,35 @@ doc_events = {
         "before_validate": "sriaas_clinic.api.practitioner.compose_full_name",
     },
     "Sales Invoice": {
+        # CREATE / SAVE restriction
+        "validate": "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
+
+        # Existing logic
         "before_insert": "sriaas_clinic.api.si_payment_flow.handlers.set_created_by_agent",
-        "before_save": [
-            "sriaas_clinic.api.sales_invoice_cost.before_save",
-            # "sriaas_clinic.api.si_payment_flow.handlers.clear_dp_when_blank",
+        "before_save": "sriaas_clinic.api.sales_invoice_cost.before_save",
+
+        # SUBMIT restriction + existing submit logic
+        "before_submit": [
+            "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
+            # "sriaas_clinic.api.si_payment_flow.handlers.validate_dp_before_submit",
+            # "sriaas_clinic.api.si_payment_flow.handlers.refresh_payment_history",
         ],
-        # "before_submit": [
-        #     "sriaas_clinic.api.si_payment_flow.handlers.validate_dp_before_submit",
-        #     "sriaas_clinic.api.si_payment_flow.handlers.refresh_payment_history",
-        # ],
+
         "on_submit": [
+            "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
             "sriaas_clinic.api.encounter_flow.handlers.link_pending_payment_entries",
             # "sriaas_clinic.api.si_payment_flow.handlers.create_pe_from_si_dp",
             # "sriaas_clinic.api.si_payment_flow.handlers.refresh_payment_history",
             # "sriaas_clinic.api.integrations.n8n_shiprocket.send_to_n8n_on_submit",
             # "sriaas_clinic.api.integrations.shipkia_sales_invoice.send_sales_invoice_to_shipkia",
         ],
+
+        # CANCEL restriction
+        "on_cancel": "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
+
+        # AMEND restriction
+        "before_amend": "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
+
         # "on_update_after_submit": [
         #     "sriaas_clinic.api.si_payment_flow.handlers.refresh_payment_history",
         # ],
@@ -193,12 +211,11 @@ doc_events = {
         # "on_rename": "sriaas_clinic.api.medical_department.on_rename",
     },
     "CRM Lead": {
-        "before_save": "sriaas_clinic.api.crm_lead.normalize_phoneish_fields",
-        # block illegal edits depending on role + new/existing state
-        "validate":"sriaas_clinic.api.crm_lead_field_guard.guard_restricted_fields",
-        # keep Assignment + DocShare in sync with lead_owner
-        "after_insert":"sriaas_clinic.api.crm_lead_assignment.after_insert",
-        "on_update":"sriaas_clinic.api.crm_lead_assignment.on_update",
+        "validate":     "sriaas_clinic.api.crm_lead.guards.guard_restricted_fields",
+        "before_save":  "sriaas_clinic.api.crm_lead.controller.normalize_phoneish_fields",
+        "after_save":   "sriaas_clinic.api.crm_lead.access.restore_lead_owner_after_unassign",
+        "after_insert": "sriaas_clinic.api.crm_lead.lifecycle.after_insert",
+        "on_update":    "sriaas_clinic.api.crm_lead.lifecycle.on_update",
     },
     # Protect assignment/unassignment rights & keep shares tidy
     "ToDo": {
@@ -224,13 +241,12 @@ doc_events = {
 
 # Overriding Methods
 # ------------------------------
-#
 
 # Keep your assignment authorization guards
 override_whitelisted_methods = {
-    "frappe.desk.form.assign_to.add":    "sriaas_clinic.api.assign_guard.add",
+    "frappe.desk.form.assign_to.add": "sriaas_clinic.api.assign_guard.add",
     "frappe.desk.form.assign_to.remove": "sriaas_clinic.api.assign_guard.remove",
-    "frappe.desk.form.assign_to.clear":  "sriaas_clinic.api.assign_guard.clear",
+    "frappe.desk.form.assign_to.clear": "sriaas_clinic.api.assign_guard.clear",
 }
 
 # Export only items that belong to our module

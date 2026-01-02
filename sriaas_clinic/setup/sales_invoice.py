@@ -348,7 +348,7 @@ def _apply_invoice_ui_customizations():
         upsert_property_setter(PARENT, "created_by_agent", "in_standard_filter", "0", "Check")
         upsert_property_setter(PARENT, "created_by_agent", "print_hide", "1", "Check")
 
-    # upsert_property_setter(PARENT, "update_stock", "default", "1", "Check")
+    upsert_property_setter(PARENT, "update_stock", "default", "1", "Check")
 
     # Set title field to patient_name
     upsert_title_field(PARENT, "patient_name")

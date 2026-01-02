@@ -1,4 +1,6 @@
-# apps/sriaas_clinic/sriaas_clinic/api/crm_lead_field_guard.py
+# sriaas_clinic/api/crm_lead/guards.py
+# Field-level protection + role helpers for CRM Lead
+
 from __future__ import annotations
 import frappe
 
@@ -6,7 +8,7 @@ TL = "Team Leader"
 AG = "Agent"
 
 # Locked after first save for TL/Agent
-ALWAYS_LOCK = {"sr_lead_pipeline", "sr_lead_platform", "source", "mobile_no"}
+ALWAYS_LOCK = {"sr_lead_pipeline", "sr_lead_platform", "source", "mobile_no", "phone"}
 # Agents can never change this
 AGENT_LOCK  = {"lead_owner"}
 
@@ -19,6 +21,7 @@ def _roles(user: str) -> set[str]:
     except Exception:
         return set()
 
+
 def _is_privileged(user: str) -> bool:
     # 1) explicit usernames
     if user in PRIVILEGED_USERS:
@@ -26,8 +29,10 @@ def _is_privileged(user: str) -> bool:
     # 2) role-based
     return bool(_roles(user) & PRIVILEGED_ROLES)
 
+
 def _has_role(user: str, role: str) -> bool:
     return role in _roles(user)
+
 
 def _changed(doc, field: str) -> bool:
     """Did this field actually change? (on insert: treat non-empty as change)"""
@@ -36,6 +41,7 @@ def _changed(doc, field: str) -> bool:
         return val not in (None, "", [])
     prev = frappe.db.get_value(doc.doctype, doc.name, field)
     return (doc.get(field) or "") != (prev or "")
+
 
 def guard_restricted_fields(doc, method=None):
     # Only protect CRM Lead

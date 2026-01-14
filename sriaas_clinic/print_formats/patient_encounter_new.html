@@ -334,6 +334,7 @@
 
 {# ---------- Ayurvedic: Only show if practitioner name exists AND table has at least one non-empty row ---------- #}
 {% set ayu_prac = doc.sr_ayurvedic_practitioner_name or "" %}
+{% set ayu_prac_reg = doc.sr_ayurvedic_practitioner_reg or "" %}
 
 {# detect at least one useful row in drug_prescription #}
 {% set ns = namespace(has_rows=false) %}
@@ -354,7 +355,7 @@
           <tr>
             <td class="stack" colspan="2">
               <div class="title">Prescription (Ayurvedic)</div>
-              <div class="value">By: <b>{{ ayu_prac }}</b></div>
+              <div class="value">By: <b>{{ ayu_prac }} (Reg No: {{ ayu_prac_reg }})</b></div>
             </td>
           </tr>
           <tr>
@@ -405,6 +406,7 @@
 
 {# ---------- Homeopathy: show only if practitioner + at least one row ---------- #}
 {% set homeo_prac = doc.sr_homeopathy_practitioner_name or "" %}
+{% set homeo_prac_reg = doc.sr_homeopathy_practitioner_reg or "" %}
 
 {# detect at least one useful row in sr_homeopathy_drug_prescription #}
 {% set hns = namespace(has_rows=false) %}
@@ -425,7 +427,7 @@
           <tr>
             <td class="stack" colspan="2">
               <div class="title">Prescription (Homeopathy)</div>
-              <div class="value">By: <b>{{ homeo_prac }}</b></div>
+              <div class="value">By: <b>{{ homeo_prac }} (Reg No: {{ homeo_prac_reg }})</b></div>
             </td>
           </tr>
           <tr>
@@ -476,6 +478,7 @@
 
 {# ---------- Allopathy: show only if practitioner + at least one row ---------- #}
 {% set allop_prac = doc.sr_allopathy_practitioner_name or "" %}
+{% set allop_prac_reg = doc.sr_allopathy_practitioner_reg or "" %}
 
 {# detect at least one useful row in sr_allopathy_drug_prescription #}
 {% set ans = namespace(has_rows=false) %}
@@ -496,7 +499,7 @@
           <tr>
             <td class="stack" colspan="2">
               <div class="title">Prescription (Allopathy)</div>
-              <div class="value">By: <b>{{ allop_prac }}</b></div>
+              <div class="value">By: <b>{{ allop_prac }} (Reg No: {{ allop_prac_reg }})</b></div>
             </td>
           </tr>
           <tr>

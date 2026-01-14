@@ -33,7 +33,6 @@ doctype_js = {
         "public/js/clinical_history_modal.js",
     ],
     "Patient Encounter": [
-        # "public/js/_encounter_clear_advance.js",
         "public/js/patient_encounter.js",
         "public/js/encounter_draft_invoice.js",
         "public/js/encounter_order_item.js",
@@ -57,10 +56,8 @@ doctype_js = {
         "public/js/item_package_weight.js",
     ],
     "Sales Invoice": [
-        # "public/js/_sales_invoice_draft_payment.js",
         "public/js/sales_invoice_actions.js",
         "public/js/sales_invoice_barcode.js",
-        # send sales invoice to Shipkia
         # "public/js/shipkia_sales_invoice.js",
     ],
     "Payment Entry": [
@@ -83,8 +80,6 @@ doctype_list_js = {
 
 # Permissions
 # -----------
-# Permissions evaluated in scripted ways
-# "Patient Encounter": "sriaas_clinic.permissions.patient_encounter.get_conditions",
 permission_query_conditions = {
     "CRM Lead": "sriaas_clinic.api.crm_lead.access.crm_lead_pqc",
 }
@@ -123,18 +118,25 @@ doc_events = {
         "before_save": "sriaas_clinic.api.contact.normalize_phoneish_fields",
     },
     "Patient Encounter": {
+        "validate": [
+            "sriaas_clinic.api.encounter_flow.handlers.validate_encounter_workflow",
+        ],
         "before_insert": [
             "sriaas_clinic.api.encounter_flow.handlers.set_created_by_agent",
             "sriaas_clinic.api.encounter_flow.handlers.enforce_agent_encounter_place",
+            "sriaas_clinic.api.encounter_flow.handlers.set_default_encounter_status",
         ],
         "before_save": [
             "sriaas_clinic.api.encounter_flow.handlers.enforce_agent_encounter_place",
             "sriaas_clinic.api.encounter_flow.handlers.before_save_patient_encounter",
             "sriaas_clinic.api.encounter_flow.handlers.clear_advance_dependent_fields",
         ],
-        "before_submit": "sriaas_clinic.api.encounter_flow.handlers.validate_required_before_submit",
-        # Billing (Sales Invoice + Multi-Mode Draft Payment Entries)
-        "on_submit": "sriaas_clinic.api.encounter_flow.handlers.create_billing_on_submit",
+        "before_submit": [
+            "sriaas_clinic.api.encounter_flow.handlers.validate_required_before_submit",
+        ],
+        "on_submit": [
+            "sriaas_clinic.api.encounter_flow.handlers.create_billing_on_submit",
+        ],
     },
     "Patient Appointment": {
         "before_insert": "sriaas_clinic.api.patient_appointment.set_created_by_agent",
@@ -145,32 +147,21 @@ doc_events = {
         "before_validate": "sriaas_clinic.api.practitioner.compose_full_name",
     },
     "Sales Invoice": {
-        # CREATE / SAVE restriction
-        "validate": "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
-        # Existing logic
-        "before_insert": "sriaas_clinic.api.si_payment_flow.handlers.set_created_by_agent",
+        "before_insert": "sriaas_clinic.api.si_payment_flow.handlers.set_created_by_agent", #done
+        "validate": "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse", #done
         "before_save": "sriaas_clinic.api.sales_invoice_cost.before_save",
-        # SUBMIT restriction + existing submit logic
         "before_submit": [
-            "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
+            "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse", #done
             # "sriaas_clinic.api.si_payment_flow.handlers.validate_dp_before_submit",
-            # "sriaas_clinic.api.si_payment_flow.handlers.refresh_payment_history",
-        ],
+        ],        
         "on_submit": [
-            "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
             "sriaas_clinic.api.encounter_flow.handlers.link_pending_payment_entries",
             # "sriaas_clinic.api.si_payment_flow.handlers.create_pe_from_si_dp",
-            # "sriaas_clinic.api.si_payment_flow.handlers.refresh_payment_history",
             # "sriaas_clinic.api.integrations.n8n_shiprocket.send_to_n8n_on_submit",
             # "sriaas_clinic.api.integrations.shipkia_sales_invoice.send_sales_invoice_to_shipkia",
-        ],
-        # CANCEL restriction
-        "on_cancel": "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
-        # AMEND restriction
-        "before_amend": "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
-        # "on_update_after_submit": [
-        #     "sriaas_clinic.api.si_payment_flow.handlers.refresh_payment_history",
-        # ],
+        ],        
+        "before_cancel": "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse", #done
+        "before_amend": "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse", #done
     },
     "Item": {
         "validate": "sriaas_clinic.api.item_package_weight.calculate_pkg_weights",
@@ -182,10 +173,10 @@ doc_events = {
         # "on_submit": "sriaas_clinic.api.payment_entry.create_journal_for_payment_modes",
         # "on_cancel": "sriaas_clinic.api.payment_entry.cancel_linked_journal_entries",
     },
-    "Medical Department": {
-        "after_insert": "sriaas_clinic.api.medical_department.after_insert",
-        # "on_rename": "sriaas_clinic.api.medical_department.on_rename",
-    },
+    # "Medical Department": {
+    #     "after_insert": "sriaas_clinic.api.medical_department.after_insert",
+    #     # "on_rename": "sriaas_clinic.api.medical_department.on_rename",
+    # },
     "CRM Lead": {
         "validate":     "sriaas_clinic.api.crm_lead.guards.guard_restricted_fields",
         "before_save":  "sriaas_clinic.api.crm_lead.controller.normalize_phoneish_fields",
@@ -193,19 +184,17 @@ doc_events = {
         "after_insert": "sriaas_clinic.api.crm_lead.lifecycle.after_insert",
         "on_update":    "sriaas_clinic.api.crm_lead.lifecycle.on_update",
     },
-    # Protect assignment/unassignment rights & keep shares tidy
     "ToDo": {
         "on_trash": "sriaas_clinic.api.assign_guard.todo_on_trash",
     },
-    # User Group sync (dept/segments)
-    "User": {
-        "after_insert": "sriaas_clinic.api.user_department_membership.after_insert",
-        "on_update":    "sriaas_clinic.api.user_department_membership.on_update",
-        "after_save":   "sriaas_clinic.api.user_department_membership.after_save",
-    },
-    "User Group": {
-        "before_save": "sriaas_clinic.api.user_group_backlink.user_group_before_save",
-    },
+    # "User": {
+    #     "after_insert": "sriaas_clinic.api.user_department_membership.after_insert",
+    #     "on_update":    "sriaas_clinic.api.user_department_membership.on_update",
+    #     "after_save":   "sriaas_clinic.api.user_department_membership.after_save",
+    # },
+    # "User Group": {
+    #     "before_save": "sriaas_clinic.api.user_group_backlink.user_group_before_save",
+    # },
     # "Purchase Order": {
     #     "before_submit": "sriaas_clinic.api.purchase_order.create_batches_before_submit"
     # },

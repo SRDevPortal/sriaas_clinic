@@ -6,12 +6,27 @@ from frappe.utils import nowdate, flt
 from erpnext.accounts.party import get_party_account
 
 # ----------------------------------
-# small helper: set_created_by_agent
+# small helper: set_created_by_agent #done
 # ----------------------------------
+# def set_created_by_agent(doc, method):
+#     """Populate created_by_agent on insert only (so edits don't override)."""
+#     if not getattr(doc, "created_by_agent", None):
+#         doc.created_by_agent = frappe.session.user
+
 def set_created_by_agent(doc, method):
-    """Populate created_by_agent on insert only (so edits don't override)."""
+    """
+    Ensure Sales Invoice ownership reflects the logged-in user
+    even when ignore_permissions=True is used.
+    """
+    user = frappe.session.user
+
+    # SYSTEM FIELD (this fixes "Created By")
+    if not doc.owner:
+        doc.owner = user
+
+    # CUSTOM AUDIT FIELD (your existing logic)
     if not getattr(doc, "created_by_agent", None):
-        doc.created_by_agent = frappe.session.user
+        doc.created_by_agent = user
 
 # -----------------------------
 # Draft Payment (input) fields
@@ -48,6 +63,8 @@ def clear_dp_when_blank(si, method):
             if getattr(si, f, None):
                 setattr(si, f, None)
 
+
+# before_submit handler
 def validate_dp_before_submit(si, method):
     """If amount > 0, enforce minimal details before submit."""
     amt = flt(si.get(F_AMT) or 0)
@@ -71,6 +88,7 @@ def validate_dp_before_submit(si, method):
     if missing:
         frappe.throw("Please complete Draft Payment: " + ", ".join(missing))
 
+
 # -----------------------------
 # Accounts helpers
 # -----------------------------
@@ -86,6 +104,7 @@ def _party_account(company: str, party_type: str, party: str) -> Optional[str]:
     except Exception:
         return None
 
+
 def _mop_account(company: str, mop: str) -> Optional[str]:
     acc = frappe.db.get_value(
         "Mode of Payment Account", {"parent": mop, "company": company}, "default_account"
@@ -96,83 +115,12 @@ def _mop_account(company: str, mop: str) -> Optional[str]:
         )
     return acc
 
+
 # ---------------------------------------------------
 # Create Draft Payment Entry from SI Draft Payment UI
 # ---------------------------------------------------
 
-# def create_pe_from_si_dp(si, method):
-#     """
-#     On Sales Invoice submit:
-#       - If Draft Payment fields indicate an advance, create a DRAFT Payment Entry.
-#       - Append a reference row to this submitted SI (allocated up to outstanding).
-#       - Keep PE as Draft (consistent with Encounter flow).
-#       - Refresh Payment History on the SI.
-#     """
-#     if si.docstatus != 1:
-#         return
-
-#     amt = flt(si.get(F_AMT) or 0)
-#     mop = (si.get(F_MOP) or "").strip()
-#     if amt <= 0 or not mop:
-#         # Nothing to create; still refresh the history so the panel shows final state
-#         refresh_payment_history(si)
-#         return
-
-#     # Create Payment Entry (Draft)
-#     pe = frappe.new_doc("Payment Entry")
-#     pe.update({
-#         "payment_type": "Receive",
-#         "company": si.company,
-#         "posting_date": nowdate(),
-#         "mode_of_payment": mop,
-#         "party_type": "Customer",
-#         "party": si.customer,
-#         "paid_amount": amt,
-#         "received_amount": amt,
-#         "reference_no": si.get(F_REFNO),
-#         "reference_date": si.get(F_REFD),
-#     })
-
-#     # Accounts
-#     party_acc = _party_account(si.company, "Customer", si.customer) \
-#         or frappe.db.get_value("Company", si.company, "default_receivable_account")
-#     if party_acc:
-#         pe.party_account = party_acc
-#         pe.paid_from = party_acc  # for Receive
-
-#     paid_to_acc = _mop_account(si.company, mop)
-#     if paid_to_acc:
-#         pe.paid_to = paid_to_acc
-
-#     # Optional helper field to mark intent, if present on your PE doctype
-#     if hasattr(pe, "intended_sales_invoice"):
-#         pe.intended_sales_invoice = si.name
-
-#     pe.set_missing_values()
-#     pe.flags.ignore_permissions = True
-#     pe.insert(ignore_permissions=True)  # keep Draft
-
-#     # Link reference to this submitted SI
-#     outstanding = flt(si.get("outstanding_amount") or 0)
-#     if outstanding > 0:
-#         alloc = min(outstanding, amt)
-#         pe.append("references", {
-#             "reference_doctype": "Sales Invoice",
-#             "reference_name": si.name,
-#             "due_date": si.get("due_date") or si.get("posting_date"),
-#             "allocated_amount": alloc,
-#         })
-#         pe.set_missing_values()
-#         pe.save(ignore_permissions=True)
-
-#     frappe.msgprint(
-#         f"Draft Payment Entry <b>{pe.name}</b> prepared for this invoice.",
-#         alert=True
-#     )
-
-#     # Update the Payment History summary panel on SI right away
-#     refresh_payment_history(si)
-
+# on_submit handler
 def create_pe_from_si_dp(si, method):
     """
     On Sales Invoice submit:
@@ -412,6 +360,7 @@ def _sum_pos_payments(si) -> Tuple[float, Set[str]]:
                 mops.add(mop)
     return total, mops
 
+# before_submit, on_submit and on_update_after_submit handler
 def refresh_payment_history(si, method=None):
     """
     Compute & write Payment History fields on Sales Invoice:

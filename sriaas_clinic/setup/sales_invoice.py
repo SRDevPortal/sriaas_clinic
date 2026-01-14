@@ -35,10 +35,6 @@ def _make_invoice_fields():
     """
     # Determine which Lead Source doctype to link to
     lead_source_dt = _lead_source_dt()
-
-    # Determine where to insert new fields (after right column CB if present)
-    meta = frappe.get_meta(PARENT)
-    insert_anchor = RIGHT_COL_CB if meta.get_field(RIGHT_COL_CB) else "posting_date"  # safe fallback (after posting_date for "sr_si_order_source" field)
     
     create_cf_with_module({
         PARENT: [
@@ -126,80 +122,6 @@ def _setup_invoice_calculation_section():
             },
         ]
     })
-
-
-# def _setup_payment_history_section():
-#     """
-#     Add 'Payment History' section after 'advances' with read-only summary fields.
-#     """
-#     create_cf_with_module({
-#         PARENT: [
-#             {"fieldname": "sr_si_payment_history_sb","label": "Payment History","fieldtype": "Section Break","insert_after": "advances"},
-            
-#             {"fieldname": "sr_si_payment_term","label": "Payment Term","fieldtype": "Select","options": "\nUnpaid\nPartially Paid\nPaid in Full","in_list_view":1,"in_standard_filter":1,"read_only": 1,"insert_after": "sr_si_payment_history_sb"},
-            
-#             {"fieldname": "sr_si_paid_amount","label": "Paid Amount","fieldtype": "Currency","read_only": 1,"insert_after": "sr_si_payment_term"},
-            
-#             {"fieldname": "sr_si_payment_history_cb","fieldtype": "Column Break","insert_after": "sr_si_paid_amount"},
-            
-#             {"fieldname": "sr_si_mode_of_payment","label": "Mode of Payment","fieldtype": "Link","options": "Mode of Payment","read_only": 1,"insert_after": "sr_si_payment_history_cb"},
-            
-#             {"fieldname": "sr_si_outstanding_amount","label": "Outstanding Amount","fieldtype": "Currency","read_only": 1,"insert_after": "sr_si_mode_of_payment"},
-#         ]
-#     })
-
-
-# def _setup_advance_payment_tab():
-#     """
-#     Add 'Draft Payment' tab on Sales Invoice to capture an intended advance.
-#     - Tab is always visible (so user can enter the amount).
-#     - Inner fields become visible/required when amount > 0.
-#     """
-#     create_cf_with_module({
-#         PARENT: [
-#             # The tab itself (always visible – lets user enter amount)
-#             {"fieldname": "si_draft_payment_tab", "label": "Payment Entry", "fieldtype": "Tab Break",
-#              "insert_after": "connections_tab"},
-
-#             # Section + fields
-#             {"fieldname": "si_dp_section", "label": "Advance Details", "fieldtype": "Section Break",
-#              "insert_after": "si_draft_payment_tab"},
-
-#             {"fieldname": "si_dp_paid_amount", "label": "Paid Amount", "fieldtype": "Currency",
-#              "insert_after": "si_dp_section"},
-
-#             {"fieldname": "si_dp_cb", "fieldtype": "Column Break", "insert_after": "si_dp_paid_amount"},
-
-#             {"fieldname": "si_dp_mode_of_payment", "label": "Mode of Payment", "fieldtype": "Link", "options": "Mode of Payment",
-#              "insert_after": "si_dp_cb"},
-
-#             {"fieldname": "si_dp_receipt_section", "label": "Receipt / Proof", "fieldtype": "Section Break",
-#              "insert_after": "si_dp_mode_of_payment"},
-
-#             {"fieldname": "si_dp_reference_no", "label": "Reference No", "fieldtype": "Data",
-#              "insert_after": "si_dp_receipt_section"},
-
-#             {"fieldname": "si_dp_cb2", "fieldtype": "Column Break", "insert_after": "si_dp_reference_no"},
-
-#             {"fieldname": "si_dp_reference_date", "label": "Reference Date", "fieldtype": "Date",
-#              "insert_after": "si_dp_cb2"},
-
-#             {"fieldname": "si_dp_payment_proof", "label": "Payment Proof", "fieldtype": "Attach Image",
-#              "insert_after": "si_dp_reference_date"},
-#         ]
-#     })
-
-#     # Show / Require inner fields ONLY if amount > 0
-#     for f in ["si_dp_mode_of_payment", "si_dp_receipt_section", "si_dp_reference_no",
-#               "si_dp_reference_date", "si_dp_payment_proof", "si_dp_cb", "si_dp_cb2"]:
-#         upsert_property_setter(PARENT, f, "depends_on", "eval:doc.si_dp_paid_amount>0", "Data")
-
-#     for f in ["si_dp_mode_of_payment", "si_dp_reference_date"]:
-#         upsert_property_setter(PARENT, f, "mandatory_depends_on", "eval:doc.si_dp_paid_amount>0", "Data")
-
-#     # Keep hard reqd OFF so autosaves don’t fail
-#     for f in ["si_dp_mode_of_payment", "si_dp_reference_date"]:
-#         upsert_property_setter(PARENT, f, "reqd", "0", "Check")
 
 
 def _setup_cost_section():
@@ -301,23 +223,12 @@ def _apply_invoice_ui_customizations():
         "get_advances",
         "advances",
         "redeem_loyalty_points",
-        # Hide payment history fields (we have our own section)
         "sr_si_payment_history_sb",
         "sr_si_payment_term",
         "sr_si_paid_amount",
         "sr_si_payment_history_cb",
         "sr_si_mode_of_payment",
         "sr_si_outstanding_amount",
-        # "si_draft_payment_tab",
-        # "si_dp_section",
-        # "si_dp_paid_amount",
-        # "si_dp_cb",
-        # "si_dp_mode_of_payment",
-        # "si_dp_receipt_section",
-        # "si_dp_reference_no",
-        # "si_dp_cb2",
-        # "si_dp_reference_date",
-        # "si_dp_payment_proof",
     )
 
     meta = frappe.get_meta(PARENT)

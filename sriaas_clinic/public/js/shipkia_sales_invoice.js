@@ -1,3 +1,9 @@
+// sriaas_clinic/public/js/shipkia_sales_invoice.js
+
+// --------------------------------------------------
+// Send Sales Invoice to Shipkia
+// --------------------------------------------------
+
 frappe.ui.form.on("Sales Invoice", {
     refresh(frm) {
 

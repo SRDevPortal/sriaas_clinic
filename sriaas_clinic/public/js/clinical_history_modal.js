@@ -118,6 +118,7 @@ function _render_med_table(title, rows) {
       <td class="med-col-dosage">${_esc(r.dosage || "-")}</td>
       <td class="med-col-period">${_esc(r.period || "-")}</td>
       <td class="med-col-form">${_esc(r.dosage_form || "-")}</td>
+      <td class="med-col-form">${_esc(r.sr_drug_instruction || "-")}</td>
     </tr>
   `).join("");
 
@@ -131,6 +132,7 @@ function _render_med_table(title, rows) {
           <th class="med-col-dosage">Dosage</th>
           <th class="med-col-period">Period</th>
           <th class="med-col-form">Form</th>
+          <th class="med-col-form">Instruction</th>
         </tr>
       </thead>
       <tbody>${trs}</tbody>

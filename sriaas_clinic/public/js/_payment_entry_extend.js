@@ -1,10 +1,4 @@
-// public/js/payment_entry_extend.js
-/* sync parent Payment Entry.mode_of_payment with sr_payment_modes child rows
-   Behaviour:
-   - If one unique child mode exists -> set parent to that mode
-   - If >1 unique child modes -> try to set parent to Mode of Payment named "Multiple"
-     (fallback: do nothing to avoid invalid Link values)
-*/
+// public/js/_payment_entry_extend.js
 
 frappe.ui.form.on('Payment Entry', {
     refresh(frm) {

@@ -67,12 +67,11 @@ def set_sr_patient_id(doc, method=None):
       If Company.abbr = 'BHPL' -> BHPL1000, BHPL1001, ...
     """
 
-    # Do not override manual entry
     if doc.get("sr_patient_id"):
         return
     
-    # Get company safely
-    company = doc.company or frappe.defaults.get_user_default("Company")
+    # Patient has NO company field → use default
+    company = frappe.defaults.get_global_default("company")
 
     if not company:
         frappe.throw("Company is required to generate Patient ID")
@@ -82,7 +81,7 @@ def set_sr_patient_id(doc, method=None):
     if not company_abbr:
         frappe.throw(f"Company Abbr not found for {company}")
 
-    prefix = company_abbr.strip().upper()
+    prefix = company_abbr.upper()
     start_number = 1000
 
     prefix_like = f"{prefix}%"
@@ -90,7 +89,7 @@ def set_sr_patient_id(doc, method=None):
 
     max_row = frappe.db.sql(
         """
-        SELECT COALESCE(MAX(CAST(SUBSTRING(sr_patient_id, %s) AS SIGNED)), 0) AS max_n
+        SELECT COALESCE(MAX(CAST(SUBSTRING(sr_patient_id, %s) AS UNSIGNED)), 0) AS max_n
         FROM `tabPatient`
         WHERE sr_patient_id LIKE %s
         """,
@@ -99,7 +98,6 @@ def set_sr_patient_id(doc, method=None):
     )
 
     last_num = int(max_row[0].max_n or 0)
-
     if last_num < start_number:
         last_num = start_number - 1
 

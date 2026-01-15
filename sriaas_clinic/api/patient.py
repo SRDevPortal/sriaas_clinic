@@ -59,79 +59,35 @@ def set_created_by_agent(doc, method):
 #             break
 
 
-# def set_sr_patient_id(doc, method=None):
-#     """
-#     Auto-generate Patient ID in the format:
-#     SR1000, SR1001, SR1002, ...
-#     Always prefix with 'SR', start numbering from 1000.
-#     """
-
-#     # If user manually set it, do not override
-#     if doc.get("sr_patient_id"):
-#         return
-
-#     prefix = "SR"
-#     start_number = 1000
-#     prefix_like = f"{prefix}%"
-
-#     # Numeric part begins after "SR" → which is index 3 in SQL (1-based)
-#     numeric_start_pos = len(prefix) + 1   # = 3
-
-#     # Find the highest existing numeric part for IDs starting with "SR"
-#     max_row = frappe.db.sql(
-#         """
-#         SELECT COALESCE(MAX(CAST(SUBSTRING(sr_patient_id, %s) AS SIGNED)), 0) AS max_n
-#         FROM `tabPatient`
-#         WHERE sr_patient_id LIKE %s
-#         """,
-#         (numeric_start_pos, prefix_like),
-#         as_dict=True,
-#     )
-
-#     last_num = int(max_row[0].max_n or 0)
-
-#     # If no record exists, begin from 999 so next becomes 1000
-#     if last_num < start_number:
-#         last_num = start_number - 1
-
-#     # Generate next available number
-#     while True:
-#         last_num += 1
-#         candidate = f"{prefix}{last_num}"
-#         if not frappe.db.exists("Patient", {"sr_patient_id": candidate}):
-#             doc.sr_patient_id = candidate
-#             break
-
-
 def set_sr_patient_id(doc, method=None):
     """
     Auto-generate Patient ID using Company.abbr as prefix.
     Example:
       If Company.abbr = 'SR' -> SR1000, SR1001, ...
-      If Company.abbr = 'HC' -> HC1000, HC1001, ...
+      If Company.abbr = 'BHPL' -> BHPL1000, BHPL1001, ...
     """
 
     # Do not override manual entry
     if doc.get("sr_patient_id"):
         return
+    
+    # Get company safely
+    company = doc.company or frappe.defaults.get_user_default("Company")
 
-    # Get company abbr safely
-    company_abbr = None
-    if doc.get("company"):
-        try:
-            company_abbr = frappe.db.get_value("Company", doc.company, "abbr")
-        except Exception:
-            company_abbr = None
+    if not company:
+        frappe.throw("Company is required to generate Patient ID")
 
-    prefix = (company_abbr or "SR").strip().upper()
+    company_abbr = frappe.db.get_value("Company", company, "abbr")
 
-    # Starting number
+    if not company_abbr:
+        frappe.throw(f"Company Abbr not found for {company}")
+
+    prefix = company_abbr.strip().upper()
     start_number = 1000
 
     prefix_like = f"{prefix}%"
-    numeric_start_pos = len(prefix) + 1  # numeric part starts after prefix
+    numeric_start_pos = len(prefix) + 1
 
-    # Get highest existing number under this prefix
     max_row = frappe.db.sql(
         """
         SELECT COALESCE(MAX(CAST(SUBSTRING(sr_patient_id, %s) AS SIGNED)), 0) AS max_n
@@ -144,11 +100,9 @@ def set_sr_patient_id(doc, method=None):
 
     last_num = int(max_row[0].max_n or 0)
 
-    # ensure at least starting number
     if last_num < start_number:
         last_num = start_number - 1
 
-    # Find next free ID
     while True:
         last_num += 1
         candidate = f"{prefix}{last_num}"

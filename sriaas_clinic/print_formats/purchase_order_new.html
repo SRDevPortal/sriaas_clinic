@@ -50,8 +50,8 @@
 {% set reg_state      = (comp_addr.state if comp_addr else "") %}
 {% set reg_pin        = (comp_addr.pincode if comp_addr else "") %}
 {% set gst_state_code = (comp_addr.gst_state_number if comp_addr and comp_addr.gst_state_number else "") %}
-{% set company_email  = company.email_id or company.company_email or "accounts@sriaas.com" %}
-{% set company_cin    = company.cin or company.company_cin or company.custom_cin or "" %}
+{% set company_email  = company.email or company.email_id or company.company_email or "accounts@sriaas.com" %}
+{% set company_cin    = company.sr_company_cin_no or company.cin or company.company_cin or company.custom_cin or "" %}
 {% set company_gstin  = doc.company_gstin or (comp_addr.gstin if comp_addr and comp_addr.gstin else "") %}
 
 {# ==== overall GST rate default (keep same as Sales template) ==== #}
@@ -92,8 +92,8 @@
 .po-meta{ width:100%; border-collapse:collapse; }
 .po-meta tr { border-bottom: 1px solid var(--sr-border); }
 .po-meta td{ padding:4pt 0; border:0; }
-.po-meta .lbl{ background: transparent; color:#444; width:40%; text-align:left; padding-right:10px; }
-.po-meta .val{ width:60%; text-align:right; }
+.po-meta .lbl{ background: transparent; color:#444; width:30%; text-align:left; padding-right:10px; }
+.po-meta .val{ width:70%; text-align:right; }
 
 /* Items and blocks */
 .card{ width:100%; border:1.25pt solid #939393; border-collapse:collapse; table-layout:fixed; margin-bottom:10pt; }

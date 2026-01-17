@@ -338,6 +338,60 @@ def _mop_account(company: str, mop: str) -> Optional[str]:
 
 
 # ---------------- Event Handlers ----------------
+def validate_agent_status_change(doc, method):
+    user = frappe.session.user
+    roles = frappe.get_roles(user)
+
+    is_pure_agent = (
+        "Agent" in roles
+        and "System Manager" not in roles
+        and "Administrator" not in roles
+        and "Healthcare Practitioner" not in roles
+    )
+
+    if not is_pure_agent:
+        return
+
+    if doc.is_new():
+        return
+
+    db_status = frappe.db.get_value(
+        "Patient Encounter",
+        doc.name,
+        "sr_encounter_status"
+    )
+
+    if doc.sr_encounter_status != db_status:
+        frappe.throw("Agent is not allowed to change Encounter Status.")
+
+
+def validate_agent_followup_online_source(doc, method=None):
+    """
+    Ensure Encounter Source is provided for Online Follow-up / Order
+    encounters created or edited by Agents while in Draft state.
+    """
+    roles = frappe.get_roles(frappe.session.user)
+
+    # Run only for Agent role
+    if "Agent" not in roles:
+        return
+
+    # Apply only on Draft documents
+    if doc.docstatus != 0:
+        return
+
+    # Validate Online Follow-up / Order encounters
+    is_online = doc.sr_encounter_place == "Online"
+    is_followup_or_order = doc.sr_encounter_type in ("Followup", "Order")
+    has_source = bool(doc.sr_encounter_source)
+
+    if is_online and is_followup_or_order and not has_source:
+        frappe.throw(
+            "Encounter Source is mandatory for Online Follow-up or Order encounters.",
+            title="Missing Required Field"
+        )
+
+
 def validate_encounter_workflow(doc, method):
     roles = frappe.get_roles(frappe.session.user)
 
@@ -454,6 +508,35 @@ def set_created_by_agent(doc, method):
     doc.created_by_agent = frappe.session.user
 
 
+# def set_default_encounter_status(doc, method):
+#     roles = frappe.get_roles(frappe.session.user)
+
+#     # Agent → always Draft
+#     if "Agent" in roles:
+#         doc.sr_encounter_status = "Draft"
+#         return
+
+#     # Online encounters → default Draft
+#     if doc.sr_encounter_place == "Online" and not doc.sr_encounter_status:
+#         doc.sr_encounter_status = "Draft"
+
+def set_default_encounter_status(doc, method):
+    roles = frappe.get_roles(frappe.session.user)
+
+    # Only on creation
+    if not doc.is_new():
+        return
+
+    # Agent creates → Draft
+    if "Agent" in roles:
+        doc.sr_encounter_status = "Draft"
+        return
+
+    # Non-agent Online creation → Draft (optional)
+    if doc.sr_encounter_place == "Online":
+        doc.sr_encounter_status = "Draft"
+
+
 def enforce_agent_encounter_place(doc, method=None):
     """
     Force Encounter Place = Online ONLY for pure Agent users.
@@ -471,19 +554,6 @@ def enforce_agent_encounter_place(doc, method=None):
 
     if is_pure_agent:
         doc.sr_encounter_place = "Online"
-
-
-def set_default_encounter_status(doc, method):
-    roles = frappe.get_roles(frappe.session.user)
-
-    # Agent → always Draft
-    if "Agent" in roles:
-        doc.sr_encounter_status = "Draft"
-        return
-
-    # Online encounters → default Draft
-    if doc.sr_encounter_place == "Online" and not doc.sr_encounter_status:
-        doc.sr_encounter_status = "Draft"
 
 
 def before_save_patient_encounter(doc, method):

@@ -92,16 +92,16 @@ has_permission = {
 # Hook on document methods and events
 doc_events = {
     "Patient": {
+        "autoname": "sriaas_clinic.api.patient.force_patient_series",
         "before_insert": [
+            "sriaas_clinic.api.patient.normalize_phoneish_fields",
+            "sriaas_clinic.api.patient.validate_unique_contact_mobile",
             "sriaas_clinic.api.patient.set_sr_patient_id",
             "sriaas_clinic.api.patient.set_created_by_agent",
-            "sriaas_clinic.api.patient.validate_unique_contact_mobile",
         ],
-        "autoname": "sriaas_clinic.api.patient.force_patient_series",
-        "before_save": "sriaas_clinic.api.patient.normalize_phoneish_fields",
         "after_insert": [
-            "sriaas_clinic.api.patient.assign_followup_day",
             "sriaas_clinic.api.patient.set_followup_last_digit",
+            "sriaas_clinic.api.patient.assign_followup_day",
         ],
         "after_save": "sriaas_clinic.api.address.mirror_links_to_customer",
     },
@@ -119,11 +119,12 @@ doc_events = {
     },
     "Patient Encounter": {
         "validate": [
-            "sriaas_clinic.api.encounter_flow.handlers.validate_encounter_workflow",
+            "sriaas_clinic.api.encounter_flow.handlers.validate_agent_status_change",
+            "sriaas_clinic.api.encounter_flow.handlers.validate_agent_followup_online_source",
+            # "sriaas_clinic.api.encounter_flow.handlers.validate_encounter_workflow",
         ],
         "before_insert": [
             "sriaas_clinic.api.encounter_flow.handlers.set_created_by_agent",
-            "sriaas_clinic.api.encounter_flow.handlers.enforce_agent_encounter_place",
             "sriaas_clinic.api.encounter_flow.handlers.set_default_encounter_status",
         ],
         "before_save": [
@@ -147,11 +148,11 @@ doc_events = {
         "before_validate": "sriaas_clinic.api.practitioner.compose_full_name",
     },
     "Sales Invoice": {
-        "before_insert": "sriaas_clinic.api.si_payment_flow.handlers.set_created_by_agent", #done
-        "validate": "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse", #done
+        "before_insert": "sriaas_clinic.api.si_payment_flow.handlers.set_created_by_agent",
+        "validate": "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
         "before_save": "sriaas_clinic.api.sales_invoice_cost.before_save",
         "before_submit": [
-            "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse", #done
+            "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
             # "sriaas_clinic.api.si_payment_flow.handlers.validate_dp_before_submit",
         ],        
         "on_submit": [
@@ -160,8 +161,8 @@ doc_events = {
             # "sriaas_clinic.api.integrations.n8n_shiprocket.send_to_n8n_on_submit",
             # "sriaas_clinic.api.integrations.shipkia_sales_invoice.send_sales_invoice_to_shipkia",
         ],        
-        "before_cancel": "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse", #done
-        "before_amend": "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse", #done
+        "before_cancel": "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
+        "before_amend": "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
     },
     "Item": {
         "validate": "sriaas_clinic.api.item_package_weight.calculate_pkg_weights",

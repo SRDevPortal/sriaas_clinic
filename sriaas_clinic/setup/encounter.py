@@ -164,50 +164,50 @@ def _make_encounter_fields():
                 "insert_after": "sr_encounter_source",
             },
 
-            {
-                "fieldname": "payment_status",
-                "label": "Payment Status",
-                "fieldtype": "Select",
-                "options": "\nPayment Approved\nPayment Disapproved",
-                "insert_after": "sr_encounter_status",
-            },
+            # {
+            #     "fieldname": "payment_status",
+            #     "label": "Payment Status",
+            #     "fieldtype": "Select",
+            #     "options": "\nPayment Approved\nPayment Disapproved",
+            #     "insert_after": "sr_encounter_status",
+            # },
 
-            {
-                "fieldname": "payment_hold_reason",
-                "label": "Payment Hold Reason",
-                "fieldtype": "Small Text",
-                "insert_after": "payment_status",
-            },
+            # {
+            #     "fieldname": "payment_hold_reason",
+            #     "label": "Payment Hold Reason",
+            #     "fieldtype": "Small Text",
+            #     "insert_after": "payment_status",
+            # },
 
-            {
-                "fieldname": "prx_status",
-                "label": "PRX Status",
-                "fieldtype": "Select",
-                "options": "\nPRX Ready\nPRX Hold",
-                "insert_after": "payment_hold_reason",
-            },
+            # {
+            #     "fieldname": "prx_status",
+            #     "label": "PRX Status",
+            #     "fieldtype": "Select",
+            #     "options": "\nPRX Ready\nPRX Hold",
+            #     "insert_after": "payment_hold_reason",
+            # },
 
-            {
-                "fieldname": "prx_hold_reason",
-                "label": "PRX Hold Reason",
-                "fieldtype": "Small Text",
-                "insert_after": "prx_status",
-            },
+            # {
+            #     "fieldname": "prx_hold_reason",
+            #     "label": "PRX Hold Reason",
+            #     "fieldtype": "Small Text",
+            #     "insert_after": "prx_status",
+            # },
 
-            {
-                "fieldname": "dispatch_status",
-                "label": "Dispatch Status",
-                "fieldtype": "Select",
-                "options": "\nDispatch\nHold\nDuplicate",
-                "insert_after": "prx_hold_reason",
-            },
+            # {
+            #     "fieldname": "dispatch_status",
+            #     "label": "Dispatch Status",
+            #     "fieldtype": "Select",
+            #     "options": "\nDispatch\nHold\nDuplicate",
+            #     "insert_after": "prx_hold_reason",
+            # },
 
-            {
-                "fieldname": "dispatch_hold_reason",
-                "label": "Dispatch Hold Reason",
-                "fieldtype": "Small Text",
-                "insert_after": "dispatch_status",
-            },
+            # {
+            #     "fieldname": "dispatch_hold_reason",
+            #     "label": "Dispatch Hold Reason",
+            #     "fieldtype": "Small Text",
+            #     "insert_after": "dispatch_status",
+            # },
         ]
     })
 

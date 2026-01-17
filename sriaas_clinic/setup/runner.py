@@ -4,7 +4,7 @@ from . import (
     patient, customer, practitioner, contact,
     encounter, crm_lead, patient_appointment,
     drug_prescription, item_price, item_package,
-    sales_invoice, payment_entry, purchase_order, user,
+    sales_invoice, payment_entry, purchase_order, user, company,
     print_formats,
 )
 
@@ -39,5 +39,7 @@ def setup_all():
     purchase_order.apply()
     # User fields/customizations
     user.apply()
+    # Company fields/customizations
+    company.apply()
     # Print Format fields/customizations
     print_formats.apply()

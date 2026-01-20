@@ -51,7 +51,7 @@
 {% set reg_pin        = (comp_addr.pincode if comp_addr else "") %}
 {% set gst_state_code = (comp_addr.gst_state_number if comp_addr and comp_addr.gst_state_number else "") %}
 {% set company_email  = company.email_id or company.company_email or "accounts@sriaas.com" %}
-{% set company_cin    = company.cin or company.company_cin or company.custom_cin or "" %}
+{% set company_cin    = company.sr_company_cin_no or company.cin or company.company_cin or company.custom_cin or "" %}
 {% set company_gstin  = doc.company_gstin or (comp_addr.gstin if comp_addr and comp_addr.gstin else "") %}
 
 {# ==== overall GST rate (fixed 5%) ==== #}
@@ -461,3 +461,4 @@
     </tr>
   </table>
 </div>
+

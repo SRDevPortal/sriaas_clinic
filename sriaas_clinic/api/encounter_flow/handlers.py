@@ -780,6 +780,73 @@ def _create_billing_drafts_from_encounter(doc):
     if si_meta.has_field(SI_F_DELIVERY_TYPE) and doc.get(F_DELIVERY_TYPE):
         setattr(si, SI_F_DELIVERY_TYPE, doc.get(F_DELIVERY_TYPE))
 
+
+	# -------------------------------------------------
+    # NEW: Compute actual total price from Item Price table
+    # -------------------------------------------------
+    def _get_item_selling_rate(item_code: str, price_list: str = "Standard Selling") -> float:
+        """
+        Fetch actual selling price from Item Price.
+        Falls back safely if price is missing.
+        """
+        filters = {
+            "item_code": item_code,
+            "price_list": price_list,
+        }
+
+        rate = frappe.db.get_value(
+            "Item Price",
+            filters,
+            "price_list_rate"
+        )
+        return flt(rate or 0)
+
+
+    # -------------------------------------------------
+    # PRICE LOGIC
+    # sr_kit_total_price   = ENTERED price (Encounter)
+    # sr_item_total_price  = ACTUAL price (Item Price)
+    # -------------------------------------------------
+    actual_total_price = 0.0     # From Item Price (Standard Selling)
+    entered_total_price = 0.0    # From Encounter (Agent-entered)
+
+    kit_name = None
+
+    for idx, it in enumerate(doc.get("sr_pe_order_items") or []):
+        qty = flt(it.sr_item_qty or 0)
+
+        # Entered (discounted) rate from Encounter
+        entered_rate = flt(it.sr_item_rate or 0)
+
+        # Actual selling rate from Item Price
+        actual_rate = _get_item_selling_rate(
+            item_code=it.sr_item_code,
+            price_list="Standard Selling",
+        )
+
+        actual_total_price += qty * actual_rate
+        entered_total_price += qty * entered_rate
+
+        # First item defines Kit Name
+        if idx == 0:
+            kit_name = it.sr_item_name
+
+
+    # -------------------------------
+    # PASS VALUES TO SALES INVOICE
+    # -------------------------------
+    if si_meta.has_field("sr_kit_name") and kit_name:
+        setattr(si, "sr_kit_name", kit_name)
+
+    # Entered / discounted price (Encounter)
+    if si_meta.has_field("sr_kit_total_price"):
+        setattr(si, "sr_kit_total_price", entered_total_price)
+
+    # Actual price (Item Price)
+    if si_meta.has_field("sr_item_total_price"):
+        setattr(si, "sr_item_total_price", actual_total_price)
+
+
     # Taxes & totals
     _set_tax_template_by_state(si, customer)
     _apply_company_tax_template(si)
@@ -941,3 +1008,4 @@ def link_pending_payment_entries(si, method):
         pe.save(ignore_permissions=True)
 
         outstanding -= alloc
+

@@ -14,7 +14,7 @@ def apply():
     if frappe.db.exists("DocType", PARENT) and frappe.db.exists("DocType", CHILD):
         _setup_cost_section()
         _setup_invoice_item_fields()
-    # _setup_invoice_calculation_section()
+    _setup_invoice_calculation_section()
     _apply_invoice_ui_customizations()
 
 
@@ -263,3 +263,4 @@ def _apply_invoice_ui_customizations():
 
     # Set title field to patient_name
     upsert_title_field(PARENT, "patient_name")
+

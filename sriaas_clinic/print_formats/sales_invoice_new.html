@@ -138,10 +138,10 @@
 /* Right-hand totals table */
 .sum{ width:100%; }
 .sum td{ padding:6pt 8pt; border-bottom:1px solid #f0f2f5; }  /* no font-size here */
-.sum td.k{ color:#444; }
+.sum td.k{ color:#444; font-weight: 700; }
 .sum td.v{ text-align:right; white-space:nowrap; }
 .sum tr.total td{ border-top:1px solid #e5e7eb; font-weight:700; }
-.sum tr.bold td{ font-weight:700; }
+.sum tr.bold td{ font-weight:600; }
 
 /* Amount in Words block */
 .inwords {
@@ -288,45 +288,13 @@
       <tr><td colspan="7" class="muted">No items</td></tr>
       {% endif %}
     </tbody>
-    <tfoot>
+    <!-- <tfoot>
       <tr>
         <td colspan="6" class="right"><b>Subtotal</b></td>
         <td class="right">{{ frappe.utils.fmt_money(doc.total or 0, currency=currency) }}</td>
       </tr>
-    </tfoot>
+    </tfoot> -->
   </table>
-
-  <!-- <table class="table table-bordered">
-    <thead>
-        <tr>
-            <th>No</th>
-            <th>Item</th>
-            <th>Qty</th>
-            <th>Rate</th>
-            <th>Amount</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% if doc.items and doc.items|length > 0 %}
-            {% set item = doc.items[0] %}
-            <tr>
-                <td>1</td>
-                <td>{{ item.item_name }}</td>
-                <td>{{ item.qty }}</td>
-                <td>{{ frappe.format_value(item.rate, {"fieldtype":"Currency"}) }}</td>
-                <td>{{ frappe.format_value(item.amount, {"fieldtype":"Currency"}) }}</td>
-            </tr>
-        {% endif %}
-    </tbody>
-  </table>
-
-  {% if doc.items and doc.items|length > 0 %}
-    {% set item = doc.items[0] %}
-    <p style="text-align:right; font-size:14px;">
-        <b>Total (INR): {{ frappe.format_value(item.amount, {"fieldtype":"Currency"}) }}</b>
-    </p>
-  {% endif %} -->
-
 
   {# ===== Bottom Right: Summary / Payment / Signature ===== #}
   <table style="width:100%; table-layout:fixed; border-collapse:collapse; margin-top:10pt;">
@@ -391,12 +359,46 @@
       </td>
 
       <!-- RIGHT SUMMARY -->
-      <td style="width:45%; padding-left:10pt; vertical-align:top;">
+      <td style="width:45%; padding-left:0pt !important; padding-right:0pt !important; vertical-align:top;">
         <table class="sum">
+          {# Original taxable before discount #}
+          <tr>
+            <td class="k"><b>Subtotal</b></td>
+            <td class="v">{{ frappe.format(doc.total or 0, {'fieldtype':'Currency','options': doc.currency}) }}</td>
+          </tr>
+
+          {# Discount #}
+          {% if (doc.additional_discount_percentage or 0) > 0 or (doc.discount_amount or 0) > 0 %}
+          <tr>
+            <td class="k">
+              Discount ({{ frappe.format(doc.additional_discount_percentage or 0, {'fieldtype':'Percent'}) }})
+            </td>
+            <td class="v">
+              - {{ frappe.format(doc.discount_amount or 0, {'fieldtype':'Currency','options': doc.currency}) }}
+            </td>
+          </tr>
+          {% endif %}
+
+          {# Adjusted taxable after discount #}
           <tr>
             <td class="k">Taxable Amount</td>
-            <td class="v">{{ doc.get_formatted('net_total') }}</td>
+            <td class="v">{{ frappe.format(doc.net_total or 0, {'fieldtype':'Currency','options': doc.currency}) }}</td>
           </tr>
+
+          <!-- <tr>
+            <td class="k">Taxable Amount</td>
+            <td class="v">{{ doc.get_formatted('net_total') }}</td>
+          </tr> -->
+
+          <!-- {# ===== Additional Discount ===== #}
+          {% if (doc.additional_discount_percentage or 0) > 0 or (doc.discount_amount or 0) > 0 %}
+          <tr>
+            <td class="k">Discount ({{ frappe.format(doc.additional_discount_percentage or 0, {'fieldtype':'Percent'}) }})</td>
+            <td class="v">
+              - {{ frappe.format(doc.discount_amount or 0, {'fieldtype':'Currency','options': doc.currency}) }}
+            </td>
+          </tr>
+          {% endif %} -->
 
           {% if doc.taxes and doc.taxes|length %}
             {% for t in doc.taxes %}
@@ -420,8 +422,8 @@
             {% endfor %}
           {% endif %}
 
-          <tr class="total">
-            <td class="k">Total Amount</td>
+          <tr>
+            <td class="k">Grand Total</td>
             <td class="v">{{ (doc.rounded_total and doc.get_formatted('rounded_total')) or doc.get_formatted('grand_total') }}</td>
           </tr>
 
@@ -437,8 +439,8 @@
           </tr>
           {% endif %}
 
-          <tr class="bold">
-            <td class="k">Balance</td>
+          <tr>
+            <td class="k">Balance Amount</td>
             <td class="v">{{ doc.get_formatted('outstanding_amount') }}</td>
           </tr>
         </table>
@@ -461,4 +463,3 @@
     </tr>
   </table>
 </div>
-

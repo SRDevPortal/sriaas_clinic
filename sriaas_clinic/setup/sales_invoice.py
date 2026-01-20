@@ -93,18 +93,17 @@ def _setup_invoice_calculation_section():
                 "insert_after": "sr_kit_name",
             },
             {
-                "fieldname": "sr_total_item_price",
-                "label": "Total Item Price",
+                "fieldname": "sr_item_total_price",
+                "label": "Item Total Price",
                 "fieldtype": "Currency",
                 "read_only": 0,
-                # "fetch_from": "grand_total",
-                "description": "Same as Grand Total (INR)",
+                "description": "Grand Total (INR)",
                 "insert_after": "sr_kit_total_price",
             },
             {
                 "fieldname": "sr_inv_calc_cb",
                 "fieldtype": "Column Break",
-                "insert_after": "sr_total_item_price",
+                "insert_after": "sr_item_total_price",
             },
             {
                 "fieldname": "sr_discount_amount",
@@ -263,4 +262,5 @@ def _apply_invoice_ui_customizations():
 
     # Set title field to patient_name
     upsert_title_field(PARENT, "patient_name")
+
 

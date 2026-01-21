@@ -371,7 +371,7 @@
           {% if (doc.additional_discount_percentage or 0) > 0 or (doc.discount_amount or 0) > 0 %}
           <tr>
             <td class="k">
-              Discount ({{ frappe.format(doc.additional_discount_percentage or 0, {'fieldtype':'Percent'}) }})
+              Discount Amount
             </td>
             <td class="v">
               - {{ frappe.format(doc.discount_amount or 0, {'fieldtype':'Currency','options': doc.currency}) }}

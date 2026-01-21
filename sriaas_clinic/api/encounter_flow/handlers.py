@@ -843,8 +843,8 @@ def _create_billing_drafts_from_encounter(doc):
         setattr(si, "sr_kit_total_price", entered_total_price)
 
     # Actual price (Item Price)
-    if si_meta.has_field("sr_item_total_price"):
-        setattr(si, "sr_item_total_price", actual_total_price)
+    # if si_meta.has_field("sr_item_total_price"):
+    #     setattr(si, "sr_item_total_price", actual_total_price)
 
 
     # Taxes & totals
@@ -1008,4 +1008,5 @@ def link_pending_payment_entries(si, method):
         pe.save(ignore_permissions=True)
 
         outstanding -= alloc
+
 

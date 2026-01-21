@@ -92,33 +92,33 @@ def _setup_invoice_calculation_section():
                 "read_only": 0,
                 "insert_after": "sr_kit_name",
             },
-            {
-                "fieldname": "sr_item_total_price",
-                "label": "Item Total Price",
-                "fieldtype": "Currency",
-                "read_only": 0,
-                "description": "Grand Total (INR)",
-                "insert_after": "sr_kit_total_price",
-            },
-            {
-                "fieldname": "sr_inv_calc_cb",
-                "fieldtype": "Column Break",
-                "insert_after": "sr_item_total_price",
-            },
-            {
-                "fieldname": "sr_discount_amount",
-                "label": "Discount Amount",
-                "fieldtype": "Currency",
-                "read_only": 1,
-                "insert_after": "sr_inv_calc_cb",
-            },
-            {
-                "fieldname": "sr_discount_pct",
-                "label": "Discount %",
-                "fieldtype": "Percent",
-                "read_only": 1,
-                "insert_after": "sr_discount_amount",
-            },
+            # {
+            #     "fieldname": "sr_item_total_price",
+            #     "label": "Item Total Price",
+            #     "fieldtype": "Currency",
+            #     "read_only": 0,
+            #     "description": "Grand Total (INR)",
+            #     "insert_after": "sr_kit_total_price",
+            # },
+            # {
+            #     "fieldname": "sr_inv_calc_cb",
+            #     "fieldtype": "Column Break",
+            #     "insert_after": "sr_item_total_price",
+            # },
+            # {
+            #     "fieldname": "sr_discount_amount",
+            #     "label": "Discount Amount",
+            #     "fieldtype": "Currency",
+            #     "read_only": 1,
+            #     "insert_after": "sr_inv_calc_cb",
+            # },
+            # {
+            #     "fieldname": "sr_discount_pct",
+            #     "label": "Discount %",
+            #     "fieldtype": "Percent",
+            #     "read_only": 1,
+            #     "insert_after": "sr_discount_amount",
+            # },
         ]
     })
 

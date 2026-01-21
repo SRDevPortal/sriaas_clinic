@@ -24,52 +24,6 @@ app_include_js = [
 
 web_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
 
-doctype_js = {
-    "Patient": [
-        "public/js/patient_invoices.js",
-        "public/js/patient_payments.js",
-        "public/js/patient_pex_launcher.js",
-        "public/js/patient_regional.js",
-        "public/js/clinical_history_modal.js",
-    ],
-    "Patient Encounter": [
-        "public/js/patient_encounter.js",
-        "public/js/encounter_draft_invoice.js",
-        "public/js/encounter_order_item.js",
-        "public/js/encounter_practitioner_filters.js",
-        "public/js/encounter_medication_template.js",
-        "public/js/encounter_medication_manual.js",
-        "public/js/encounter_medication_filters.js",
-        "public/js/encounter_block_autosave_for_proof.js",
-        "public/js/encounter_attachments.js",
-        "public/js/clinical_history_modal.js",
-    ],
-    "Healthcare Practitioner": [
-        "public/js/healthcare_practitioner.js",
-    ],
-    "CRM Lead": [
-        "public/js/crm_lead_disposition_filter.js",
-        "public/js/crm_lead_lock_fields.js",
-        "public/js/crm_lead_pex_launcher.js",
-    ],
-    "Item": [
-        "public/js/item_package_weight.js",
-    ],
-    "Sales Invoice": [
-        "public/js/sales_invoice_actions.js",
-        "public/js/sales_invoice_barcode.js",
-        # "public/js/shipkia_sales_invoice.js",
-    ],
-    "Payment Entry": [
-        "public/js/payment_entry_outstanding_dialog.js",
-        "public/js/payment_entry_actions.js",
-        # "public/js/_payment_entry_extend.js",
-    ],
-    "Stock Entry": [
-        "public/js/stock_entry_barcode.js",
-    ],
-}
-
 list_js = {
     "Sales Invoice": "public/js/sales_invoice_list.js",
 }
@@ -78,18 +32,14 @@ doctype_list_js = {
     "CRM Lead": "public/js/crm_lead_list.js",
 }
 
-# Permissions
-# -----------
 permission_query_conditions = {
     "CRM Lead": "sriaas_clinic.api.crm_lead.access.crm_lead_pqc",
 }
+
 has_permission = {
     "CRM Lead": "sriaas_clinic.api.crm_lead.access.crm_lead_has_permission",
 }
 
-# Document Events
-# ---------------
-# Hook on document methods and events
 doc_events = {
     "Patient": {
         "autoname": "sriaas_clinic.api.patient.force_patient_series",
@@ -205,16 +155,58 @@ doc_events = {
     # }
 }
 
-# Overriding Methods
-# ------------------------------
-# Keep your assignment authorization guards
+doctype_js = {
+    "Patient": [
+        "public/js/patient_invoices.js",
+        "public/js/patient_payments.js",
+        "public/js/patient_pex_launcher.js",
+        "public/js/patient_regional.js",
+        "public/js/clinical_history_modal.js",
+    ],
+    "Patient Encounter": [
+        "public/js/patient_encounter.js",
+        "public/js/encounter_draft_invoice.js",
+        "public/js/encounter_order_item.js",
+        "public/js/encounter_practitioner_filters.js",
+        "public/js/encounter_medication_template.js",
+        "public/js/encounter_medication_manual.js",
+        "public/js/encounter_medication_filters.js",
+        "public/js/encounter_block_autosave_for_proof.js",
+        "public/js/encounter_attachments.js",
+        "public/js/clinical_history_modal.js",
+    ],
+    "Healthcare Practitioner": [
+        "public/js/healthcare_practitioner.js",
+    ],
+    "CRM Lead": [
+        "public/js/crm_lead_disposition_filter.js",
+        "public/js/crm_lead_lock_fields.js",
+        "public/js/crm_lead_pex_launcher.js",
+    ],
+    "Item": [
+        "public/js/item_package_weight.js",
+    ],
+    "Sales Invoice": [
+        "public/js/sales_invoice_actions.js",
+        "public/js/sales_invoice_barcode.js",
+        # "public/js/shipkia_sales_invoice.js",
+    ],
+    "Payment Entry": [
+        "public/js/payment_entry_outstanding_dialog.js",
+        "public/js/payment_entry_actions.js",
+        # "public/js/_payment_entry_extend.js",
+    ],
+    "Stock Entry": [
+        "public/js/stock_entry_barcode.js",
+    ],
+}
+
 override_whitelisted_methods = {
     "frappe.desk.form.assign_to.add": "sriaas_clinic.api.assign_guard.add",
     "frappe.desk.form.assign_to.remove": "sriaas_clinic.api.assign_guard.remove",
     "frappe.desk.form.assign_to.clear": "sriaas_clinic.api.assign_guard.clear",
 }
 
-# Export only items that belong to our module
 fixtures = [
     {"dt": "Custom Field", "filters": [["module", "=", "SRIAAS Clinic"]]},
     {"dt": "Property Setter", "filters": [["module", "=", "SRIAAS Clinic"]]},

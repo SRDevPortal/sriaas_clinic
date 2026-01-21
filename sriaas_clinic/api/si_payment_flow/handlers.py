@@ -416,3 +416,64 @@ def refresh_payment_history(si, method=None):
     for f, v in updates.items():
         if hasattr(si, f):
             si.db_set(f, v, update_modified=False)
+
+
+
+def apply_kit_discount_from_grand_total(doc, method=None):
+    """
+    Guarantee:
+    Final Grand Total == sr_kit_total_price
+    even after multiple edits.
+    """
+
+    if doc.doctype != "Sales Invoice":
+        return
+
+    kit_price = flt(doc.get("sr_kit_total_price"))
+
+    if kit_price <= 0:
+        return
+
+    # -------------------------------------------------
+    # STEP 1: CLEAR EXISTING DISCOUNTS (VERY IMPORTANT)
+    # -------------------------------------------------
+    doc.apply_discount_on = "Grand Total"
+    doc.additional_discount_percentage = 0
+    doc.discount_amount = 0
+
+    # Recalculate WITHOUT discount
+    doc.calculate_taxes_and_totals()
+
+    # -------------------------------------------------
+    # STEP 2: USE BASE GRAND TOTAL (PRE-DISCOUNT)
+    # -------------------------------------------------
+    base_grand_total = flt(doc.get("base_grand_total"))
+
+    if base_grand_total <= 0:
+        return
+
+    # -------------------------------------------------
+    # STEP 3: HARD VALIDATION
+    # -------------------------------------------------
+    if kit_price > base_grand_total:
+        frappe.throw(
+            "Kit Price cannot be greater than Invoice Grand Total",
+            title="Invalid Kit Price"
+        )
+
+    discount_amount = base_grand_total - kit_price
+
+    if discount_amount <= 0:
+        return
+
+    discount_pct = (discount_amount / base_grand_total) * 100
+
+    # -------------------------------------------------
+    # STEP 4: APPLY DISCOUNT
+    # -------------------------------------------------
+    doc.additional_discount_percentage = flt(discount_pct, 6)
+
+    # -------------------------------------------------
+    # STEP 5: FINAL RECALC
+    # -------------------------------------------------
+    doc.calculate_taxes_and_totals()

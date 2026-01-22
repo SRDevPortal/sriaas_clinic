@@ -38,7 +38,7 @@ TAX_TEMPLATE_INTERSTATE = "Output GST Out-state"
 # If True also writes to SI POS payments (GL on submit) — keep False if you use PEs
 USE_POS_PAYMENTS_ROW = False
 
-DEFAULT_FALLBACK_WAREHOUSE: Optional[str] = None # e.g., "Main - SR"
+DEFAULT_FALLBACK_WAREHOUSE: Optional[str] = None
 
 ROW_KEYS = {
     "item_code": ["sr_item_code", "item_code"],
@@ -55,6 +55,24 @@ def _row_get(row: Dict[str, Any], key: str, default=None):
         if val not in (None, ""):
             return val
     return default
+
+
+def _get_item_selling_rate(item_code: str, price_list: str = "Standard Selling") -> float:
+    """
+    Fetch actual selling price from Item Price.
+    Used for Sales Invoice item rate (NOT encounter rate).
+    """
+    filters = {
+        "item_code": item_code,
+        "price_list": price_list,
+    }
+
+    rate = frappe.db.get_value(
+        "Item Price",
+        filters,
+        "price_list_rate"
+    )
+    return flt(rate or 0)
 
 
 def _find_item_rows(doc) -> List[Dict[str, Any]]:
@@ -747,7 +765,11 @@ def _create_billing_drafts_from_encounter(doc):
             continue
 
         qty = flt(_row_get(it, "qty") or 1)
-        rate = flt(_row_get(it, "rate") or 0)
+        # rate = flt(_row_get(it, "rate") or 0)
+        rate = _get_item_selling_rate(
+            item_code=item_code,
+            price_list="Standard Selling",
+        )
         uom = _row_get(it, "uom")
         name = _row_get(it, "item_name")
 
@@ -782,28 +804,6 @@ def _create_billing_drafts_from_encounter(doc):
 
 
 	# -------------------------------------------------
-    # NEW: Compute actual total price from Item Price table
-    # -------------------------------------------------
-    def _get_item_selling_rate(item_code: str, price_list: str = "Standard Selling") -> float:
-        """
-        Fetch actual selling price from Item Price.
-        Falls back safely if price is missing.
-        """
-        filters = {
-            "item_code": item_code,
-            "price_list": price_list,
-        }
-
-        rate = frappe.db.get_value(
-            "Item Price",
-            filters,
-            "price_list_rate"
-        )
-        return flt(rate or 0)
-
-
-    # -------------------------------------------------
-    # PRICE LOGIC
     # sr_kit_total_price   = ENTERED price (Encounter)
     # sr_item_total_price  = ACTUAL price (Item Price)
     # -------------------------------------------------
@@ -1008,4 +1008,3 @@ def link_pending_payment_entries(si, method):
         pe.save(ignore_permissions=True)
 
         outstanding -= alloc
-

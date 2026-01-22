@@ -2,16 +2,11 @@
 
 from typing import Optional, Set, Tuple
 import frappe
-from frappe.utils import nowdate, flt
+from frappe.utils import nowdate, flt, money_in_words
 from erpnext.accounts.party import get_party_account
 
 # ----------------------------------
-# small helper: set_created_by_agent #done
-# ----------------------------------
-# def set_created_by_agent(doc, method):
-#     """Populate created_by_agent on insert only (so edits don't override)."""
-#     if not getattr(doc, "created_by_agent", None):
-#         doc.created_by_agent = frappe.session.user
+# small helper: set_created_by_agent
 
 def set_created_by_agent(doc, method):
     """
@@ -286,38 +281,6 @@ def create_pe_from_si_dp(si, method):
 
     refresh_payment_history(si)
 
-# -------------------------------------------------
-# Payment History (read-only UI summary) updaters
-# -------------------------------------------------
-
-# def _sum_pe_allocations_for_invoice(si_name: str, company: str, customer: str) -> Tuple[float, Set[str]]:
-#     """
-#     Sum allocated amounts from SUBMITTED Payment Entries that reference this SI.
-#     Returns (total_allocated, set_of_MOPs).
-#     """
-#     res = frappe.db.sql(
-#         """
-#         select per.allocated_amount, pe.mode_of_payment
-#         from `tabPayment Entry Reference` per
-#         join `tabPayment Entry` pe on pe.name = per.parent
-#         where per.reference_doctype = 'Sales Invoice'
-#           and per.reference_name = %s
-#           and pe.docstatus = 1
-#           and pe.company = %s
-#           and pe.party_type = 'Customer'
-#           and pe.party = %s
-#         """,
-#         (si_name, company, customer),
-#         as_dict=True,
-#     )
-#     total = 0.0
-#     mops: Set[str] = set()
-#     for r in res:
-#         total += flt(r.allocated_amount)
-#         mop = (r.mode_of_payment or "").strip()
-#         if mop:
-#             mops.add(mop)
-#     return total, mops
 
 def _sum_pe_allocations_for_invoice(si_name: str, company: str, customer: str) -> Tuple[float, Set[str]]:
     """
@@ -348,6 +311,7 @@ def _sum_pe_allocations_for_invoice(si_name: str, company: str, customer: str) -
             mops.add(mop)
     return total, mops
 
+
 def _sum_pos_payments(si) -> Tuple[float, Set[str]]:
     """If SI uses POS payments table, include them for UI summary."""
     total = 0.0
@@ -359,6 +323,7 @@ def _sum_pos_payments(si) -> Tuple[float, Set[str]]:
             if mop:
                 mops.add(mop)
     return total, mops
+
 
 # before_submit, on_submit and on_update_after_submit handler
 def refresh_payment_history(si, method=None):
@@ -418,62 +383,104 @@ def refresh_payment_history(si, method=None):
             si.db_set(f, v, update_modified=False)
 
 
+def ensure_kit_values(doc):
+    """
+    Ensure kit fields never go blank once invoice exists
+    """
+
+    if flt(doc.sr_kit_total_price) > 0:
+        return
+
+    encounter_name = doc.get("source_encounter")
+    if not encounter_name:
+        return
+
+    enc = frappe.get_doc("Patient Encounter", encounter_name)
+
+    doc.sr_kit_name = enc.sr_kit_name
+    doc.sr_kit_total_price = enc.sr_kit_total_price
+
 
 def apply_kit_discount_from_grand_total(doc, method=None):
     """
-    Guarantee:
-    Final Grand Total == sr_kit_total_price
-    even after multiple edits.
+    Force final payable = sr_kit_total_price
     """
 
+    # -------------------------------
+    # HARD SAFETY
+    # -------------------------------
     if doc.doctype != "Sales Invoice":
         return
 
-    kit_price = flt(doc.get("sr_kit_total_price"))
+    if doc.docstatus != 0:   # 🔒 never touch submitted invoices
+        return
+    
+    # -------------------------------
+    # ENSURE KIT VALUES
+    # -------------------------------
+    ensure_kit_values(doc)
 
+    kit_price = flt(doc.sr_kit_total_price)
     if kit_price <= 0:
         return
 
-    # -------------------------------------------------
-    # STEP 1: CLEAR EXISTING DISCOUNTS (VERY IMPORTANT)
-    # -------------------------------------------------
+    # -------------------------------
+    # RESET DISCOUNT
+    # -------------------------------
     doc.apply_discount_on = "Grand Total"
     doc.additional_discount_percentage = 0
     doc.discount_amount = 0
 
-    # Recalculate WITHOUT discount
+    # Base calculation (no discount)
     doc.calculate_taxes_and_totals()
 
-    # -------------------------------------------------
-    # STEP 2: USE BASE GRAND TOTAL (PRE-DISCOUNT)
-    # -------------------------------------------------
-    base_grand_total = flt(doc.get("base_grand_total"))
-
+    base_grand_total = flt(doc.base_grand_total)
     if base_grand_total <= 0:
         return
 
-    # -------------------------------------------------
-    # STEP 3: HARD VALIDATION
-    # -------------------------------------------------
     if kit_price > base_grand_total:
-        frappe.throw(
-            "Kit Price cannot be greater than Invoice Grand Total",
-            title="Invalid Kit Price"
-        )
+        frappe.throw("Kit Price cannot be greater than Invoice Grand Total")
 
     discount_amount = base_grand_total - kit_price
-
     if discount_amount <= 0:
         return
-
+    
     discount_pct = (discount_amount / base_grand_total) * 100
 
-    # -------------------------------------------------
-    # STEP 4: APPLY DISCOUNT
-    # -------------------------------------------------
+    # -------------------------------
+    # APPLY DISCOUNT
+    # -------------------------------
     doc.additional_discount_percentage = flt(discount_pct, 6)
 
-    # -------------------------------------------------
-    # STEP 5: FINAL RECALC
-    # -------------------------------------------------
+    # Final ERPNext calc
     doc.calculate_taxes_and_totals()
+
+    # -------------------------------
+    # LOCK FINAL PAYABLE
+    # -------------------------------
+    doc.rounded_total = kit_price
+    doc.grand_total = kit_price
+    doc.outstanding_amount = kit_price
+
+    # -------------------------------
+    # FIX IN-WORDS (REQUIRED)
+    # -------------------------------
+    doc.in_words = money_in_words(
+        doc.grand_total,
+        doc.currency
+    )
+
+    doc.base_in_words = money_in_words(
+        doc.grand_total,
+        doc.company_currency
+    )
+
+    # -------------------------------
+    # CLEAN ITEM-LEVEL DISCOUNTS
+    # (ONLY FOR KIT-BASED INVOICES)
+    # -------------------------------
+    if doc.get("source_encounter") and flt(doc.sr_kit_total_price) > 0:
+        for item in doc.items:
+            item.discount_percentage = 0
+            item.discount_amount = 0
+            item.distributed_discount_amount = 0

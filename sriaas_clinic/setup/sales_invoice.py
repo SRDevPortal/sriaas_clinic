@@ -83,13 +83,14 @@ def _setup_invoice_calculation_section():
                 "fieldname": "sr_kit_name",
                 "label": "Kit Name",
                 "fieldtype": "Data",
+                "read_only": 1,
                 "insert_after": "sr_invoice_calc_sb",
             },
             {
                 "fieldname": "sr_kit_total_price",
                 "label": "Kit Total Price",
                 "fieldtype": "Currency",
-                "read_only": 0,
+                "read_only": 1,
                 "insert_after": "sr_kit_name",
             },
             # {
@@ -205,8 +206,8 @@ def _apply_invoice_ui_customizations():
     ensure_field_after(PARENT, "sr_invoice_calc_sb", "ignore_pricing_rule")
     ensure_field_after(PARENT, "sr_kit_name", "sr_invoice_calc_sb")
     ensure_field_after(PARENT, "sr_kit_total_price", "sr_kit_name")
-    ensure_field_after(PARENT, "sr_total_item_price", "sr_kit_total_price")
-    ensure_field_after(PARENT, "sr_inv_calc_cb", "sr_total_item_price")
+    ensure_field_after(PARENT, "sr_item_total_price", "sr_kit_total_price")
+    ensure_field_after(PARENT, "sr_inv_calc_cb", "sr_item_total_price")
     ensure_field_after(PARENT, "sr_discount_amount", "sr_inv_calc_cb")
     ensure_field_after(PARENT, "sr_discount_pct", "sr_discount_amount")
 
@@ -260,8 +261,8 @@ def _apply_invoice_ui_customizations():
 
     upsert_property_setter(PARENT, "update_stock", "default", "1", "Check")
 
+    upsert_property_setter(PARENT, "sr_kit_name", "read_only", "1", "Check")
+    upsert_property_setter(PARENT, "sr_kit_total_price", "read_only", "1", "Check")
+
     # Set title field to patient_name
     upsert_title_field(PARENT, "patient_name")
-
-
-

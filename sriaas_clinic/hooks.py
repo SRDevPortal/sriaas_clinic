@@ -101,9 +101,12 @@ doc_events = {
         "before_insert": "sriaas_clinic.api.si_payment_flow.handlers.set_created_by_agent",
         "validate": [
             "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
+            # "sriaas_clinic.api.si_payment_flow.handlers.apply_kit_discount_from_grand_total",
+        ],
+        "before_save": [
+            "sriaas_clinic.api.sales_invoice_cost.before_save",
             "sriaas_clinic.api.si_payment_flow.handlers.apply_kit_discount_from_grand_total",
         ],
-        "before_save": "sriaas_clinic.api.sales_invoice_cost.before_save",
         "before_submit": [
             "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
             # "sriaas_clinic.api.si_payment_flow.handlers.validate_dp_before_submit",

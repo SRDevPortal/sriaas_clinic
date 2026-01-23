@@ -42,30 +42,47 @@ has_permission = {
 
 doc_events = {
     "Patient": {
-        "autoname": "sriaas_clinic.api.patient.force_patient_series",
+        "autoname": [
+            "sriaas_clinic.api.patient.set_patient_series",
+        ],
         "before_insert": [
-            "sriaas_clinic.api.patient.normalize_phoneish_fields",
+            "sriaas_clinic.api.patient.normalize_patient_contact_numbers",
             "sriaas_clinic.api.patient.validate_unique_contact_mobile",
-            "sriaas_clinic.api.patient.set_sr_patient_id",
-            "sriaas_clinic.api.patient.set_created_by_agent",
+            "sriaas_clinic.api.patient.set_patient_id",
+            "sriaas_clinic.api.patient.set_patient_creator",
         ],
         "after_insert": [
-            "sriaas_clinic.api.patient.set_followup_last_digit",
-            "sriaas_clinic.api.patient.assign_followup_day",
+            "sriaas_clinic.api.patient.set_followup_id",
+            "sriaas_clinic.api.patient.set_followup_day",
         ],
-        "after_save": "sriaas_clinic.api.address.mirror_links_to_customer",
+        "after_save": [
+            "sriaas_clinic.api.address.mirror_links_to_customer",
+        ],
     },
     "Customer": {
-        "before_insert": "sriaas_clinic.api.customer.set_sr_customer_id",
-        "autoname": "sriaas_clinic.api.customer.force_customer_series",
-        "before_save":   "sriaas_clinic.api.customer.normalize_phoneish_fields",
+        "autoname": [
+            "sriaas_clinic.api.customer.set_customer_series",
+        ],
+        "before_insert": [
+            "sriaas_clinic.api.customer.set_customer_id",
+            "sriaas_clinic.api.customer.set_customer_creator",
+        ],        
+        "before_save": [
+            "sriaas_clinic.api.customer.sanitize_customer_contact_numbers",
+        ],
     },
     "Address": {
-        "before_validate": "sriaas_clinic.api.address.validate_state",
-        "before_save": "sriaas_clinic.api.address.ensure_address_has_customer_link",
+        "before_validate": [
+            "sriaas_clinic.api.address.validate_state",
+        ],
+        "before_save": [
+            "sriaas_clinic.api.address.ensure_address_has_customer_link",
+        ],
     },
     "Contact": {
-        "before_save": "sriaas_clinic.api.contact.normalize_phoneish_fields",
+        "before_save": [
+            "sriaas_clinic.api.contact.normalize_phoneish_fields",
+        ],
     },
     "Patient Encounter": {
         "validate": [
@@ -90,15 +107,23 @@ doc_events = {
         ],
     },
     "Patient Appointment": {
-        "before_insert": "sriaas_clinic.api.patient_appointment.set_created_by_agent",
-        # "on_update": "sriaas_clinic.api.patient_appointment.create_payment_entries_from_child_table",
-        # "on_update": "sriaas_clinic.api.patient_appointment.on_update_create_payments",
+        "before_insert": [
+            "sriaas_clinic.api.patient_appointment.set_created_by_agent",
+        ],
+        # "on_update": [
+        #     "sriaas_clinic.api.patient_appointment.create_payment_entries_from_child_table",
+        #     "sriaas_clinic.api.patient_appointment.on_update_create_payments",
+        # ],
     },
     "Healthcare Practitioner": {
-        "before_validate": "sriaas_clinic.api.practitioner.compose_full_name",
+        "before_validate": [
+            "sriaas_clinic.api.practitioner.compose_full_name",
+        ],
     },
     "Sales Invoice": {
-        "before_insert": "sriaas_clinic.api.si_payment_flow.handlers.set_created_by_agent",
+        "before_insert": [
+            "sriaas_clinic.api.si_payment_flow.handlers.set_created_by_agent",
+        ],
         "validate": [
             "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
             # "sriaas_clinic.api.si_payment_flow.handlers.apply_kit_discount_from_grand_total",
@@ -117,32 +142,62 @@ doc_events = {
             # "sriaas_clinic.api.integrations.n8n_shiprocket.send_to_n8n_on_submit",
             # "sriaas_clinic.api.integrations.shipkia_sales_invoice.send_sales_invoice_to_shipkia",
         ],        
-        "before_cancel": "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
-        "before_amend": "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
+        "before_cancel": [
+            "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
+        ],
+        "before_amend": [
+            "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
+        ],
     },
     "Item": {
         "validate": "sriaas_clinic.api.item_package_weight.calculate_pkg_weights",
     },
     "Payment Entry": {
-        "before_insert": "sriaas_clinic.api.payment_entry.set_created_by_agent",
-        # "before_save": "sriaas_clinic.api.payment_entry.sync_parent_mode_from_children_server",
-        # "validate": "sriaas_clinic.api.payment_entry.validate_payment_modes_total",
-        # "on_submit": "sriaas_clinic.api.payment_entry.create_journal_for_payment_modes",
-        # "on_cancel": "sriaas_clinic.api.payment_entry.cancel_linked_journal_entries",
+        "before_insert": [
+            "sriaas_clinic.api.payment_entry.set_created_by_agent",
+        ],        
+        # "before_save": [
+        #     "sriaas_clinic.api.payment_entry.sync_parent_mode_from_children_server",
+        # ],
+        # "validate": [
+        #     "sriaas_clinic.api.payment_entry.validate_payment_modes_total",
+        # ],
+        # "on_submit": [
+        #     "sriaas_clinic.api.payment_entry.create_journal_for_payment_modes",
+        # ],
+        # "on_cancel": [
+        #     "sriaas_clinic.api.payment_entry.cancel_linked_journal_entries",
+        # ],
     },
     # "Medical Department": {
-    #     "after_insert": "sriaas_clinic.api.medical_department.after_insert",
-    #     # "on_rename": "sriaas_clinic.api.medical_department.on_rename",
+    #     "after_insert": [
+    #         "sriaas_clinic.api.medical_department.after_insert",
+    #     ],
+    #     "on_rename": [
+    #         "sriaas_clinic.api.medical_department.on_rename",
+    #     ],
     # },
     "CRM Lead": {
-        "validate":     "sriaas_clinic.api.crm_lead.guards.guard_restricted_fields",
-        "before_save":  "sriaas_clinic.api.crm_lead.controller.normalize_phoneish_fields",
-        "after_save":   "sriaas_clinic.api.crm_lead.access.restore_lead_owner_after_unassign",
-        "after_insert": "sriaas_clinic.api.crm_lead.lifecycle.after_insert",
-        "on_update":    "sriaas_clinic.api.crm_lead.lifecycle.on_update",
+        "validate": [
+            "sriaas_clinic.api.crm_lead.guards.guard_restricted_fields",
+        ],
+        "before_save": [
+            "sriaas_clinic.api.crm_lead.controller.normalize_phoneish_fields",
+        ],
+        "after_save": [
+            "sriaas_clinic.api.crm_lead.access.restore_lead_owner_after_unassign",
+        ],
+        "after_insert": [
+            "sriaas_clinic.api.crm_lead.lifecycle.after_insert",
+        ],
+        "on_update": [
+            "sriaas_clinic.api.crm_lead.lifecycle.on_update",
+        ],
     },
     "ToDo": {
-        "on_trash": "sriaas_clinic.api.assign_guard.todo_on_trash",
+        "on_trash": [
+            "sriaas_clinic.api.assign_guard.todo_on_trash",
+        ],
     },
     # "User": {
     #     "after_insert": "sriaas_clinic.api.user_department_membership.after_insert",
@@ -156,8 +211,12 @@ doc_events = {
     #     "before_submit": "sriaas_clinic.api.purchase_order.create_batches_before_submit"
     # },
     # "File": {
-    #     "after_insert": "sriaas_clinic.api.s3.file_hooks.handle_file_after_insert",
-    #     "on_trash": "sriaas_clinic.api.s3.file_hooks.handle_file_on_trash",
+    #     "after_insert": [
+    #         "sriaas_clinic.api.s3.file_hooks.handle_file_after_insert",
+    #     ],
+    #     "on_trash": [
+    #         "sriaas_clinic.api.s3.file_hooks.handle_file_on_trash",
+    #     ],
     # }
 }
 

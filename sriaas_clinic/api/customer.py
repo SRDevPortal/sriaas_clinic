@@ -4,13 +4,36 @@ import frappe
 from frappe.model.naming import make_autoname
 
 PREFIX = "CUST-"
+
 # Match series: CUST-2025-00001
 _CUST_SERIES_RX = re.compile(r"^CUST-\d{4}-\d+$")
 
-# ----------------------------
-# A) Customer ID auto-generator
-# ----------------------------
-def set_sr_customer_id(doc, method=None):
+
+# ---------------------------------
+# A) Set naming_series for customer
+# ---------------------------------
+def set_customer_series(doc, method=None):
+    """
+    Runs during set_new_name(). Ensure Customer uses CUST series.
+    If a name was passed (via API/import) and it doesn't match our series,
+    overwrite it with the correct series.
+    """
+
+    # If name already matches series → keep it
+    if doc.name and _CUST_SERIES_RX.match(doc.name):
+        return
+
+    # Ensure naming_series exists
+    series = getattr(doc, "naming_series", None) or "CUST-.YYYY.-"
+    doc.name = make_autoname(series)
+
+    frappe.logger().info(f"[Customer] series name -> {doc.name}")
+
+
+# -----------------------------
+# B) Customer ID auto-generator
+# -----------------------------
+def set_customer_id(doc, method=None):
     if doc.get("sr_customer_id"):
         return
 
@@ -32,13 +55,23 @@ def set_sr_customer_id(doc, method=None):
             doc.sr_customer_id = candidate
             break
 
-# -------------------------------------------
-# B) Phone-like fields whitespace normalizer
-# -------------------------------------------
+
+# -----------------------
+# C) Set created_by_agent
+# -----------------------
+def set_customer_creator(doc, method):
+    """Populate created_by_agent on insert only."""
+    if not getattr(doc, "created_by_agent", None):
+        doc.created_by_agent = frappe.session.user or "Administrator"
+
+
+# ------------------------------------------
+# D) Phone-like fields whitespace normalizer
+# ------------------------------------------
 def _clean_spaces(s: str) -> str:
     return ''.join(s.split()) if isinstance(s, str) else s
 
-def normalize_phoneish_fields(doc, method=None):
+def sanitize_customer_contact_numbers(doc, method=None):
     CANDIDATE_FIELDS = (
         "mobile", "mobile_no",
         "phone", "phone_no",
@@ -50,21 +83,4 @@ def normalize_phoneish_fields(doc, method=None):
         val = doc.get(field)
         cleaned = _clean_spaces(val)
         if cleaned != val:
-            doc.set(field, cleaned)  # before_save: no extra DB write
-
-def force_customer_series(doc, method=None):
-    """
-    Runs during set_new_name(). Ensure Customer uses CUST series.
-    If a name was passed (via API/import) and it doesn't match our series,
-    overwrite it with the correct series.
-    """
-
-    # If name already matches series → keep it
-    if doc.name and _CUST_SERIES_RX.match(doc.name):
-        return
-
-    # Ensure naming_series exists
-    series = getattr(doc, "naming_series", None) or "CUST-.YYYY.-"
-    doc.name = make_autoname(series)
-
-    frappe.logger().info(f"[Customer] series name -> {doc.name}")
+            doc.set(field, cleaned)

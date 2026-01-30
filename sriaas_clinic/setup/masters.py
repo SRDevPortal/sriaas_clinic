@@ -1462,12 +1462,24 @@ def _ensure_shipkia_settings():
         "track_changes": 1,
         "allow_rename": 0,
         "field_order": [
+            # Flags
             "enable_sync",
+
+            # Webhook (ERP → n8n)
             "webhook_url",
-            "api_token",
-            "header_key",
+            "webhook_header_key",
+            "webhook_header_token",
+
+            # Shipkia Order API
+            "shipkia_order_url",
+            "shipkia_order_header_key",
+            "shipkia_order_token",
+
+            # Meta
             "pickup_address",
             "order_channel",
+            "shipkia_base_url",
+            "shipkia_tracking_url",
         ],
         "fields": [
             {
@@ -1476,23 +1488,53 @@ def _ensure_shipkia_settings():
                 "fieldtype": "Check",
                 "default": "0",
             },
+            # ============================
+            # Webhook (ERP → n8n)
+            # ============================
             {
                 "fieldname": "webhook_url",
-                "label": "Shipkia Webhook URL",
+                "label": "Webhook URL",
                 "fieldtype": "Data",
                 "reqd": 1,
             },
             {
-                "fieldname": "api_token",
-                "label": "Shipkia API Token",
-                "fieldtype": "Password",
-            },
-            {
-                "fieldname": "header_key",
-                "label": "Auth Header Key",
+                "fieldname": "webhook_header_key",
+                "label": "Webhook Header Key",
                 "fieldtype": "Data",
                 "default": "x-api-key",
             },
+            {
+                "fieldname": "webhook_header_token",
+                "label": "Webhook Header Token",
+                "fieldtype": "Password",
+                "reqd": 1,
+            },
+
+            # ============================
+            # Shipkia Order API
+            # ============================
+            {
+                "fieldname": "shipkia_order_url",
+                "label": "Shipkia Order URL",
+                "fieldtype": "Data",
+                "reqd": 1,
+            },
+            # {
+            #     "fieldname": "shipkia_order_header_key",
+            #     "label": "Shipkia Order Header Key",
+            #     "fieldtype": "Data",
+            #     "default": "Authorization",
+            # },
+            {
+                "fieldname": "shipkia_order_token",
+                "label": "Shipkia Order Token",
+                "fieldtype": "Password",
+                "reqd": 1,
+            },
+
+            # ============================
+            # Meta
+            # ============================
             {
                 "fieldname": "pickup_address",
                 "label": "Pickup Address Code",
@@ -1504,6 +1546,18 @@ def _ensure_shipkia_settings():
                 "label": "Order Channel",
                 "fieldtype": "Data",
                 "default": "erpsriaas",
+                "reqd": 1,
+            },
+            {
+                "fieldname": "shipkia_base_url",
+                "label": "Shipkia Base URL",
+                "fieldtype": "Data",
+            },
+            {
+                "fieldname": "shipkia_tracking_url",
+                "label": "Shipkia Tracking URL",
+                "fieldtype": "Data",
+                "reqd": 1,
             },
         ],
         "permissions": [

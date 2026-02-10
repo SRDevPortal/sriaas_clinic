@@ -11,7 +11,6 @@ from .utils import (
 # List of DocTypes shipped as JSON (folder names under doctype/)
 # ------------------------------------------------------------
 JSON_DOCTYPES = [
-    # Example:
     # "sr_patient_disable_reason",
     # "sr_patient_invoice_view",
 ]
@@ -161,6 +160,7 @@ def _ensure_sr_patient_disable_reason():
         ],
     }).insert(ignore_permissions=True)
 
+
 def _ensure_sr_patient_invoice_view():
     """Create SR Patient Invoice View master."""
     if frappe.db.exists("DocType", "SR Patient Invoice View"):
@@ -212,6 +212,7 @@ def _ensure_sr_patient_invoice_view():
         ],
         "permissions": [],
     }).insert(ignore_permissions=True)
+
 
 def _ensure_sr_patient_payment_view():
     """Create SR Patient Payment View master."""
@@ -290,6 +291,7 @@ def _ensure_sr_patient_payment_view():
         "permissions": [],
     }).insert(ignore_permissions=True)
 
+
 def _ensure_sr_multi_mode_payment():
     """Create SR Multi Mode Payment master."""
     if frappe.db.exists("DocType", "SR Multi Mode Payment"):
@@ -367,6 +369,7 @@ def _ensure_sr_multi_mode_payment():
         "permissions": [],
     }).insert(ignore_permissions=True)
 
+
 def _ensure_sr_sales_type():
     """Create SR Sales Type master."""
     if frappe.db.exists("DocType", "SR Sales Type"):
@@ -406,6 +409,7 @@ def _ensure_sr_sales_type():
         ],
     }).insert(ignore_permissions=True)
 
+
 def _ensure_sr_encounter_status():
     """Create SR Encounter Status master."""
     if frappe.db.exists("DocType", "SR Encounter Status"):
@@ -442,6 +446,7 @@ def _ensure_sr_encounter_status():
             }
         ],
     }).insert(ignore_permissions=True)
+
 
 def _ensure_sr_order_item():
     """Create SR Order Item master."""
@@ -518,6 +523,7 @@ def _ensure_sr_order_item():
         "permissions": [],
     }).insert(ignore_permissions=True)
 
+
 def _ensure_sr_instruction():
     """Create SR Instruction master."""
     if frappe.db.exists("DocType", "SR Instruction"):
@@ -564,6 +570,7 @@ def _ensure_sr_instruction():
             }
         ],
     }).insert(ignore_permissions=True)
+
 
 def _ensure_sr_medication_template_item():
     """Create SR Medication Template Item master."""
@@ -651,6 +658,7 @@ def _ensure_sr_medication_template_item():
         ],
     }).insert(ignore_permissions=True)
 
+
 def _ensure_sr_medication_template():
     """Create SR Medication Template master."""
     if frappe.db.exists("DocType", "SR Medication Template"):
@@ -705,6 +713,7 @@ def _ensure_sr_medication_template():
         ],
     }).insert(ignore_permissions=True)
 
+
 def _ensure_sr_delivery_type():
     """Create SR Delivery Type master."""
     if frappe.db.exists("DocType", "SR Delivery Type"):
@@ -744,6 +753,7 @@ def _ensure_sr_delivery_type():
             }
         ],
     }).insert(ignore_permissions=True)
+
 
 def _ensure_sr_practitioner_pathy():
     """Create SR Practitioner Pathy master."""
@@ -791,6 +801,7 @@ def _ensure_sr_practitioner_pathy():
             },
         ],
     }).insert(ignore_permissions=True)
+
 
 def _ensure_sr_state():
     """Ensure SR State DocType exists and seed all Indian States + UTs."""
@@ -906,6 +917,7 @@ def _ensure_sr_state():
     frappe.db.commit()
     frappe.logger().info("SR State DocType and data seeded successfully.")
 
+
 def _ensure_sr_lead_pipeline():
     """Create SR Lead Pipeline master."""
     if frappe.db.exists("DocType", "SR Lead Pipeline"):
@@ -975,6 +987,7 @@ def _ensure_sr_lead_pipeline():
         ],
     }).insert(ignore_permissions=True)
 
+
 def _ensure_sr_lead_platform():
     """Create SR Lead Platform master."""
     if frappe.db.exists("DocType", "SR Lead Platform"):
@@ -1032,6 +1045,7 @@ def _ensure_sr_lead_platform():
         ],
     }).insert(ignore_permissions=True)
 
+
 def _ensure_sr_lead_source():
     """Create SR Lead Source master."""
     if frappe.db.exists("DocType", "SR Lead Source"):
@@ -1088,6 +1102,7 @@ def _ensure_sr_lead_source():
             },
         ],
     }).insert(ignore_permissions=True)
+
 
 def _ensure_sr_lead_disposition():
     """Create SR Lead Disposition master."""
@@ -1164,6 +1179,7 @@ def _ensure_sr_lead_disposition():
         ],
     }).insert(ignore_permissions=True)
 
+
 def _ensure_dpt_disease():
     """Create DPT Disease master."""
     if frappe.db.exists("DocType", "DPT Disease"):
@@ -1203,6 +1219,7 @@ def _ensure_dpt_disease():
         ],
     }).insert(ignore_permissions=True)
 
+
 def _ensure_dpt_language():
     """Create DPT Language master."""
     if frappe.db.exists("DocType", "DPT Language"):
@@ -1241,6 +1258,7 @@ def _ensure_dpt_language():
             }
         ],
     }).insert(ignore_permissions=True)
+
 
 def _ensure_diet_chart():
     """Create Diet Chart master."""
@@ -1299,6 +1317,7 @@ def _ensure_diet_chart():
             }
         ],
     }).insert(ignore_permissions=True)
+
 
 def _ensure_sr_medical_report():
     """Create SR Medical Report child table."""
@@ -1366,6 +1385,7 @@ def _ensure_sr_medical_report():
         ],
     }).insert(ignore_permissions=True)
 
+
 def create_bulk_clearance():
     """
     Idempotently create the 'Bulk Clearance Upload' DocType used to upload CSV and run bulk settlement jobs.
@@ -1373,7 +1393,7 @@ def create_bulk_clearance():
     doctype_name = "Bulk Clearance Upload"
 
     if frappe.db.exists("DocType", doctype_name):
-        print(f"DocType '{doctype_name}' already exists. Skipping.")
+        # print(f"DocType '{doctype_name}' already exists. Skipping.")
         return {"skipped": True, "reason": "exists"}
 
     frappe.get_doc({
@@ -1447,6 +1467,7 @@ def create_bulk_clearance():
     frappe.db.commit()
     print(f"Created DocType '{doctype_name}' in module '{MODULE_DEF_NAME}'.")
 
+
 def _ensure_shipkia_settings():
     """Create Shipkia Settings (Single Doctype)."""
 
@@ -1472,7 +1493,6 @@ def _ensure_shipkia_settings():
 
             # Shipkia Order API
             "shipkia_order_url",
-            "shipkia_order_header_key",
             "shipkia_order_token",
 
             # Meta
@@ -1519,12 +1539,6 @@ def _ensure_shipkia_settings():
                 "fieldtype": "Data",
                 "reqd": 1,
             },
-            # {
-            #     "fieldname": "shipkia_order_header_key",
-            #     "label": "Shipkia Order Header Key",
-            #     "fieldtype": "Data",
-            #     "default": "Authorization",
-            # },
             {
                 "fieldname": "shipkia_order_token",
                 "label": "Shipkia Order Token",
@@ -1573,6 +1587,7 @@ def _ensure_shipkia_settings():
 
     frappe.db.commit()
     frappe.logger().info("Shipkia Settings DocType created successfully.")
+
 
 def _disable_item_quick_entry():
     """Disable Quick Entry for Item DocType."""

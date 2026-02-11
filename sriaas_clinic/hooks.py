@@ -126,7 +126,6 @@ doc_events = {
         ],
         "validate": [
             "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
-            # "sriaas_clinic.api.si_payment_flow.handlers.apply_kit_discount_from_grand_total",
         ],
         "before_save": [
             "sriaas_clinic.api.sales_invoice_cost.before_save",
@@ -134,13 +133,13 @@ doc_events = {
         ],
         "before_submit": [
             "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
+            "sriaas_clinic.api.sales_invoice_guard.validate_kit_total_vs_grand_total",
             # "sriaas_clinic.api.si_payment_flow.handlers.validate_dp_before_submit",
         ],        
         "on_submit": [
             "sriaas_clinic.api.encounter_flow.handlers.link_pending_payment_entries",
             # "sriaas_clinic.api.si_payment_flow.handlers.create_pe_from_si_dp",
             # "sriaas_clinic.api.integrations.n8n_shiprocket.send_to_n8n_on_submit",
-            # "sriaas_clinic.api.integrations.shipkia_sales_invoice.send_sales_invoice_to_shipkia",
         ],        
         "before_cancel": [
             "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",

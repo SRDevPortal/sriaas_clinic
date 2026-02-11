@@ -5,24 +5,6 @@ import frappe
 from frappe.utils import nowdate, flt, money_in_words
 from erpnext.accounts.party import get_party_account
 
-# ----------------------------------
-# small helper: set_created_by_agent
-
-def set_created_by_agent(doc, method):
-    """
-    Ensure Sales Invoice ownership reflects the logged-in user
-    even when ignore_permissions=True is used.
-    """
-    user = frappe.session.user
-
-    # SYSTEM FIELD (this fixes "Created By")
-    if not doc.owner:
-        doc.owner = user
-
-    # CUSTOM AUDIT FIELD (your existing logic)
-    if not getattr(doc, "created_by_agent", None):
-        doc.created_by_agent = user
-
 # -----------------------------
 # Draft Payment (input) fields
 # -----------------------------
@@ -46,9 +28,6 @@ def _has_any_attachment(doc) -> bool:
         )
     )
 
-# -----------------------------------------
-# Draft Payment (input) field validations
-# -----------------------------------------
 
 def clear_dp_when_blank(si, method):
     """If amount is blank/zero, clear dependent fields to avoid stale data."""
@@ -57,6 +36,250 @@ def clear_dp_when_blank(si, method):
         for f in (F_MOP, F_REFNO, F_REFD, F_PROOF):
             if getattr(si, f, None):
                 setattr(si, f, None)
+
+
+def _party_account(company: str, party_type: str, party: str) -> Optional[str]:
+    try:
+        return get_party_account(party_type, party, company)
+    except TypeError:
+        try:
+            return get_party_account(company, party_type, party)
+        except Exception:
+            return None
+    except Exception:
+        return None
+
+
+def _mop_account(company: str, mop: str) -> Optional[str]:
+    acc = frappe.db.get_value(
+        "Mode of Payment Account", {"parent": mop, "company": company}, "default_account"
+    )
+    if not acc:
+        acc = frappe.db.get_value(
+            "Mode of Payment Account", {"parent": mop, "company": company}, "account"
+        )
+    return acc
+
+
+def _sum_pe_allocations_for_invoice(si_name: str, company: str, customer: str) -> Tuple[float, Set[str]]:
+    """
+    Sum allocated amounts from Payment Entries (submitted OR draft) that reference this SI.
+    Returns (total_allocated, set_of_MOPs).
+    """
+    res = frappe.db.sql(
+        """
+        select per.allocated_amount, pe.mode_of_payment, pe.docstatus
+        from `tabPayment Entry Reference` per
+        join `tabPayment Entry` pe on pe.name = per.parent
+        where per.reference_doctype = 'Sales Invoice'
+          and per.reference_name = %s
+          and pe.company = %s
+          and pe.party_type = 'Customer'
+          and pe.party = %s
+          and pe.docstatus in (0,1)
+        """,
+        (si_name, company, customer),
+        as_dict=True,
+    )
+    total = 0.0
+    mops: Set[str] = set()
+    for r in res:
+        total += flt(r.allocated_amount)
+        mop = (r.mode_of_payment or "").strip()
+        if mop:
+            mops.add(mop)
+    return total, mops
+
+
+def _sum_pos_payments(si) -> Tuple[float, Set[str]]:
+    """If SI uses POS payments table, include them for UI summary."""
+    total = 0.0
+    mops: Set[str] = set()
+    if getattr(si, "is_pos", 0):
+        for p in (si.get("payments") or []):
+            total += flt(getattr(p, "amount", 0))
+            mop = (getattr(p, "mode_of_payment", "") or "").strip()
+            if mop:
+                mops.add(mop)
+    return total, mops
+
+
+def refresh_payment_history(si, method=None):
+    """
+    Compute & write Payment History fields on Sales Invoice:
+      - sr_si_paid_amount
+      - sr_si_outstanding_amount
+      - sr_si_mode_of_payment (single or 'Multiple')
+      - sr_si_payment_term (Unpaid / Partially Paid / Paid in Full)
+    """
+    total = flt(si.get("rounded_total") or si.get("grand_total") or 0)
+    outstanding = flt(si.get("outstanding_amount") or 0)
+
+    # --- Gather Submitted Payment Entry data ---
+    pe_paid, pe_mops = _sum_pe_allocations_for_invoice(si.name, si.company, si.customer)
+    pos_paid, pos_mops = _sum_pos_payments(si)
+
+    total_paid = pe_paid + pos_paid
+    all_mops = pe_mops.union(pos_mops)
+
+    # --- Fallback: use Draft Payment fields if no submitted PE ---
+    dp_amt = flt(si.get("si_dp_paid_amount") or 0)
+    dp_mop = (si.get("si_dp_mode_of_payment") or "").strip()
+    if total_paid <= 0 and dp_amt > 0:
+        total_paid = dp_amt
+        if dp_mop:
+            all_mops.add(dp_mop)
+
+    # Mode of Payment summary
+    mop_summary = ""
+    if len(all_mops) == 1:
+        mop_summary = list(all_mops)[0]
+    elif len(all_mops) > 1:
+        mop_summary = "Multiple"
+
+    # Determine term
+    eps = 0.005
+    if total <= eps or abs(outstanding) <= eps or abs(total - total_paid) <= eps:
+        term = "Paid in Full"
+        outstanding_ui = 0.0
+    elif total_paid <= eps:
+        term = "Unpaid"
+        outstanding_ui = total
+    else:
+        term = "Partially Paid"
+        outstanding_ui = max(total - total_paid, 0)
+
+    # Persist without recursion
+    updates = {
+        "sr_si_payment_term": term,
+        "sr_si_paid_amount": total_paid,
+        "sr_si_mode_of_payment": mop_summary,
+        "sr_si_outstanding_amount": outstanding_ui,
+    }
+    for f, v in updates.items():
+        if hasattr(si, f):
+            si.db_set(f, v, update_modified=False)
+
+
+def ensure_kit_values(doc):
+    """
+    Ensure kit fields never go blank once invoice exists
+    """
+
+    if flt(doc.sr_kit_total_price) > 0:
+        return
+
+    encounter_name = doc.get("source_encounter")
+    if not encounter_name:
+        return
+
+    enc = frappe.get_doc("Patient Encounter", encounter_name)
+
+    doc.sr_kit_name = enc.sr_kit_name
+    doc.sr_kit_total_price = enc.sr_kit_total_price
+
+
+# before_insert handler
+def set_created_by_agent(doc, method):
+    """
+    Ensure Sales Invoice ownership reflects the logged-in user
+    even when ignore_permissions=True is used.
+    """
+    user = frappe.session.user
+
+    # SYSTEM FIELD (this fixes "Created By")
+    if not doc.owner:
+        doc.owner = user
+
+    # CUSTOM AUDIT FIELD (your existing logic)
+    if not getattr(doc, "created_by_agent", None):
+        doc.created_by_agent = user
+
+
+# before_save handler
+def apply_kit_discount_from_grand_total(doc, method=None):
+    """
+    Force final payable = sr_kit_total_price
+    """
+
+    # -------------------------------
+    # HARD SAFETY
+    # -------------------------------
+    if doc.doctype != "Sales Invoice":
+        return
+
+    if doc.docstatus != 0:   # 🔒 never touch submitted invoices
+        return
+    
+    # -------------------------------
+    # ENSURE KIT VALUES
+    # -------------------------------
+    ensure_kit_values(doc)
+
+    kit_price = flt(doc.sr_kit_total_price)
+    if kit_price <= 0:
+        return
+
+    # -------------------------------
+    # RESET DISCOUNT
+    # -------------------------------
+    doc.apply_discount_on = "Grand Total"
+    doc.additional_discount_percentage = 0
+    doc.discount_amount = 0
+
+    # Base calculation (no discount)
+    doc.calculate_taxes_and_totals()
+
+    base_grand_total = flt(doc.base_grand_total)
+    if base_grand_total <= 0:
+        return
+
+    if kit_price > base_grand_total:
+        frappe.throw("Kit Price cannot be greater than Invoice Grand Total")
+
+    discount_amount = base_grand_total - kit_price
+    if discount_amount <= 0:
+        return
+    
+    discount_pct = (discount_amount / base_grand_total) * 100
+
+    # -------------------------------
+    # APPLY DISCOUNT
+    # -------------------------------
+    doc.additional_discount_percentage = flt(discount_pct, 6)
+
+    # Final ERPNext calc
+    doc.calculate_taxes_and_totals()
+
+    # -------------------------------
+    # LOCK FINAL PAYABLE
+    # -------------------------------
+    doc.rounded_total = kit_price
+    doc.grand_total = kit_price
+    doc.outstanding_amount = kit_price
+
+    # -------------------------------
+    # FIX IN-WORDS (REQUIRED)
+    # -------------------------------
+    doc.in_words = money_in_words(
+        doc.grand_total,
+        doc.currency
+    )
+
+    doc.base_in_words = money_in_words(
+        doc.grand_total,
+        doc.company_currency
+    )
+
+    # -------------------------------
+    # CLEAN ITEM-LEVEL DISCOUNTS
+    # (ONLY FOR KIT-BASED INVOICES)
+    # -------------------------------
+    if doc.get("source_encounter") and flt(doc.sr_kit_total_price) > 0:
+        for item in doc.items:
+            item.discount_percentage = 0
+            item.discount_amount = 0
+            item.distributed_discount_amount = 0
 
 
 # before_submit handler
@@ -83,37 +306,6 @@ def validate_dp_before_submit(si, method):
     if missing:
         frappe.throw("Please complete Draft Payment: " + ", ".join(missing))
 
-
-# -----------------------------
-# Accounts helpers
-# -----------------------------
-
-def _party_account(company: str, party_type: str, party: str) -> Optional[str]:
-    try:
-        return get_party_account(party_type, party, company)
-    except TypeError:
-        try:
-            return get_party_account(company, party_type, party)
-        except Exception:
-            return None
-    except Exception:
-        return None
-
-
-def _mop_account(company: str, mop: str) -> Optional[str]:
-    acc = frappe.db.get_value(
-        "Mode of Payment Account", {"parent": mop, "company": company}, "default_account"
-    )
-    if not acc:
-        acc = frappe.db.get_value(
-            "Mode of Payment Account", {"parent": mop, "company": company}, "account"
-        )
-    return acc
-
-
-# ---------------------------------------------------
-# Create Draft Payment Entry from SI Draft Payment UI
-# ---------------------------------------------------
 
 # on_submit handler
 def create_pe_from_si_dp(si, method):
@@ -272,7 +464,8 @@ def create_pe_from_si_dp(si, method):
         pe.set_missing_values()
         pe.save(ignore_permissions=True)
 
-    # Inform user and refresh SI payment history (which, if you changed _sum_pe_allocations_for_invoice to include drafts,
+    # Inform user and refresh SI payment history
+    # (which, if you changed _sum_pe_allocations_for_invoice to include drafts,
     # will now count this draft PE)
     frappe.msgprint(
         f"Draft Payment Entry <b>{pe.name}</b> prepared for this invoice.",
@@ -280,207 +473,3 @@ def create_pe_from_si_dp(si, method):
     )
 
     refresh_payment_history(si)
-
-
-def _sum_pe_allocations_for_invoice(si_name: str, company: str, customer: str) -> Tuple[float, Set[str]]:
-    """
-    Sum allocated amounts from Payment Entries (submitted OR draft) that reference this SI.
-    Returns (total_allocated, set_of_MOPs).
-    """
-    res = frappe.db.sql(
-        """
-        select per.allocated_amount, pe.mode_of_payment, pe.docstatus
-        from `tabPayment Entry Reference` per
-        join `tabPayment Entry` pe on pe.name = per.parent
-        where per.reference_doctype = 'Sales Invoice'
-          and per.reference_name = %s
-          and pe.company = %s
-          and pe.party_type = 'Customer'
-          and pe.party = %s
-          and pe.docstatus in (0,1)
-        """,
-        (si_name, company, customer),
-        as_dict=True,
-    )
-    total = 0.0
-    mops: Set[str] = set()
-    for r in res:
-        total += flt(r.allocated_amount)
-        mop = (r.mode_of_payment or "").strip()
-        if mop:
-            mops.add(mop)
-    return total, mops
-
-
-def _sum_pos_payments(si) -> Tuple[float, Set[str]]:
-    """If SI uses POS payments table, include them for UI summary."""
-    total = 0.0
-    mops: Set[str] = set()
-    if getattr(si, "is_pos", 0):
-        for p in (si.get("payments") or []):
-            total += flt(getattr(p, "amount", 0))
-            mop = (getattr(p, "mode_of_payment", "") or "").strip()
-            if mop:
-                mops.add(mop)
-    return total, mops
-
-
-# before_submit, on_submit and on_update_after_submit handler
-def refresh_payment_history(si, method=None):
-    """
-    Compute & write Payment History fields on Sales Invoice:
-      - sr_si_paid_amount
-      - sr_si_outstanding_amount
-      - sr_si_mode_of_payment (single or 'Multiple')
-      - sr_si_payment_term (Unpaid / Partially Paid / Paid in Full)
-    """
-    total = flt(si.get("rounded_total") or si.get("grand_total") or 0)
-    outstanding = flt(si.get("outstanding_amount") or 0)
-
-    # --- Gather Submitted Payment Entry data ---
-    pe_paid, pe_mops = _sum_pe_allocations_for_invoice(si.name, si.company, si.customer)
-    pos_paid, pos_mops = _sum_pos_payments(si)
-
-    total_paid = pe_paid + pos_paid
-    all_mops = pe_mops.union(pos_mops)
-
-    # --- Fallback: use Draft Payment fields if no submitted PE ---
-    dp_amt = flt(si.get("si_dp_paid_amount") or 0)
-    dp_mop = (si.get("si_dp_mode_of_payment") or "").strip()
-    if total_paid <= 0 and dp_amt > 0:
-        total_paid = dp_amt
-        if dp_mop:
-            all_mops.add(dp_mop)
-
-    # Mode of Payment summary
-    mop_summary = ""
-    if len(all_mops) == 1:
-        mop_summary = list(all_mops)[0]
-    elif len(all_mops) > 1:
-        mop_summary = "Multiple"
-
-    # Determine term
-    eps = 0.005
-    if total <= eps or abs(outstanding) <= eps or abs(total - total_paid) <= eps:
-        term = "Paid in Full"
-        outstanding_ui = 0.0
-    elif total_paid <= eps:
-        term = "Unpaid"
-        outstanding_ui = total
-    else:
-        term = "Partially Paid"
-        outstanding_ui = max(total - total_paid, 0)
-
-    # Persist without recursion
-    updates = {
-        "sr_si_payment_term": term,
-        "sr_si_paid_amount": total_paid,
-        "sr_si_mode_of_payment": mop_summary,
-        "sr_si_outstanding_amount": outstanding_ui,
-    }
-    for f, v in updates.items():
-        if hasattr(si, f):
-            si.db_set(f, v, update_modified=False)
-
-
-def ensure_kit_values(doc):
-    """
-    Ensure kit fields never go blank once invoice exists
-    """
-
-    if flt(doc.sr_kit_total_price) > 0:
-        return
-
-    encounter_name = doc.get("source_encounter")
-    if not encounter_name:
-        return
-
-    enc = frappe.get_doc("Patient Encounter", encounter_name)
-
-    doc.sr_kit_name = enc.sr_kit_name
-    doc.sr_kit_total_price = enc.sr_kit_total_price
-
-
-def apply_kit_discount_from_grand_total(doc, method=None):
-    """
-    Force final payable = sr_kit_total_price
-    """
-
-    # -------------------------------
-    # HARD SAFETY
-    # -------------------------------
-    if doc.doctype != "Sales Invoice":
-        return
-
-    if doc.docstatus != 0:   # 🔒 never touch submitted invoices
-        return
-    
-    # -------------------------------
-    # ENSURE KIT VALUES
-    # -------------------------------
-    ensure_kit_values(doc)
-
-    kit_price = flt(doc.sr_kit_total_price)
-    if kit_price <= 0:
-        return
-
-    # -------------------------------
-    # RESET DISCOUNT
-    # -------------------------------
-    doc.apply_discount_on = "Grand Total"
-    doc.additional_discount_percentage = 0
-    doc.discount_amount = 0
-
-    # Base calculation (no discount)
-    doc.calculate_taxes_and_totals()
-
-    base_grand_total = flt(doc.base_grand_total)
-    if base_grand_total <= 0:
-        return
-
-    if kit_price > base_grand_total:
-        frappe.throw("Kit Price cannot be greater than Invoice Grand Total")
-
-    discount_amount = base_grand_total - kit_price
-    if discount_amount <= 0:
-        return
-    
-    discount_pct = (discount_amount / base_grand_total) * 100
-
-    # -------------------------------
-    # APPLY DISCOUNT
-    # -------------------------------
-    doc.additional_discount_percentage = flt(discount_pct, 6)
-
-    # Final ERPNext calc
-    doc.calculate_taxes_and_totals()
-
-    # -------------------------------
-    # LOCK FINAL PAYABLE
-    # -------------------------------
-    doc.rounded_total = kit_price
-    doc.grand_total = kit_price
-    doc.outstanding_amount = kit_price
-
-    # -------------------------------
-    # FIX IN-WORDS (REQUIRED)
-    # -------------------------------
-    doc.in_words = money_in_words(
-        doc.grand_total,
-        doc.currency
-    )
-
-    doc.base_in_words = money_in_words(
-        doc.grand_total,
-        doc.company_currency
-    )
-
-    # -------------------------------
-    # CLEAN ITEM-LEVEL DISCOUNTS
-    # (ONLY FOR KIT-BASED INVOICES)
-    # -------------------------------
-    if doc.get("source_encounter") and flt(doc.sr_kit_total_price) > 0:
-        for item in doc.items:
-            item.discount_percentage = 0
-            item.discount_amount = 0
-            item.distributed_discount_amount = 0

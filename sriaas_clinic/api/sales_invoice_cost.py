@@ -22,6 +22,7 @@ def _get_item_cost(item_code: str, price_list: str) -> float:
         return 0.0
 
 
+# before_save handler
 def before_save(doc, method=None):
     """Compute per-row cost & totals on Sales Invoice before save."""
     selling_pl = getattr(doc, "selling_price_list", None) or getattr(doc, "price_list", None)

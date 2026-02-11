@@ -4,9 +4,8 @@ import frappe
 from frappe.utils import flt, nowdate
 from frappe import _
 
-# ----------------------------------------------------------------------
-# Hook: before_insert
-# ----------------------------------------------------------------------
+
+# before_insert handler to set created_by_agent if not provided
 def set_created_by_agent(doc, method):
     """
     Hook: before_insert on Payment Entry
@@ -19,9 +18,29 @@ def set_created_by_agent(doc, method):
         # don't block creation for non-critical failure
         frappe.log_error(f"set_created_by_agent failed for Payment Entry {getattr(doc, 'name', '')}")
 
-# ----------------------------------------------------------------------
-# Hook: validate
-# ----------------------------------------------------------------------
+
+# before_save handler to sync parent mode_of_payment based on child sr_payment_modes
+# def sync_parent_mode_from_children_server(doc, method):
+#     # if single child -> set parent; if multiple -> set to 'Multiple' if exists
+#     rows = getattr(doc, "sr_payment_modes", []) or []
+#     if not rows:
+#         return
+
+#     modes = list({r.sr_mode_of_payment for r in rows if getattr(r, "sr_mode_of_payment", None)})
+#     if len(modes) == 1:
+#         doc.mode_of_payment = modes[0]
+#     elif len(modes) > 1:
+#         # prefer Mode of Payment named 'Multiple' if exists
+#         multiple = frappe.db.exists("Mode of Payment", "Multiple")
+#         if multiple:
+#             doc.mode_of_payment = "Multiple"
+#         else:
+#             # leave parent as-is or set to comma-joined (unsafe if Link)
+#             # doc.mode_of_payment = ", ".join(modes)
+#             pass
+
+
+# validate handler to ensure sum of sr_payment_modes.sr_amount equals doc.paid_amount
 # def validate_payment_modes_total(doc, method):
 #     """
 #     Ensure sum(sr_payment_modes.sr_amount) == doc.paid_amount
@@ -40,9 +59,8 @@ def set_created_by_agent(doc, method):
 #         # rethrow as validation to be safe
 #         frappe.throw(_("Unable to validate payment modes total. See error log."))
 
-# ----------------------------------------------------------------------
-# Hook: on_submit
-# ----------------------------------------------------------------------
+
+# on_submit handler to create Journal Entry based on sr_payment_modes
 # def create_journal_for_payment_modes(doc, method):
 #     """
 #     Create a Journal Entry on submit with:
@@ -150,9 +168,8 @@ def set_created_by_agent(doc, method):
 #         frappe.log_error(f"create_journal_for_payment_modes error for Payment Entry {getattr(doc,'name','')}: {str(e)}")
 #         frappe.throw(_("Failed to create Journal Entry for payment modes. See error log."))
 
-# ----------------------------------------------------------------------
-# Hook: on_cancel
-# ----------------------------------------------------------------------
+
+# on_cancel handler to cancel linked Journal Entry if exists
 # def cancel_linked_journal_entries(doc, method):
 #     """
 #     Cancel linked Journal Entry created earlier (if any).
@@ -178,24 +195,6 @@ def set_created_by_agent(doc, method):
 #     except Exception as e:
 #         frappe.log_error(f"Failed to cancel JE for Payment Entry {doc.name}: {str(e)}")
 
-# def sync_parent_mode_from_children_server(doc, method):
-#     # if single child -> set parent; if multiple -> set to 'Multiple' if exists
-#     rows = getattr(doc, "sr_payment_modes", []) or []
-#     if not rows:
-#         return
-
-#     modes = list({r.sr_mode_of_payment for r in rows if getattr(r, "sr_mode_of_payment", None)})
-#     if len(modes) == 1:
-#         doc.mode_of_payment = modes[0]
-#     elif len(modes) > 1:
-#         # prefer Mode of Payment named 'Multiple' if exists
-#         multiple = frappe.db.exists("Mode of Payment", "Multiple")
-#         if multiple:
-#             doc.mode_of_payment = "Multiple"
-#         else:
-#             # leave parent as-is or set to comma-joined (unsafe if Link)
-#             # doc.mode_of_payment = ", ".join(modes)
-#             pass
 
 # ----------------------------------------------------------------------
 # Whitelisted API: create Payment Entry from payload

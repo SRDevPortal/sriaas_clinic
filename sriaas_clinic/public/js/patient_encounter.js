@@ -3,10 +3,12 @@
 frappe.ui.form.on('Patient Encounter', {
     onload(frm) {
         apply_encounter_access_rules(frm);
+        apply_active_master_filters(frm);
     },
 
     refresh(frm) {
         apply_encounter_access_rules(frm);
+        apply_active_master_filters(frm);
 
         if (frm.is_new()) return;
 
@@ -150,3 +152,52 @@ frappe.ui.form.on('SR Multi Mode Payment', {
         row.__last_proof = row.mmp_payment_proof;
     }
 });
+
+
+function apply_active_master_filters(frm) {
+
+    // SR Delivery Type → only active
+    frm.set_query("sr_delivery_type", function() {
+        return {
+            filters: {
+                is_active: 1
+            }
+        };
+    });
+
+    // SR Medication Template → only active
+    frm.set_query("sr_medication_template", function() {
+        return {
+            filters: {
+                is_active: 1
+            }
+        };
+    });
+
+    // SR Encounter Status → only active
+    frm.set_query("sr_encounter_status", function() {
+        return {
+            filters: {
+                is_active: 1
+            }
+        };
+    });
+
+    // SR Encounter Source → only active
+    frm.set_query("sr_encounter_source", function() {
+        return {
+            filters: {
+                is_active: 1
+            }
+        };
+    });
+
+    // SR Sales Type → only active
+    frm.set_query("sr_sales_type", function() {
+        return {
+            filters: {
+                is_active: 1
+            }
+        };
+    });
+}

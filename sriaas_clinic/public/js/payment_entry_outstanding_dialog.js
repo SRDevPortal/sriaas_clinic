@@ -1,3 +1,5 @@
+// sriaas_clinic\public\js\payment_entry_outstanding_dialog.js
+
 // Payment Entry — pick outstanding invoices into references table
 // Shows a dialog with outstanding invoices when Party is selected (non–Internal Transfer)
 

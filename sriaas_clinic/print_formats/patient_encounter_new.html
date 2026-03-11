@@ -1,5 +1,20 @@
+{% set company_doc = frappe.get_doc("Company", doc.company) if doc.company else frappe.get_doc("Company", frappe.defaults.get_user_default("Company")) %}
+
+{% set comp_addr_link = frappe.get_all(
+  "Dynamic Link",
+  filters={
+    "parenttype": "Address",
+    "link_doctype": "Company",
+    "link_name": company_doc.name
+  },
+  fields=["parent"],
+  limit=1
+) %}
+
+{% set comp_addr = frappe.get_doc("Address", comp_addr_link[0].parent) if comp_addr_link else None %}
+
 <!-- ================= HEADER ================= -->
-<div style="border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 10px;">
+<div style="border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 0px;">
   <table style="width: 100%; font-family: Arial, sans-serif;">
     <tr>
       <td style="width: 20%; vertical-align: top;">
@@ -12,19 +27,44 @@
         <table style="width: 100%;">
           <tr>
             <td style="font-size: 12px; line-height: 1.6; vertical-align: top; width: 55%; padding-left: 0 !important;">
-              B-92, 1st Floor, Sector 43,<br>
-              Sushant Lok Phase I,<br>
-              Gurugram, Haryana - 122009<br>
-              <strong>GST No:</strong> 06ABFCS5095L1ZT<br>
-              <strong>OPD Timings:</strong><br>Monday to Saturday – 10:00 AM to 4:00 PM
+              {% if comp_addr %}
+                {{ comp_addr.address_line1 or "" }}<br>
+                {% if comp_addr.address_line2 %}{{ comp_addr.address_line2 }}<br>{% endif %}
+            
+                {# ---- City, State, Pincode, Country in one clean line ---- #}
+                {% set city_line = [] %}
+                {% if comp_addr.city %}{% set _ = city_line.append(comp_addr.city) %}{% endif %}
+                {% if comp_addr.state %}{% set _ = city_line.append(comp_addr.state) %}{% endif %}
+                {% if comp_addr.pincode %}{% set _ = city_line.append("PIN: " ~ comp_addr.pincode) %}{% endif %}
+                {% if comp_addr.country %}{% set _ = city_line.append(comp_addr.country) %}{% endif %}
+            
+                {{ city_line | join(", ") }}<br>
+              {% endif %}
+            
+              {% if company_doc.gstin %}
+                <strong>GST No:</strong> {{ company_doc.gstin }}<br>
+              {% endif %}
+            
+              {% if company_doc.phone_no %}
+               <strong>Phone:</strong> {{ company_doc.phone_no }}<br>
+              {% endif %}
+            
+              {% if company_doc.email %}
+               <strong>Email:</strong> {{ company_doc.email }}<br>
+              {% endif %}
+              
+              {% if company_doc.custom_opd_timings %}
+                <strong>OPD Timings:</strong><br>
+                {{ company_doc.custom_opd_timings }}
+              {% else %}
+                <strong>OPD Timings:</strong><br>Monday to Saturday - 10:00 AM to 4:00 PM
+              {% endif %}
+            
             </td>
-            <!-- <td style="font-size: 12px; line-height: 1.6; vertical-align: top; width: 45%;">
-              <strong>Kidney Helpline:</strong> 9319812595<br>
-              <strong>Paralysis Helpline:</strong> 7863800400
-            </td> -->
           </tr>
         </table>
       </td>
+
     </tr>
   </table>
 </div>

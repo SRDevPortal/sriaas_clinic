@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 import frappe
+from frappe import _
 
 ROLE_WAREHOUSE_MAP = {
     "OPD Biller": "OPD Warehouse - SR",
@@ -67,6 +68,10 @@ def validate_kit_total_vs_grand_total(doc, method=None):
     when a kit is applied.
     """
 
+    # Skip returns / credit notes
+    if doc.is_return or doc.docstatus == 2:
+        return
+    
     # Only enforce when kit exists
     if not doc.sr_kit_name:
         return

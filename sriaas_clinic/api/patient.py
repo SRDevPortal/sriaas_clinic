@@ -2,6 +2,7 @@
 import re
 import frappe
 from frappe.model.naming import make_autoname
+from frappe.utils import getdate, nowdate
 
 # --------------------------------
 # A) Set naming_series for patient
@@ -149,15 +150,9 @@ def set_patient_creator(doc, method):
 # F) Follow-up fields: followup id + followup day cycler assignment
 # -----------------------------------------------------------------
 def set_followup_id(doc, method=None):
-    source = (
-        doc.get("sr_practo_id")
-        or doc.get("sr_patient_id")
-    )
+    source = doc.get("sr_practo_id") or doc.get("sr_patient_id")
 
     if not source:
-        # Explicitly clear the field if nothing is available
-        if doc.get("sr_followup_id"):
-            doc.db_set("sr_followup_id", None, update_modified=False)
         return
 
     source = source.strip()
@@ -167,16 +162,17 @@ def set_followup_id(doc, method=None):
         if ch.isdigit():
             last_digit = ch
 
-    if doc.get("sr_followup_id") != last_digit:
-        doc.db_set("sr_followup_id", last_digit, update_modified=False)
+    if last_digit:
+        doc.sr_followup_id = last_digit
 
-
-DAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
 
 def set_followup_day(doc, method=None):
-    if not doc.get("sr_followup_id") or doc.get("sr_followup_day"):
+    # Skip if already set
+    if doc.get("sr_followup_day"):
         return
 
-    digit = int(doc.sr_followup_id)
-    day = DAYS[digit % len(DAYS)]
-    doc.db_set("sr_followup_day", day, update_modified=False)
+    # Safe creation date
+    creation_date = getdate(doc.creation) if doc.creation else getdate(nowdate())
+
+    # Assign weekday (Mon, Tue, Wed...)
+    doc.sr_followup_day = creation_date.strftime("%a")

@@ -50,8 +50,6 @@ doc_events = {
             "sriaas_clinic.api.patient.validate_unique_contact_mobile",
             "sriaas_clinic.api.patient.set_patient_id",
             "sriaas_clinic.api.patient.set_patient_creator",
-        ],
-        "after_insert": [
             "sriaas_clinic.api.patient.set_followup_id",
             "sriaas_clinic.api.patient.set_followup_day",
         ],

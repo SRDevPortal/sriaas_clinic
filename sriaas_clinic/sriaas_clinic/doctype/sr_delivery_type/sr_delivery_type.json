@@ -7,7 +7,8 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "sr_delivery_type_name"
+  "sr_delivery_type_name",
+  "is_active"
  ],
  "fields": [
   {
@@ -17,12 +18,18 @@
    "label": "Delivery / Service Type",
    "reqd": 1,
    "unique": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-22 17:08:06.084793",
+ "modified": "2026-03-21 13:46:40.114278",
  "modified_by": "Administrator",
  "module": "Sriaas Clinic",
  "name": "SR Delivery Type",

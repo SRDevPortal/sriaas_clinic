@@ -7,7 +7,8 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "sr_sales_type_name"
+  "sr_sales_type_name",
+  "is_active"
  ],
  "fields": [
   {
@@ -17,12 +18,18 @@
    "label": "Sales Type",
    "reqd": 1,
    "unique": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-22 17:08:05.592529",
+ "modified": "2026-03-21 13:39:47.801008",
  "modified_by": "Administrator",
  "module": "Sriaas Clinic",
  "name": "SR Sales Type",

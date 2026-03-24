@@ -7,7 +7,8 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "sr_status_name"
+  "sr_status_name",
+  "is_active"
  ],
  "fields": [
   {
@@ -15,12 +16,18 @@
    "fieldtype": "Data",
    "label": "Status Name",
    "unique": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-22 17:08:05.678652",
+ "modified": "2026-03-21 13:44:18.117967",
  "modified_by": "Administrator",
  "module": "Sriaas Clinic",
  "name": "SR Encounter Status",

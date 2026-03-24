@@ -1,5 +1,277 @@
-{% set company_doc = frappe.get_doc("Company", doc.company) if doc.company else frappe.get_doc("Company", frappe.defaults.get_user_default("Company")) %}
+<style>
+/* ================= GLOBAL ================= */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
 
+td, th {
+  font-size: 10pt;
+  vertical-align: top;
+  word-break: break-word;
+}
+
+/* ================= WRAPPER ================= */
+.print-wrap {
+  padding-right: 3px; /* prevents PDF border cut */
+}
+
+/* ================= PATIENT TABLE ================= */
+.patient-table {
+  width: 100%;
+  border: 1px solid #cfd6e4;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin-right: 1px; /* PDF safety */
+  /* box-shadow: inset -1px 0 0 #cfd6e4; */
+}
+
+/* MATCH BORDER COLOR */
+.patient-table td {
+  border: 1px solid #cfd6e4;
+  padding: 8px 10px;
+}
+
+/* RIGHT BORDER SAFETY */
+.patient-table tr td:last-child {
+  border-right: 1px solid #cfd6e4;
+}
+
+/* LEFT / RIGHT SPLIT */
+.pt-left {
+  width: 65%;
+}
+
+.pt-right {
+  width: 35%;
+  border-left: 1px solid #cfd6e4;
+}
+
+/* LABEL + VALUE */
+.pt-label {
+  width: 30%;
+  color: #444;
+  font-weight: 600;
+  background: #fafbfc;
+}
+
+.pt-value {
+  width: 70%;
+  color: #111;
+}
+
+/* ================= INNER TABLE ================= */
+.inner-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* CLEAN INNER ROWS */
+.inner-table td {
+  border: none !important;
+  border-bottom: 1px solid #e8ebf0 !important;
+  padding: 7px 10px;
+}
+
+/* ROW HEIGHT */
+.inner-table tr {
+  height: 28px;
+}
+
+.inner-table tr:last-child td {
+  border-bottom: none !important;
+}
+
+/* ================= SECTION (COMMON) ================= */
+.section-block {
+  border: 1px solid #cfd6e4;
+  margin-top: 15px;
+  margin-right: 0px;
+}
+
+.section-title {
+  font-weight: 600;
+  padding: 7px 10px;
+  border-bottom: 1px solid #cfd6e4;
+  background: #f8fafc;
+  color: #444;
+  font-size: 10pt;
+}
+
+/* ================= CLINICAL/DIET CHART TABLE ================= */
+.clinical-table, .diet-table {
+  width: 100%;
+  border-collapse: collapse;
+  /* border: 1px solid #cfd6e4; */
+  table-layout: fixed;
+  margin-right: 1px; /* PDF safety */
+  /* box-shadow: inset -1px 0 0 #cfd6e4; */
+}
+
+.clinical-table tr td,
+.diet-table tr td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #cfd6e4;
+  vertical-align: top;
+}
+
+.cl-label {
+  width: 22%;
+  font-weight: 600;
+  color: #444;
+  border-right: 1px solid #e8ebf0;
+  padding-right: 10px;
+}
+
+.cl-value {
+  width: 78%;
+  color: #111;
+  line-height: 1.6;
+  padding-left: 10px;
+}
+
+/* remove last row border */
+.clinical-table tr:last-child td,
+.diet-table tr:last-child td {
+  border-bottom: none;
+}
+
+
+/* ================= PRESCRIPTION ================= */
+.rx-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+/* KEEP ONLY INTERNAL BORDERS */
+.rx-table th,
+.rx-table td {
+  padding: 7px 8px;
+  font-size: 10pt;
+  text-align: left;
+
+  border-bottom: 1px solid #cfd6e4;
+  border-right: 1px solid #cfd6e4;
+}
+
+.rx-table th {
+  background: #f8fafc;
+  font-weight: 600;
+}
+
+/* REMOVE RIGHT BORDER FROM LAST COLUMN */
+.rx-table tr th:last-child,
+.rx-table tr td:last-child {
+  border-right: none;
+}
+
+/* REMOVE BOTTOM BORDER FROM LAST ROW */
+.rx-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* COLUMN WIDTHS */
+.rx-sr { width: 5%; }
+.rx-med { width: 35%; }
+.rx-dose { width: 15%; }
+.rx-period { width: 20%; }
+.rx-form { width: 15%; }
+
+/* INSTRUCTION ROW */
+.rx-instruction {
+  font-style: italic;
+  background: #fcfcfd;
+}
+
+.rx-instruction td {
+  padding: 6px 8px;
+}
+
+/* SECTION HEADER TEXT */
+.rx-header {
+  padding: 6px 10px;
+  border-bottom: 1px solid #cfd6e4;
+  font-size: 10pt;
+  color: #444;
+}
+
+
+/* ================= INSTRUCTION ================= */
+.instruction-box {
+  padding: 10px;
+  line-height: 1.6;
+  color: #111;
+}
+
+
+/* ================= PRINT ================= */
+@media print {
+
+  /* Allow tables to flow across pages */
+  table {
+    page-break-inside: auto;
+  }
+
+  /* Prevent rows from breaking */
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  td {
+    page-break-inside: auto;
+  }
+
+  /* Wrapper safety */
+  .print-wrap {
+    padding-right: 3px !important;
+  }
+
+  /* Section should not break awkwardly */
+  .section-block {
+    border: 1px solid #cfd6e4 !important;
+    page-break-inside: avoid;
+  }
+
+  /* Patient table border */
+  .patient-table {
+    border: 1px solid #cfd6e4 !important;
+    /* box-shadow: inset -1px 0 0 #cfd6e4 !important; */
+
+  }
+
+  /* Remove inner table border */
+  .clinical-table,
+  .diet-table {
+    border: none !important;
+  }
+
+  /* Keep section title attached to content */
+  .section-title {
+    page-break-after: avoid;
+  }
+
+  /* Keep prescription header attached */
+  .rx-header {
+    page-break-after: avoid;
+  }
+
+  /* Repeat table header on next page (VERY IMPORTANT) */
+  .rx-table thead {
+    display: table-header-group;
+  }
+
+  /* Avoid breaking inside prescription rows */
+  .rx-table tr {
+    page-break-inside: avoid;
+  }
+
+}
+</style>
+
+
+{% set company_doc = frappe.get_doc("Company", doc.company) if doc.company else frappe.get_doc("Company", frappe.defaults.get_user_default("Company")) %}
 {% set comp_addr_link = frappe.get_all(
   "Dynamic Link",
   filters={
@@ -14,53 +286,76 @@
 {% set comp_addr = frappe.get_doc("Address", comp_addr_link[0].parent) if comp_addr_link else None %}
 
 <!-- ================= HEADER ================= -->
-<div style="border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 0px;">
+<div style="padding-bottom: 0px; margin-bottom: 10px;">
   <table style="width: 100%; font-family: Arial, sans-serif;">
     <tr>
       <td style="width: 20%; vertical-align: top;">
-        <img src="/files/sriaas-logo.png" style="max-height: 120px;">
+        <img src="https://sriaas-frappe.s3.ap-south-1.amazonaws.com/icon-sr/sriaas-logo.png" style="max-height: 120px;">
       </td>
       <td style="width: 80%; vertical-align: top;">
-        <div style="font-size: 17px; font-weight: 500; margin-bottom: 10px;">
-          Sr Institute of Advanced Ayurvedic Sciences Private Limited
+        <div style="font-size: 17px; font-weight: 600; margin-bottom: 5px;">
+          {{ company_doc.company_name }}
         </div>
+
         <table style="width: 100%;">
           <tr>
-            <td style="font-size: 12px; line-height: 1.6; vertical-align: top; width: 55%; padding-left: 0 !important;">
+            <!-- LEFT COLUMN -->
+            <td style="font-size: 12px; line-height: 1.5; vertical-align: top; width: 50%; padding-left: 0 !important;">
               {% if comp_addr %}
-                {{ comp_addr.address_line1 or "" }}<br>
-                {% if comp_addr.address_line2 %}{{ comp_addr.address_line2 }}<br>{% endif %}
+                {{ comp_addr.address_line1 }}<br>
+
+                {% if comp_addr.address_line2 %}
+                  {{ comp_addr.address_line2 }}<br>
+                {% endif %}
             
-                {# ---- City, State, Pincode, Country in one clean line ---- #}
-                {% set city_line = [] %}
-                {% if comp_addr.city %}{% set _ = city_line.append(comp_addr.city) %}{% endif %}
-                {% if comp_addr.state %}{% set _ = city_line.append(comp_addr.state) %}{% endif %}
-                {% if comp_addr.pincode %}{% set _ = city_line.append("PIN: " ~ comp_addr.pincode) %}{% endif %}
-                {% if comp_addr.country %}{% set _ = city_line.append(comp_addr.country) %}{% endif %}
+                {% set address_parts = [] %}
+                {% if comp_addr.city %}{% set _ = address_parts.append(comp_addr.city) %}{% endif %}
+                {% if comp_addr.state %}{% set _ = address_parts.append(comp_addr.state) %}{% endif %}
+                {% if comp_addr.pincode %}{% set _ = address_parts.append(comp_addr.pincode) %}{% endif %}
+                {% if comp_addr.country %}{% set _ = address_parts.append(comp_addr.country) %}{% endif %}
+
+                {{ address_parts | join(", ") }}<br>
+              {% endif %}
             
-                {{ city_line | join(", ") }}<br>
+              {% if company_doc.sr_company_cin_no %}
+                <strong>CIN: </strong>{{ company_doc.sr_company_cin_no }}<br>
               {% endif %}
             
               {% if company_doc.gstin %}
-                <strong>GST No:</strong> {{ company_doc.gstin }}<br>
+                <strong>GST No: </strong>{{ company_doc.gstin }}<br>
               {% endif %}
-            
+            </td>
+
+            {% if company_doc.phone_no 
+              or company_doc.email 
+              or company_doc.website 
+              or company_doc.sr_opd_timings %}
+
+            <!-- RIGHT COLUMN -->
+            <td style="font-size: 12px; line-height: 1.5; vertical-align: top; width: 50%; padding-left: 20px; border-left: 1px solid #eee;">
+
+              <strong>For any Query:</strong><br>
+
               {% if company_doc.phone_no %}
-               <strong>Phone:</strong> {{ company_doc.phone_no }}<br>
+                <strong>Phone:</strong> {{ company_doc.phone_no }}<br>
               {% endif %}
-            
+
               {% if company_doc.email %}
-               <strong>Email:</strong> {{ company_doc.email }}<br>
+                <strong>Email:</strong> {{ company_doc.email }}<br>
               {% endif %}
-              
-              {% if company_doc.custom_opd_timings %}
+
+              {% if company_doc.website %}
+                <strong>Website:</strong> {{ company_doc.website }}<br>
+              {% endif %}
+
+              {% if company_doc.sr_opd_timings %}
                 <strong>OPD Timings:</strong><br>
-                {{ company_doc.custom_opd_timings }}
-              {% else %}
-                <strong>OPD Timings:</strong><br>Monday to Saturday - 10:00 AM to 4:00 PM
+                {{ company_doc.sr_opd_timings }}  <!-- <strong>OPD Timings:</strong><br>Monday to Saturday - 10:00 AM to 4:00 PM -->
               {% endif %}
             
             </td>
+
+            {% endif %}
           </tr>
         </table>
       </td>
@@ -68,41 +363,11 @@
     </tr>
   </table>
 </div>
-<!-- ================= /HEADER ================= -->
-
-<style>
-  .hdr-wrap { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color:#111; font-size:10pt; margin-bottom:10pt; }
-  .card    { width:100%; border:1.25pt solid #cfd6e4; border-collapse:collapse; table-layout:fixed; font-size:10pt; }
-  .card td { vertical-align:top; padding:10px 0; font-size:10pt; }
-  .card .left  { width:60%; padding: 0pt !important; }
-  .card .right { width:40%; border-left:1.25pt solid #cfd6e4; padding: 0pt !important; }
-
-  .kv            { width:100%; border-collapse:collapse; font-size:10pt; }
-  .kv tr > td    { padding:3px 0; vertical-align:top; border-bottom:1px solid #e8ebf0; }
-  .kv tr:last-child > td { border-bottom:0; }
-
-  .lbl     { color:#444; white-space:nowrap; border-right:1px solid #e8ebf0; padding-right:0; background:#fafbfc; }
-  .val     { padding-left:0; }
-  .val b   { font-weight:700; }
-  .addr    { line-height:1.4; }
-  .stack         { padding:0 !important; border-bottom:1px solid #e8ebf0; }
-  .stack .title  { font-weight:600; color:#444; background:#fafbfc; padding:5px 0 !important; }
-  .stack .value  { padding:4px 0 8px 0; }
-
-  .clinical-notes td {
-    border: 1.25pt solid #cfd6e4;
-  }
-  .clinical-notes td.lbl {
-    font-weight: 600;
-  }
-
-  @media print { .hdr-wrap, .card, .card td, .kv, .kv td { font-size:10pt !important; } }
-</style>
 
 {# -------------------- Resolve Patient + Address/Contact safely -------------------- #}
 {% set patient = frappe.get_doc("Patient", doc.patient) if doc.patient else None %}
 
-{# find Address via Dynamic Link row, then load Address #}
+{# Address #}
 {% set dl = frappe.get_all(
   "Dynamic Link",
   filters={
@@ -116,176 +381,146 @@
 ) if doc.patient else [] %}
 {% set addr = frappe.get_doc("Address", dl[0].parent) if dl else None %}
 
-{% set patient_name  = doc.patient_name or (patient.patient_name if patient else (doc.patient_name or "")) %}
-{% set uhid          = doc.sr_pe_id or (patient.sr_patient_id if patient and patient.sr_patient_id else (doc.patient or "")) %}
-{% set sex           = doc.patient_sex or (patient.sex if patient else "") %}
-{% set age_text      = doc.sr_pe_age or (patient.sr_patient_age if patient and patient.age else "") %}
-{% set dob           = patient.dob if patient and patient.dob else "" %}
-{% set blood_group   = patient.blood_group if patient and patient.blood_group else "" %}
+{# Core fields (PRIORITY: doc → fallback: patient) #}
+{% set patient_name = doc.patient_name or (patient.patient_name if patient and patient.patient_name else "") %}
+{% set uhid = doc.sr_pe_id or (patient.sr_patient_id if patient and patient.sr_patient_id else "") %}
+{% set sex = doc.patient_sex or (patient.sex if patient and patient.sex else "") %}
+{% set age_text = doc.sr_pe_age or (patient.sr_patient_age if patient and patient.sr_patient_age else "") %}
 
-{# phones/emails from Patient #}
-{% set primary_phone = (patient.mobile_no if patient and patient.mobile_no else (patient.phone if patient and patient.phone else "")) %}
-{% set email         = (patient.email or patient.email_id) if patient else "" %}
+{# Direct from patient only #}
+{% set dob = patient.dob if patient else "" %}
+{% set blood_group = patient.blood_group if patient else "" %}
 
-<div class="hdr-wrap">
-  <table class="card">
+{% set primary_phone = "" %}
+{% if patient %}
+  {% if patient.mobile %}
+    {% set primary_phone = patient.mobile %}
+  {% elif patient.phone %}
+    {% set primary_phone = patient.phone %}
+  {% endif %}
+{% endif %}
+
+{% set email = patient.email if patient and patient.email else "" %}
+
+
+<div class="print-wrap">
+
+  <table class="patient-table">
+
+    <colgroup>
+      <col style="width:65%">
+      <col style="width:35%">
+    </colgroup>
+
     <tr>
-      <!-- LEFT: Patient details -->
-      <td class="left">
-        <table class="kv">
+
+      <!-- LEFT SIDE -->
+      <td class="pt-left">
+
+        <table class="inner-table">
+
           <tr>
-            <td class="lbl">Patient Name:</td>
-            <td class="val"><b>{{ patient_name }}</b></td>
+            <td class="pt-label">Patient Name:</td>
+            <td class="pt-value"><b>{{ patient_name.title() }}</b></td>
           </tr>
+
           <tr>
-            <td class="lbl">UHID / Patient ID:</td>
-            <td class="val">{{ uhid }}</td>
+            <td class="pt-label">UHID / Patient ID:</td>
+            <td class="pt-value">{{ uhid }}</td>
           </tr>
 
           {% if age_text or sex %}
           <tr>
-            <td class="lbl">Age / Sex:</td>
-            <td class="val">{{ (age_text ~ " ") if age_text else "" }}{{ sex }}</td>
-          </tr>
-          {% endif %}
-
-          {% if dob %}
-          <tr>
-            <td class="lbl">Date of Birth:</td>
-            <td class="val">{{ frappe.format(dob, {"fieldtype":"Date"}) }}</td>
-          </tr>
-          {% endif %}
-
-          {% if blood_group %}
-          <tr>
-            <td class="lbl">Blood Group:</td>
-            <td class="val">{{ blood_group }}</td>
+            <td class="pt-label">Age / Sex:</td>
+            <td class="pt-value">
+              {% if age_text and sex %}
+                {{ age_text }} / {{ sex }}
+              {% elif age_text %}
+                {{ age_text }}
+              {% else %}
+                {{ sex }}
+              {% endif %}
+            </td>
           </tr>
           {% endif %}
 
           {% if addr %}
           <tr>
-            <td class="lbl">Address:</td>
-            <td class="val addr">
-              {{ addr.address_line1 or "" }}
-              {% if addr.address_line2 %}<br>{{ addr.address_line2 }}{% endif %}
-              {% if addr.city %}<br>{{ addr.city }}{% endif %}, {% if addr.state %} {{ addr.state }}{% endif %}
-              <!--{% if addr.state %}<br>{{ addr.state }}{% endif %}-->
-              {% if addr.pincode %}<br>PIN: {{ addr.pincode }}{% endif %}, {% if addr.country %} {{ addr.country }}{% endif %}
-              <!--{% if addr.country %}<br>{{ addr.country }}{% endif %}-->
+            <td class="pt-label">Address:</td>
+            <td class="pt-value">
+              {{ addr.address_line1 }}<br>
+              {% if addr.address_line2 %}{{ addr.address_line2 }}<br>{% endif %}
+              {{ addr.city }}, {{ addr.state }}<br>
+              PIN: {{ addr.pincode }}, {{ addr.country }}
             </td>
           </tr>
           {% endif %}
 
           {% if primary_phone %}
           <tr>
-            <td class="lbl">Mobile No:</td>
-            <td class="val">{{ primary_phone }}</td>
+            <td class="pt-label">Contact:</td>
+            <td class="pt-value">{{ primary_phone }}</td>
           </tr>
           {% endif %}
 
           {% if email %}
           <tr>
-            <td class="lbl">Email:</td>
-            <td class="val">{{ email }}</td>
+            <td class="pt-label">Email:</td>
+            <td class="pt-value">{{ email }}</td>
           </tr>
           {% endif %}
+
         </table>
+
       </td>
 
-      <!-- RIGHT: Encounter info -->
-      <td class="right">
-        <table class="kv">
+      <!-- RIGHT SIDE -->
+      <td class="pt-right">
+
+        <table class="inner-table">
+
           <tr>
-            <td colspan="2" class="stack">
-              <div class="title">Encounter Date & Time</div>
-              <div class="value">
-                {% if doc.encounter_datetime %}
-                  {{ frappe.format(doc.encounter_datetime, {"fieldtype":"Datetime"}) }}
-                {% elif doc.encounter_date %}
-                  {{ frappe.format(doc.encounter_date, {"fieldtype":"Date"}) }}
-                {% else %}
-                  {{ frappe.format(doc.modified, {"fieldtype":"Datetime"}) }}
-                {% endif %}
-              </div>
+            <td class="pt-label">Encounter Date & Time</td>
+          </tr>
+          <tr>
+            <td class="pt-value">
+              {% if doc.encounter_date and doc.encounter_time %}
+                {{ frappe.format(doc.encounter_date, {"fieldtype":"Date"}) }}
+                {{ frappe.format(doc.encounter_time, {"fieldtype":"Time"}) }}
+              {% elif doc.encounter_datetime %}
+                {{ frappe.format(doc.encounter_datetime, {"fieldtype":"Datetime"}) }}
+              {% else %}
+                {{ frappe.format(doc.modified, {"fieldtype":"Datetime"}) }}
+              {% endif %}
             </td>
           </tr>
 
-          {% if doc.sr_medical_department %}
+          {% if doc.sr_pe_deptt %}
           <tr>
-            <td colspan="2" class="stack">
-              <div class="title">Medical Department</div>
-              <div class="value">{{ doc.sr_medical_department }}</div>
-            </td>
+            <td class="pt-label">Department</td>
           </tr>
-          {% endif %}
-
-          <!--{% if doc.practitioner %}-->
-          <!--<tr>-->
-          <!--  <td colspan="2" class="stack">-->
-          <!--    <div class="title">Practitioner</div>-->
-          <!--    <div class="value">{{ doc.practitioner }}</div>-->
-          <!--  </td>-->
-          <!--</tr>-->
-          <!--{% endif %}-->
-
-          {% if doc.ayurvedic_practitioner %}
-          <!--<tr>-->
-          <!--  <td colspan="2" class="stack">-->
-          <!--    <div class="title">Ayurvedic Practitioner</div>-->
-          <!--    <div class="value">{{ doc.ayurvedic_practitioner }}</div>-->
-          <!--  </td>-->
-          <!--</tr>-->
-          {% endif %}
-
-          {% if doc.homeopathy_practitioner %}
-          <!--<tr>-->
-          <!--  <td colspan="2" class="stack">-->
-          <!--    <div class="title">Homeopathy Practitioner</div>-->
-          <!--    <div class="value">{{ doc.homeopathy_practitioner }}</div>-->
-          <!--  </td>-->
-          <!--</tr>-->
-          {% endif %}
-
-          {% if doc.allopathy_practitioner %}
-          <!--<tr>-->
-          <!--  <td colspan="2" class="stack">-->
-          <!--    <div class="title">Allopathy Practitioner</div>-->
-          <!--    <div class="value">{{ doc.allopathy_practitioner }}</div>-->
-          <!--  </td>-->
-          <!--</tr>-->
-          {% endif %}
-
-          {% if doc.patient_appointment %}
           <tr>
-            <td colspan="2" class="stack">
-              <div class="title">Appointment</div>
-              <div class="value">{{ doc.patient_appointment }}</div>
-            </td>
+            <td class="pt-value">{{ doc.sr_pe_deptt }}</td>
           </tr>
-          {% endif %}
-
-          {% if doc.company %}
-          <!--<tr>-->
-          <!--  <td colspan="2" class="stack">-->
-          <!--    <div class="title">Facility</div>-->
-          <!--    <div class="value">{{ doc.company }}</div>-->
-          <!--  </td>-->
-          <!--</tr>-->
           {% endif %}
 
           {% if doc.sr_encounter_type %}
           <tr>
-            <td colspan="2" class="stack">
-              <div class="title">Encounter Type</div>
-              <div class="value">{{ doc.sr_encounter_type }}</div>
-            </td>
+            <td class="pt-label">Encounter Type</td>
+          </tr>
+          <tr>
+            <td class="pt-value">{{ doc.sr_encounter_type }}</td>
           </tr>
           {% endif %}
+
         </table>
+
       </td>
+
     </tr>
+
   </table>
+
 </div>
 
 {# ---------- Clinical Notes (Encounter) ---------- #}
@@ -302,81 +537,104 @@
    or doc.sr_diagnosis
    or (show_notes and doc.sr_notes)
 %}
-<div class="hdr-wrap">
-  <table class="card clinical-notes">
-    <colgroup>
-      <col style="width: 20%;">
-      <col style="width: 80%;">
-    </colgroup>
 
-    <tr>
-      <td colspan="2" class="stack">
-        <div class="title">Clinical Notes</div>
-      </td>
-    </tr>
+<div class="print-wrap">
+  <div class="section-block">
 
-    {% if doc.sr_complaints %}
-    <tr>
-      <td class="lbl">Complaints</td>
-      <td class="val">{{ doc.sr_complaints }}</td>
-    </tr>
-    {% endif %}
+    <div class="section-title">Clinical Notes</div>
 
-    {% if doc.sr_observations %}
-    <tr>
-      <td class="lbl">Observations</td>
-      <td class="val">{{ doc.sr_observations }}</td>
-    </tr>
-    {% endif %}
+    <table class="clinical-table">
 
-    {% if doc.sr_investigations %}
-    <tr>
-      <td class="lbl">Investigations</td>
-      <td class="val">{{ doc.sr_investigations }}</td>
-    </tr>
-    {% endif %}
+      {% if doc.sr_complaints %}
+      <tr>
+        <td class="cl-label">Complaints</td>
+        <td class="cl-value">{{ doc.sr_complaints }}</td>
+      </tr>
+      {% endif %}
 
-    {% if doc.sr_diagnosis %}
-    <tr>
-      <td class="lbl">Diagnosis</td>
-      <td class="val">{{ doc.sr_diagnosis }}</td>
-    </tr>
-    {% endif %}
+      {% if doc.sr_observations %}
+      <tr>
+        <td class="cl-label">Observations</td>
+        <td class="cl-value">{{ doc.sr_observations }}</td>
+      </tr>
+      {% endif %}
 
-    {% if show_notes and doc.sr_notes %}
-    <tr>
-      <td class="lbl">Notes</td>
-      <td class="val">{{ doc.sr_notes }}</td>
-    </tr>
-    {% endif %}
+      {% if doc.sr_investigations %}
+      <tr>
+        <td class="cl-label">Investigations</td>
+        <td class="cl-value">{{ doc.sr_investigations }}</td>
+      </tr>
+      {% endif %}
 
-  </table>
+      {% if doc.sr_diagnosis %}
+      <tr>
+        <td class="cl-label">Diagnosis</td>
+        <td class="cl-value">{{ doc.sr_diagnosis }}</td>
+      </tr>
+      {% endif %}
+
+      {% if show_notes and doc.sr_notes %}
+      <tr>
+        <td class="cl-label">Notes</td>
+        <td class="cl-value">{{ doc.sr_notes }}</td>
+      </tr>
+      {% endif %}
+
+    </table>
+
+  </div>
 </div>
+
 {% endif %}
 
 {# ---------- Diet Chart: Only show if exists ---------- #}
-{% if doc.diet_chart %}
-<div class="hdr-wrap">
-  <table class="card">
-    <tr>
-      <td colspan="2" class="stack">
-        <div class="title">Diet Chart</div>
-      </td>
-    </tr>
-    <tr>
-      <td colspan="2" style="padding:10px;">
-        {{ doc.diet_chart }}
-      </td>
-    </tr>
-  </table>
+{% set diet_doc = frappe.get_doc("Diet Chart", doc.diet_chart) if doc.diet_chart else None %}
+
+{% if diet_doc %}
+
+<div class="print-wrap">
+  <div class="section-block">
+
+    <div class="section-title">
+      Diet Chart - <b>{{ diet_doc.diet_chart_name }}</b>
+    </div>
+
+    <table class="diet-table">
+
+      {% if diet_doc.instructions %}
+      <tr>
+        <td class="cl-label">Instructions</td>
+        <td class="cl-value">{{ diet_doc.instructions }}</td>
+      </tr>
+      {% endif %}
+
+      {% if diet_doc.allowed_foods %}
+      <tr>
+        <td class="cl-label">Allowed Foods</td>
+        <td class="cl-value">{{ diet_doc.allowed_foods }}</td>
+      </tr>
+      {% endif %}
+
+      {% if diet_doc.restricted_foods %}
+      <tr>
+        <td class="cl-label">Restricted Foods</td>
+        <td class="cl-value">{{ diet_doc.restricted_foods }}</td>
+      </tr>
+      {% endif %}
+
+    </table>
+
+  </div>
 </div>
+
 {% endif %}
 
+
 {# ---------- Ayurvedic: Only show if practitioner name exists AND table has at least one non-empty row ---------- #}
+
 {% set ayu_prac = doc.sr_ayurvedic_practitioner_name or "" %}
 {% set ayu_prac_reg = doc.sr_ayurvedic_practitioner_reg or "" %}
 
-{# detect at least one useful row in drug_prescription #}
 {% set ns = namespace(has_rows=false) %}
 {% if doc.drug_prescription %}
   {% for row in doc.drug_prescription %}
@@ -387,68 +645,80 @@
 {% endif %}
 
 {% if ayu_prac and ns.has_rows %}
-<div class="hdr-wrap">
-  <table class="card">
-    <tr>
-      <td class="left" colspan="2" style="padding:0 !important;">
-        <table class="kv" style="width:100%;">
-          <tr>
-            <td class="stack" colspan="2">
-              <div class="title">Prescription (Ayurvedic)</div>
-              <div class="value">By: <b>{{ ayu_prac }} (Reg No: {{ ayu_prac_reg }})</b></div>
-            </td>
-          </tr>
-          <tr>
-            <td class="stack" colspan="2" style="padding:0 !important;">
-              <div class="value" style="padding:0;">
-                <table style="width:100%; border-collapse:collapse; font-size:10pt;">
-                  <thead>
-                    <tr style="background:#fafbfc;">
-                      <th style="border:1px solid #e8ebf0; padding:6px; width:40px; text-align:left;">Sr</th>
-                      <th style="border:1px solid #e8ebf0; padding:6px; width:220px; text-align:left;">Medication</th>
-                      <th style="border:1px solid #e8ebf0; padding:6px; width:110px; text-align:left;">Dosage</th>
-                      <th style="border:1px solid #e8ebf0; padding:6px; width:120px; text-align:left;">Period</th>
-                      <th style="border:1px solid #e8ebf0; padding:6px; width:120px; text-align:left;">Form</th>
-                      <th style="border:1px solid #e8ebf0; padding:6px; text-align:left;">Instruction</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for row in doc.drug_prescription %}
-                      {% set drug_name  = row.sr_medication_name_print or row.medication_name or row.drug_name or row.medication or row.drug or row.item_name or row.drug_code or "-" %}
-                      {% set dose_txt   = row.dosage or row.dosage_display or row.custom_dosage or "-" %}
-                      {% set period_txt = ((row.period|string) ~ " " ~ (row.period_uom or "")) if row.period is not none else (row.duration or row.custom_period or "-") %}
-                      {% set form_txt   = row.form or row.dosage_form or row.drug_form or "-" %}
-                      {% set instr_txt  = row.sr_drug_instruction or row.instructions or row.remarks or row.custom_instruction or "-" %}
 
-                      {% if drug_name != "-" or form_txt != "-" or dose_txt != "-" or period_txt != "-" or instr_txt != "-" %}
-                      <tr>
-                        <td style="border:1px solid #e8ebf0; padding:6px;">{{ loop.index }}</td>
-                        <td style="border:1px solid #e8ebf0; padding:6px; word-break:break-word;">{{ drug_name }}</td>
-                        <td style="border:1px solid #e8ebf0; padding:6px; word-break:break-word;">{{ dose_txt }}</td>
-                        <td style="border:1px solid #e8ebf0; padding:6px; word-break:break-word;">{{ period_txt }}</td>
-                        <td style="border:1px solid #e8ebf0; padding:6px; word-break:break-word;">{{ form_txt }}</td>
-                        <td style="border:1px solid #e8ebf0; padding:6px; word-break:break-word;">{{ instr_txt }}</td>
-                      </tr>
-                      {% endif %}
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
+<div class="print-wrap">
+  <div class="section-block">
+
+    <div class="section-title">
+      Prescription (Ayurvedic)
+    </div>
+
+    <div class="rx-header">
+      By: <b>{{ ayu_prac }} (Reg No: {{ ayu_prac_reg }})</b>
+    </div>
+
+    <table class="rx-table">
+
+      <thead>
+        <tr>
+          <th class="rx-sr">Sr</th>
+          <th class="rx-med">Medication</th>
+          <th class="rx-dose">Dosage</th>
+          <th class="rx-period">Period</th>
+          <th class="rx-form">Form</th>
+        </tr>
+      </thead>
+
+      <tbody>
+
+        {% for row in doc.drug_prescription %}
+
+          {% set drug_name  = row.sr_medication_name_print or row.medication_name or row.drug_name or row.medication or row.drug or row.item_name or row.drug_code or "-" %}
+          {% set dose_txt   = row.dosage or row.dosage_display or row.custom_dosage or "-" %}
+          {% set period_txt = ((row.period|string) ~ " " ~ (row.period_uom or "")) if row.period is not none else (row.duration or row.custom_period or "-") %}
+          {% set form_txt   = row.form or row.dosage_form or row.drug_form or "-" %}
+          {% set instr_txt  = row.sr_drug_instruction or row.instructions or row.remarks or row.custom_instruction or "" %}
+
+          {% if drug_name != "-" or dose_txt != "-" or period_txt != "-" or form_txt != "-" or instr_txt != "-" %}
+
+          <!-- MAIN ROW -->
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ drug_name }}</td>
+            <td>{{ dose_txt }}</td>
+            <td>{{ period_txt }}</td>
+            <td>{{ form_txt }}</td>
+          </tr>
+
+          <!-- INSTRUCTION ROW -->
+          {% if instr_txt %}
+          <tr class="rx-instruction">
+            <td></td>
+            <td colspan="4">
+              <strong>Instruction:</strong> {{ instr_txt }}
             </td>
           </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
+          {% endif %}
+
+          {% endif %}
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
 </div>
+
 {% endif %}
 
 
 {# ---------- Homeopathy: show only if practitioner + at least one row ---------- #}
+
 {% set homeo_prac = doc.sr_homeopathy_practitioner_name or "" %}
 {% set homeo_prac_reg = doc.sr_homeopathy_practitioner_reg or "" %}
 
-{# detect at least one useful row in sr_homeopathy_drug_prescription #}
 {% set hns = namespace(has_rows=false) %}
 {% if doc.sr_homeopathy_drug_prescription %}
   {% for row in doc.sr_homeopathy_drug_prescription %}
@@ -459,68 +729,80 @@
 {% endif %}
 
 {% if homeo_prac and hns.has_rows %}
-<div class="hdr-wrap">
-  <table class="card">
-    <tr>
-      <td class="left" colspan="2" style="padding:0 !important;">
-        <table class="kv" style="width:100%;">
-          <tr>
-            <td class="stack" colspan="2">
-              <div class="title">Prescription (Homeopathy)</div>
-              <div class="value">By: <b>{{ homeo_prac }} (Reg No: {{ homeo_prac_reg }})</b></div>
-            </td>
-          </tr>
-          <tr>
-            <td class="stack" colspan="2" style="padding:0 !important;">
-              <div class="value" style="padding:0;">
-                <table style="width:100%; border-collapse:collapse; font-size:10pt;">
-                  <thead>
-                    <tr style="background:#fafbfc;">
-                      <th style="border:1px solid #e8ebf0; padding:6px; width:40px; text-align:left;">Sr</th>
-                      <th style="border:1px solid #e8ebf0; padding:6px; width:220px; text-align:left;">Medication</th>
-                      <th style="border:1px solid #e8ebf0; padding:6px; width:110px; text-align:left;">Dosage</th>
-                      <th style="border:1px solid #e8ebf0; padding:6px; width:120px; text-align:left;">Period</th>
-                      <th style="border:1px solid #e8ebf0; padding:6px; width:120px; text-align:left;">Form</th>
-                      <th style="border:1px solid #e8ebf0; padding:6px; text-align:left;">Instruction</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for row in doc.sr_homeopathy_drug_prescription %}
-                      {% set drug_name  = row.sr_medication_name_print or row.medication_name or row.drug_name or row.medication or row.drug or row.item_name or row.drug_code or "-" %}
-                      {% set dose_txt   = row.dosage or row.dosage_display or row.custom_dosage or "-" %}
-                      {% set period_txt = ((row.period|string) ~ " " ~ (row.period_uom or "")) if row.period is not none else (row.duration or row.custom_period or "-") %}
-                      {% set form_txt   = row.form or row.dosage_form or row.drug_form or "-" %}
-                      {% set instr_txt  = row.sr_drug_instruction or row.instructions or row.remarks or row.custom_instruction or "-" %}
 
-                      {% if drug_name != "-" or form_txt != "-" or dose_txt != "-" or period_txt != "-" or instr_txt != "-" %}
-                      <tr>
-                        <td style="border:1px solid #e8ebf0; padding:6px;">{{ loop.index }}</td>
-                        <td style="border:1px solid #e8ebf0; padding:6px; word-break:break-word;">{{ drug_name }}</td>
-                        <td style="border:1px solid #e8ebf0; padding:6px; word-break:break-word;">{{ dose_txt }}</td>
-                        <td style="border:1px solid #e8ebf0; padding:6px; word-break:break-word;">{{ period_txt }}</td>
-                        <td style="border:1px solid #e8ebf0; padding:6px; word-break:break-word;">{{ form_txt }}</td>
-                        <td style="border:1px solid #e8ebf0; padding:6px; word-break:break-word;">{{ instr_txt }}</td>
-                      </tr>
-                      {% endif %}
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
+<div class="print-wrap">
+  <div class="section-block">
+
+    <div class="section-title">
+      Prescription (Homeopathy)
+    </div>
+
+    <div class="rx-header">
+      By: <b>{{ homeo_prac }} (Reg No: {{ homeo_prac_reg }})</b>
+    </div>
+
+    <table class="rx-table">
+
+      <thead>
+        <tr>
+          <th class="rx-sr">Sr</th>
+          <th class="rx-med">Medication</th>
+          <th class="rx-dose">Dosage</th>
+          <th class="rx-period">Period</th>
+          <th class="rx-form">Form</th>
+        </tr>
+      </thead>
+
+      <tbody>
+
+        {% for row in doc.sr_homeopathy_drug_prescription %}
+
+          {% set drug_name  = row.sr_medication_name_print or row.medication_name or row.drug_name or row.medication or row.drug or row.item_name or row.drug_code or "-" %}
+          {% set dose_txt   = row.dosage or row.dosage_display or row.custom_dosage or "-" %}
+          {% set period_txt = ((row.period|string) ~ " " ~ (row.period_uom or "")) if row.period is not none else (row.duration or row.custom_period or "-") %}
+          {% set form_txt   = row.form or row.dosage_form or row.drug_form or "-" %}
+          {% set instr_txt  = row.sr_drug_instruction or row.instructions or row.remarks or row.custom_instruction or "" %}
+
+          {% if drug_name != "-" or dose_txt != "-" or period_txt != "-" or form_txt != "-" or instr_txt != "-" %}
+
+          <!-- MAIN ROW -->
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ drug_name }}</td>
+            <td>{{ dose_txt }}</td>
+            <td>{{ period_txt }}</td>
+            <td>{{ form_txt }}</td>
+          </tr>
+
+          <!-- INSTRUCTION ROW -->
+          {% if instr_txt %}
+          <tr class="rx-instruction">
+            <td></td>
+            <td colspan="4">
+              <strong>Instruction:</strong> {{ instr_txt }}
             </td>
           </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
+          {% endif %}
+
+          {% endif %}
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
 </div>
+
 {% endif %}
 
 
 {# ---------- Allopathy: show only if practitioner + at least one row ---------- #}
+
 {% set allop_prac = doc.sr_allopathy_practitioner_name or "" %}
 {% set allop_prac_reg = doc.sr_allopathy_practitioner_reg or "" %}
 
-{# detect at least one useful row in sr_allopathy_drug_prescription #}
 {% set ans = namespace(has_rows=false) %}
 {% if doc.sr_allopathy_drug_prescription %}
   {% for row in doc.sr_allopathy_drug_prescription %}
@@ -531,125 +813,91 @@
 {% endif %}
 
 {% if allop_prac and ans.has_rows %}
-<div class="hdr-wrap">
-  <table class="card">
-    <tr>
-      <td class="left" colspan="2" style="padding:0 !important;">
-        <table class="kv" style="width:100%;">
-          <tr>
-            <td class="stack" colspan="2">
-              <div class="title">Prescription (Allopathy)</div>
-              <div class="value">By: <b>{{ allop_prac }} (Reg No: {{ allop_prac_reg }})</b></div>
-            </td>
-          </tr>
-          <tr>
-            <td class="stack" colspan="2" style="padding:0 !important;">
-              <div class="value" style="padding:0;">
-                <table style="width:100%; border-collapse:collapse; font-size:10pt;">
-                  <thead>
-                    <tr style="background:#fafbfc;">
-                      <th style="border:1px solid #e8ebf0; padding:6px; width:40px; text-align:left;">Sr</th>
-                      <th style="border:1px solid #e8ebf0; padding:6px; width:220px; text-align:left;">Medication</th>
-                      <th style="border:1px solid #e8ebf0; padding:6px; width:110px; text-align:left;">Dosage</th>
-                      <th style="border:1px solid #e8ebf0; padding:6px; width:120px; text-align:left;">Period</th>
-                      <th style="border:1px solid #e8ebf0; padding:6px; width:120px; text-align:left;">Form</th>
-                      <th style="border:1px solid #e8ebf0; padding:6px; text-align:left;">Instruction</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for row in doc.sr_allopathy_drug_prescription %}
-                      {% set drug_name  = row.sr_medication_name_print or row.medication_name or row.drug_name or row.medication or row.drug or row.item_name or row.drug_code or "-" %}
-                      {% set dose_txt   = row.dosage or row.dosage_display or row.custom_dosage or "-" %}
-                      {% set period_txt = ((row.period|string) ~ " " ~ (row.period_uom or "")) if row.period is not none else (row.duration or row.custom_period or "-") %}
-                      {% set form_txt   = row.form or row.dosage_form or row.drug_form or "-" %}
-                      {% set instr_txt  = row.sr_drug_instruction or row.instructions or row.remarks or row.custom_instruction or "-" %}
 
-                      {% if drug_name != "-" or form_txt != "-" or dose_txt != "-" or period_txt != "-" or instr_txt != "-" %}
-                      <tr>
-                        <td style="border:1px solid #e8ebf0; padding:6px;">{{ loop.index }}</td>
-                        <td style="border:1px solid #e8ebf0; padding:6px; word-break:break-word;">{{ drug_name }}</td>
-                        <td style="border:1px solid #e8ebf0; padding:6px; word-break:break-word;">{{ dose_txt }}</td>
-                        <td style="border:1px solid #e8ebf0; padding:6px; word-break:break-word;">{{ period_txt }}</td>
-                        <td style="border:1px solid #e8ebf0; padding:6px; word-break:break-word;">{{ form_txt }}</td>
-                        <td style="border:1px solid #e8ebf0; padding:6px; word-break:break-word;">{{ instr_txt }}</td>
-                      </tr>
-                      {% endif %}
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
+<div class="print-wrap">
+  <div class="section-block">
+
+    <div class="section-title">
+      Prescription (Allopathy)
+    </div>
+
+    <div class="rx-header">
+      By: <b>{{ allop_prac }} (Reg No: {{ allop_prac_reg }})</b>
+    </div>
+
+    <table class="rx-table">
+
+      <thead>
+        <tr>
+          <th class="rx-sr">Sr</th>
+          <th class="rx-med">Medication</th>
+          <th class="rx-dose">Dosage</th>
+          <th class="rx-period">Period</th>
+          <th class="rx-form">Form</th>
+        </tr>
+      </thead>
+
+      <tbody>
+
+        {% for row in doc.sr_allopathy_drug_prescription %}
+
+          {% set drug_name  = row.sr_medication_name_print or row.medication_name or row.drug_name or row.medication or row.drug or row.item_name or row.drug_code or "-" %}
+          {% set dose_txt   = row.dosage or row.dosage_display or row.custom_dosage or "-" %}
+          {% set period_txt = ((row.period|string) ~ " " ~ (row.period_uom or "")) if row.period is not none else (row.duration or row.custom_period or "-") %}
+          {% set form_txt   = row.form or row.dosage_form or row.drug_form or "-" %}
+          {% set instr_txt  = row.sr_drug_instruction or row.instructions or row.remarks or row.custom_instruction or "" %}
+
+          {% if drug_name != "-" or dose_txt != "-" or period_txt != "-" or form_txt != "-" or instr_txt != "-" %}
+
+          <!-- MAIN ROW -->
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ drug_name }}</td>
+            <td>{{ dose_txt }}</td>
+            <td>{{ period_txt }}</td>
+            <td>{{ form_txt }}</td>
+          </tr>
+
+          <!-- INSTRUCTION ROW -->
+          {% if instr_txt %}
+          <tr class="rx-instruction">
+            <td></td>
+            <td colspan="4">
+              <strong>Instruction:</strong> {{ instr_txt }}
             </td>
           </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
+          {% endif %}
+
+          {% endif %}
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
 </div>
+
 {% endif %}
 
 
-<!-- {% if doc.sr_encounter_type and doc.sr_encounter_type.lower() == "order" %}
-<div class="hdr-wrap">
-  <table class="card">
-    <tr><td colspan="2" class="stack"><div class="title">Draft Invoice – Items</div></td></tr>
-    <tr><td colspan="2" style="padding:0 !important;">
-      <table style="width:100%; border-collapse:collapse; font-size:10pt;">
-        <thead>
-          <tr style="background:#fafbfc;">
-            <th style="border:1px solid #e8ebf0; padding:6px;">#</th>
-            <th style="border:1px solid #e8ebf0; padding:6px;">Item</th>
-            <th style="border:1px solid #e8ebf0; padding:6px;">UOM</th>
-            <th style="border:1px solid #e8ebf0; padding:6px; text-align:right;">Qty</th>
-            <th style="border:1px solid #e8ebf0; padding:6px; text-align:right;">Rate</th>
-            <th style="border:1px solid #e8ebf0; padding:6px; text-align:right;">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% set rows = doc.sr_pe_order_items or [] %}
-          {% if rows|length == 0 %}
-            <tr><td colspan="6" style="text-align:center; color:#888; padding:6px;">No items</td></tr>
-          {% else %}
-            {% for r in rows %}
-              {% set qty  = (r.sr_item_qty or r.qty or 0) | float %}
-              {% set rate = (r.sr_item_rate or r.rate or 0) | float %}
-              {% set amt  = qty * rate %}
-              <tr>
-                <td style="border:1px solid #e8ebf0; padding:6px;">{{ loop.index }}</td>
-                <td style="border:1px solid #e8ebf0; padding:6px;">
-                  <div><b>{{ r.sr_item_name or r.item_name or r.sr_item_code or r.item_code }}</b></div>
-                  {% if r.sr_item_description or r.description %}
-                    <div style="color:#666; font-size:9pt;">{{ r.sr_item_description or r.description }}</div>
-                  {% endif %}
-                </td>
-                <td style="border:1px solid #e8ebf0; padding:6px;">{{ r.sr_item_uom or r.uom }}</td>
-                <td style="border:1px solid #e8ebf0; padding:6px; text-align:right;">{{ frappe.utils.fmt_money(qty, 0) }}</td>
-                <td style="border:1px solid #e8ebf0; padding:6px; text-align:right;">{{ frappe.utils.fmt_money(rate) }}</td>
-                <td style="border:1px solid #e8ebf0; padding:6px; text-align:right;">{{ frappe.utils.fmt_money(amt) }}</td>
-              </tr>
-            {% endfor %}
-          {% endif %}
-        </tbody>
-      </table>
-    </td></tr>
-  </table>
-</div>
-
-<div class="hdr-wrap">
-  <table class="card">
-    <tr><td colspan="2" class="stack"><div class="title">Advance Payment</div></td></tr>
-    <tr><td class="lbl">Mode of Payment</td><td class="val">{{ doc.sr_pe_mode_of_payment or "" }}</td></tr>
-    <tr><td class="lbl">Paid Amount</td><td class="val">{{ frappe.utils.fmt_money(doc.sr_pe_paid_amount or 0) }}</td></tr>
-    <tr><td class="lbl">Reference No</td><td class="val">{{ doc.sr_pe_payment_reference_no or "" }}</td></tr>
-    <tr><td class="lbl">Reference Date</td><td class="val">{{ frappe.utils.formatdate(doc.sr_pe_payment_reference_date) if doc.sr_pe_payment_reference_date else "" }}</td></tr>
-  </table>
-</div>
-{% endif %} -->
+{# ---------- Instruction ---------- #}
 
 {% if doc.sr_pe_instruction %}
-<div class="hdr-wrap">
-  <table class="card">
-    <tr><td colspan="2" class="stack"><div class="title">Instructions</div></td></tr>
-    <tr><td colspan="2" style="padding:6px;">{{ doc.sr_pe_instruction }}</td></tr>
-  </table>
+
+<div class="print-wrap">
+  <div class="section-block">
+
+    <div class="section-title">
+      Instructions
+    </div>
+
+    <div class="instruction-box">
+      {{ doc.sr_pe_instruction }}
+    </div>
+
+  </div>
 </div>
+
 {% endif %}

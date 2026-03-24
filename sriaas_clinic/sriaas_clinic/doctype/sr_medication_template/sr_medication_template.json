@@ -10,7 +10,8 @@
  "field_order": [
   "sr_template_name",
   "sr_tmpl_instruction",
-  "sr_medications"
+  "sr_medications",
+  "is_active"
  ],
  "fields": [
   {
@@ -31,12 +32,18 @@
    "fieldtype": "Table",
    "label": "Medications",
    "options": "SR Medication Template Item"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-22 17:08:06.005421",
+ "modified": "2026-03-21 13:45:49.630161",
  "modified_by": "Administrator",
  "module": "Sriaas Clinic",
  "name": "SR Medication Template",

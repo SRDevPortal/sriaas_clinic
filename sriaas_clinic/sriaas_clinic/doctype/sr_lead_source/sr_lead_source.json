@@ -7,7 +7,8 @@
  "engine": "InnoDB",
  "field_order": [
   "sr_source_name",
-  "sr_source_details"
+  "sr_source_details",
+  "is_active"
  ],
  "fields": [
   {
@@ -22,12 +23,18 @@
    "fieldname": "sr_source_details",
    "fieldtype": "Text Editor",
    "label": "Source Details"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-22 17:08:06.165037",
+ "modified": "2026-03-21 13:43:18.682974",
  "modified_by": "Administrator",
  "module": "Sriaas Clinic",
  "name": "SR Lead Source",

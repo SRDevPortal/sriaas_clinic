@@ -110,7 +110,7 @@ def _safe_phone(phone: str) -> str:
         return f"+91-{phone}"
 
     # Fallback (Shipkia-safe dummy)
-    return "+91-9999999999"
+    # return "+91-9999999999"
 
 
 # =========================================================

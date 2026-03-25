@@ -1,6 +1,7 @@
 # sriaas_clinic/api/s3/upload.py
 import mimetypes
-import re, os
+import re
+import os
 from datetime import datetime
 
 import frappe
@@ -24,7 +25,7 @@ def get_logger():
 
 def normalize_part(value: str) -> str:
     """
-    Convert strings to lowercase kebab-case for S3 keys
+    Convert strings to lowercase kebab-case
     Example:
         "Patient Encounter" -> "patient-encounter"
     """
@@ -32,8 +33,8 @@ def normalize_part(value: str) -> str:
         return "misc"
 
     value = value.lower().strip()
-    value = re.sub(r"[^\w\s-]", "", value)   # remove special chars
-    value = re.sub(r"[\s_]+", "-", value)    # space/_ → hyphen
+    value = re.sub(r"[^\w\s-]", "", value)
+    value = re.sub(r"[\s_]+", "-", value)
     return value
 
 
@@ -41,7 +42,7 @@ def normalize_filename(filename: str) -> str:
     """
     Normalize filename but preserve extension
     Example:
-      male Patient.JPG → male-patient.jpg
+        male Patient.JPG → male-patient.jpg
     """
     if not filename:
         return "file"
@@ -52,9 +53,7 @@ def normalize_filename(filename: str) -> str:
     name = re.sub(r"[^\w\s-]", "", name)
     name = re.sub(r"[\s_]+", "-", name)
 
-    ext = ext.lower()  # keep .jpg, .png, etc.
-
-    return f"{name}{ext}"
+    return f"{name}{ext.lower()}"
 
 
 def _get_company_abbr(file_doc):
@@ -89,13 +88,25 @@ def _get_company_abbr(file_doc):
 def upload_file_to_s3(file_doc):
     """
     Upload a local Frappe File to S3 and return the S3 key.
-    - Skips remote / already S3 files
-    - Normalizes path for clean S3 URLs
+
+    Safe Features:
+    - Works only if S3 config exists
+    - Skips remote files
+    - Validates local file existence
+    - Adds metadata
+    - Never breaks system (fallback-safe)
     """
 
     logger = get_logger()
     s3 = get_s3_client()
     bucket = get_bucket()
+
+    # --------------------------------------------------
+    # ✅ SAFE CHECK (S3 disabled fallback)
+    # --------------------------------------------------
+    if not s3 or not bucket:
+        logger.info("S3_DISABLED → skipping upload")
+        return None
 
     # --------------------------------------------------
     # Skip if already remote or S3
@@ -106,13 +117,13 @@ def upload_file_to_s3(file_doc):
         return None
     
     # --------------------------------------------------
-    # Resolve & normalize S3 path parts
+    # Normalize S3 path
     # --------------------------------------------------
     raw_prefix = frappe.conf.get("aws_s3_prefix") or _get_company_abbr(file_doc)
 
     prefix = normalize_part(raw_prefix)
     doctype = normalize_part(file_doc.attached_to_doctype or "misc")
-    filename = normalize_filename(file_doc.file_name)
+    filename = normalize_filename(file_doc.file_name or file_doc.name)
 
     date = datetime.utcnow().strftime("%Y%m%d")
 
@@ -122,18 +133,22 @@ def upload_file_to_s3(file_doc):
         # --------------------------------------------------
         local_path = get_file_path(file_doc.file_url)
 
+        if not local_path or not os.path.exists(local_path):
+            logger.error(
+                f"FILE_NOT_FOUND | file={file_doc.name} | path={local_path}"
+            )
+            return None
+
+        # --------------------------------------------------
+        # Content type
+        # --------------------------------------------------
         content_type, _ = mimetypes.guess_type(local_path)
         content_type = content_type or "application/octet-stream"
 
         # --------------------------------------------------
-        # Final S3 Key (🔥 CLEAN FORMAT)
+        # Final S3 key
         # --------------------------------------------------
-        key = (
-            f"{prefix}/"
-            f"{doctype}/"
-            f"{date}/"
-            f"{file_doc.name}_{filename}"
-        )
+        key = f"{prefix}/{doctype}/{date}/{file_doc.name}_{filename}"
 
         # --------------------------------------------------
         # Upload
@@ -144,31 +159,25 @@ def upload_file_to_s3(file_doc):
                 Key=key,
                 Body=f,
                 ContentType=content_type,
+
+                # 🔥 Optional: enable public access if needed later
+                # ACL="public-read",
+
                 Metadata={
-                    "company_abbr": prefix,
-                    "doctype": doctype,
+                    "doctype": file_doc.attached_to_doctype or "",
                     "docname": file_doc.attached_to_name or "",
+                    "uploaded_by": frappe.session.user or "system",
                 }
             )
 
-        # --------------------------------------------------
-        # Success Log
-        # --------------------------------------------------
         logger.info(
-            f"S3_UPLOAD_SUCCESS | "
-            f"file={file_doc.name} | "
-            f"filename={file_doc.file_name} | "
-            f"bucket={bucket} | "
-            f"key={key} | "
-            f"user={frappe.session.user}"
+            f"S3_UPLOAD_SUCCESS | file={file_doc.name} | key={key} | type={content_type}"
         )
 
         return key
 
-    except Exception as e:
+    except Exception:
         logger.error(
-            f"S3_UPLOAD_FAILED | "
-            f"file={getattr(file_doc, 'name', None)} | "
-            f"error={str(e)}\n{frappe.get_traceback()}"
+            f"S3_UPLOAD_FAILED | file={file_doc.name}\n{frappe.get_traceback()}"
         )
-        raise
+        return None

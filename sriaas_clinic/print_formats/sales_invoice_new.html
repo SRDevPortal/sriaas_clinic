@@ -19,7 +19,6 @@
 
 {# ===== COMPANY + TAX INVOICE HEADER ===== #}
 {% set company = frappe.get_doc("Company", doc.company) %}
-{% set logo = company.company_logo %}
 {% set currency = doc.currency or company.default_currency or "INR" %}
 {% set grand = (doc.rounded_total if doc.rounded_total else doc.grand_total) or 0 %}
 
@@ -43,7 +42,7 @@
 {% set reg_state = (comp_addr.state if comp_addr else "") %}
 {% set reg_pin = (comp_addr.pincode if comp_addr else "") %}
 {% set gst_state_code = (comp_addr.gst_state_number if comp_addr and comp_addr.gst_state_number else "") %}
-{% set company_email = company.email_id or company.company_email or "accounts@sriaas.com" %}
+{% set company_email = company.email or company.email_id or company.company_email or "" %}
 {% set company_cin = company.sr_company_cin_no or company.cin or company.company_cin or company.custom_cin or "" %}
 {% set company_gstin = doc.company_gstin or (comp_addr.gstin if comp_addr and comp_addr.gstin else "") %}
 
@@ -119,20 +118,28 @@
   .inwords .lbl { width: 100%; color: var(--sr-color); font-size: 9pt; display: block; margin-bottom: 2pt; text-align: left; padding-left: 0; }
   .inwords .val { font-weight: 600; font-size: 10pt; text-align: left; }
   .sign { margin-top:12pt; gap:12pt; align-items:flex-end; justify-content:flex-end; }
-  .sign-img { width:auto; border:1px solid var(--sr-border); border-radius:0pt; background: transparent; }
+  .sign-img { width:auto; border-radius:0pt; background: transparent; text-align: right; }
+  .sign-img img { max-width:65% !important; }
   .sign-content { text-align:right; margin-top: 5pt }
 </style>
+
+{% set company_doc = frappe.get_doc("Company", doc.company) if doc.company else frappe.get_doc("Company", frappe.defaults.get_user_default("Company")) %}
+{% set logo = company_doc.sr_company_logo or '' %}
+{% set signature = company_doc.sr_company_signature  or '' %}
+{% set payment_barcode = company_doc.sr_payment_barcode  or '' %}
+{% set upi_id = company_doc.sr_upi_id  or '' %}
 
 <div class="si-wrap">
 
   <table class="si-head">
     <tr>
       <td class="left">
-        {% if logo %}<img class="si-logo" src="{{ logo }}">{% endif %}
-        <div class="si-co-name">SR Institute of Advanced Ayurvedic Sciences Private Limited</div>
+        <!-- {% if logo %}
+        <img src="{{ logo }}" class="si-logo" style="max-height: 120px;">
+        {% endif %} -->
+        <div class="si-co-name">{{ company_doc.company_name }}</div>
         <div class="si-left-lines">
-          {{ line("Reg Add: " ~ (reg_add_1 or "")) }}
-          {{ line(reg_add_2) }}
+          {{ line("Reg Add: " ~ [reg_add_1, reg_add_2]|reject("equalto","")|join(", ")) }}
           {{ line([reg_city, reg_state, reg_pin]|reject("equalto","")|join(", ")) }}
           {{ line("CIN No: " ~ company_cin) }}
           {{ line("GSTIN/UIN: " ~ company_gstin) }}
@@ -225,7 +232,6 @@
     <tfoot>
       <tr>
         <td colspan="6" class="right"><b>Subtotal</b></td>
-        <!-- <td class="right">{{ frappe.utils.fmt_money(doc.total or 0, currency=currency) }}</td> -->
         <td class="right">{{ frappe.format(doc.total or 0, {'fieldtype':'Currency','options': doc.currency}) }}</td>
       </tr>
     </tfoot>
@@ -285,18 +291,18 @@
         <div class="blk">
           <h4>Payment QR Code</h4>
           <div class="box" style="display:flex; gap:5pt; align-items:center;">
-            {% set qr = doc.qr_code_image or doc.qrcode_image or doc.get('einvoice_qr') %}
-            <div class="scanner-box">
-              {% if qr %}
-                <img src="{{ qr }}" alt="QR" style="height:90pt;">
-              {% else %}
-                <img src="{{ frappe.utils.get_url('/files/sriaas-scanner.jpg') }}" alt="Scanner">
-              {% endif %}
+            {% if payment_barcode %}
+            <div class="scanner-box">              
+                <img src="{{ payment_barcode }}" alt="Payment Barcode">
             </div>
+            {% endif %}
+
+            {% if upi_id %}
             <div class="info">
-              <div>UPI ID:<br><strong>sriaas@icici</strong></div>
+              <div>UPI ID:<br><strong>{{ upi_id }}</strong></div>
               <div class="muted" style="margin-top:6pt;">PhonePe • GPay • Paytm • UPI</div>
             </div>
+            {% endif %}
           </div>
         </div>
       </td>
@@ -359,7 +365,9 @@
 
         <div class="sign">
           <div class="sign-img">
-            <img src="{{ frappe.utils.get_url('/files/sriaas-sign-and-stam.jpg') }}" alt="Authorised Signatory">
+            {% if signature %}
+              <img src="{{ signature }}" alt="Authorised Signatory">
+            {% endif %}
           </div>
           <div class="sign-content">
             <div class="sign-caption">Authorised Signature for</div>

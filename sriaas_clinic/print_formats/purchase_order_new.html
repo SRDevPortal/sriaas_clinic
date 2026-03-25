@@ -26,7 +26,6 @@
 
 {# ========== COMPANY + PURCHASE ORDER HEADER ========== #}
 {% set company  = frappe.get_doc("Company", doc.company) %}
-{% set logo     = company.company_logo %}
 {% set currency = doc.currency or company.default_currency or "INR" %}
 {% set grand    = (doc.rounded_total if doc.rounded_total else doc.grand_total) or 0 %}
 
@@ -120,16 +119,25 @@
 .blk .box{ border:1px solid #939393; padding:5pt 2pt; }
 
 /* Signature */
-.sign-box{ width:auto; border:1px solid #939393; border-radius:0pt; padding:2pt; display:inline-block; }
+.sign-box{ width:auto; border-radius:0pt; background: transparent; text-align: right; }
+.sign-box img { max-width:65% !important; }
+
 </style>
+
+{% set company_doc = frappe.get_doc("Company", doc.company) if doc.company else frappe.get_doc("Company", frappe.defaults.get_user_default("Company")) %}
+{% set logo = company_doc.sr_company_logo or '' %}
+{% set signature = company_doc.sr_company_signature  or '' %}
+{% set payment_barcode = company_doc.sr_payment_barcode  or '' %}
 
 <div class="po-wrap">
 
   <table class="po-head">
     <tr>
       <td class="left" style="width:60%;">
-        {% if logo %}<img class="po-logo" src="{{ logo }}" style="max-height:64px;">{% endif %}
-        <div class="po-co-name">{{ company.company_name or doc.company }}</div>
+        <!-- {% if logo %}
+        <img class="po-logo" src="{{ logo }}" style="max-height:64px;">
+        {% endif %} -->
+        <div class="po-co-name">{{ company_doc.company_name }}</div>
         <div class="po-left-lines">
           {{ line("Reg Add: " ~ (reg_add_1 or "")) }}
           {{ line(reg_add_2) }}
@@ -170,13 +178,11 @@
       <td class="lbl">Supplier</td>
       <td>
         <div><strong>{{ doc.supplier_name or doc.supplier or (sup and sup.supplier_name) }}</strong></div>
-        <!-- <div class="muted">{{ sup_contact or "-" }}</div> -->
       </td>
 
       <td class="lbl">Company</td>
       <td>
         <div><strong>{{ company.company_name or doc.company }}</strong></div>
-        <!-- <div class="muted">{{ company.email_id or company.company_email or company_email }}</div> -->
       </td>
     </tr>
 
@@ -354,14 +360,11 @@
 
         <div style="margin-top:12pt; gap:12pt; align-items:flex-end; justify-content:flex-end;">
           <div class="sign-box">
-            {# If you have an authorised signature image, use it here, else keep blank box #}
-            {% if doc.authorised_signature %}
-              <img src="{{ doc.authorised_signature }}" alt="Authorised Sign" style="max-height:48px;">
-            {% else %}
+            {% if signature %}
               <div>
-                <img src="{{ frappe.utils.get_url('/files/sriaas-sign-and-stam.jpg') }}" alt="Authorised Signatory">
-              </div>
-            {% endif %}
+                <img src="{{ signature }}" alt="Authorised Signatory">
+              </div>              
+            {% endif %}            
           </div>
           <div style="text-align:right; margin-top: 5pt">
             <div class="sign-caption">Authorised Signature for</div>

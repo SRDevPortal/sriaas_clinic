@@ -322,6 +322,11 @@ td, th {
 
                 {{ address_parts | join(", ") }}<br>
               {% endif %}
+
+              <!-- Bharat Address Fallback -->
+              <!-- Plot No. 52, Sector 44, <br>
+              Near Millennium City Centre<br>
+              Metro Station, Gurugram - 122003<br> -->
             
               {% if company_doc.sr_company_cin_no %}
                 <strong>CIN: </strong>{{ company_doc.sr_company_cin_no }}<br>

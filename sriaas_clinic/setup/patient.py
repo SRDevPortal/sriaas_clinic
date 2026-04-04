@@ -54,7 +54,7 @@ def _make_patient_fields():
             {"fieldname": "sr_pex_launcher_html","label":"PE Launcher","fieldtype":"HTML","read_only":1,"insert_after":"sr_pex_tab"},
 
             {"fieldname": "sr_followup_marker_tab","label":"Follow-up Marker","fieldtype":"Tab Break","insert_after":"sr_pex_launcher_html"},
-            {"fieldname": "sr_followup_day","label": "Follow-up Day","fieldtype": "Select","options": "\nMon\nTue\nWed\nThu\nFri\nSat","insert_after": "sr_followup_marker_tab","read_only": 1,"in_list_view": 1,"in_standard_filter": 1},
+            {"fieldname": "sr_followup_day","label": "Follow-up Day","fieldtype": "Select","options": "\nMon\nTue\nWed\nThu\nFri\nSat\nSun","insert_after": "sr_followup_marker_tab","read_only": 1,"in_list_view": 1,"in_standard_filter": 1},
             {"fieldname": "sr_followup_id","label": "Follow-up ID","fieldtype": "Select","options": "\n0\n1\n2\n3\n4\n5\n6\n7\n8\n9","insert_after": "sr_followup_day","read_only": 1,"in_list_view": 1,"in_standard_filter": 1},
 
             {

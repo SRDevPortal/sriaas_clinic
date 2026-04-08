@@ -99,8 +99,8 @@ def _valid_warehouse(wh_name: Optional[str], company: str) -> bool:
     return frappe.db.get_value("Warehouse", wh_name, "company") == company
 
 
+# Treat Encounter as billable when type == "Order" AND place is either "online" or "opd"
 def _is_order_online(doc) -> bool:
-    # Treat Encounter as billable when type == "Order" AND place is either "online" or "opd"
     return (
         str(doc.get(F_ENCOUNTER_TYPE) or "").strip().lower() == "order"
         and str(doc.get(F_ENCOUNTER_PLACE) or "").strip().lower() in ("online", "opd")
@@ -356,6 +356,18 @@ def _mop_account(company: str, mop: str) -> Optional[str]:
 
 
 # ---------------- Event Handlers ----------------
+def validate_order_items_required(doc, method=None):
+    """
+    Block saving Patient Encounter if Order Items are empty
+    for Order + (Online or OPD) encounters
+    """
+
+    if _is_order_online(doc) and not doc.get("sr_pe_order_items"):
+        frappe.throw(
+            "You must add at least one item in <b>Order Items</b> before saving."
+        )
+
+
 def validate_agent_status_change(doc, method):
     user = frappe.session.user
     roles = frappe.get_roles(user)

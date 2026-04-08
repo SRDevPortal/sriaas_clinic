@@ -356,18 +356,6 @@ def _mop_account(company: str, mop: str) -> Optional[str]:
 
 
 # ---------------- Event Handlers ----------------
-def validate_order_items_required(doc, method=None):
-    """
-    Block saving Patient Encounter if Order Items are empty
-    for Order + (Online or OPD) encounters
-    """
-
-    if _is_order_online(doc) and not doc.get("sr_pe_order_items"):
-        frappe.throw(
-            "You must add at least one item in <b>Order Items</b> before saving."
-        )
-
-
 def validate_agent_status_change(doc, method):
     user = frappe.session.user
     roles = frappe.get_roles(user)
@@ -419,6 +407,18 @@ def validate_agent_followup_online_source(doc, method=None):
         frappe.throw(
             "Encounter Source is mandatory for Online Follow-up or Order encounters.",
             title="Missing Required Field"
+        )
+
+
+def validate_order_items_required(doc, method=None):
+    """
+    Block saving Patient Encounter if Order Items are empty
+    for Order + (Online or OPD) encounters
+    """
+
+    if _is_order_online(doc) and not doc.get("sr_pe_order_items"):
+        frappe.throw(
+            "You must add at least one item in <b>Order Items</b> before saving."
         )
 
 

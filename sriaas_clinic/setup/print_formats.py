@@ -31,10 +31,8 @@ def _upsert_pf(name: str, doctype: str, relpath: str):
     frappe.clear_cache(doctype=doctype)
 
 def apply():
-    # Patient Encounter
     _upsert_pf("Patient Encounter New", "Patient Encounter", "print_formats/patient_encounter_new.html")
-    # Sales Invoice
     _upsert_pf("Sales Invoice New", "Sales Invoice", "print_formats/sales_invoice_new.html")
-    _upsert_pf("Sales Invoice New2", "Sales Invoice", "print_formats/sales_invoice_new2.html")
-    # Purchase Order
+    # _upsert_pf("Sales Invoice New2", "Sales Invoice", "print_formats/sales_invoice_new2.html")
+    _upsert_pf("Kit Billing Invoice", "Sales Invoice", "print_formats/kit_billing_invoice.html")
     _upsert_pf("Purchase Order New", "Purchase Order", "print_formats/purchase_order_new.html")

@@ -218,7 +218,7 @@
         <th style="width:36px;">#</th>
         <th>Item</th>
         <th style="width:90px;">HSN/SAC</th>
-        <th style="width:60px;" class="right">GST %</th>
+        <!-- <th style="width:60px;" class="right">GST %</th> -->
         <th style="width:80px;" class="right">Qty</th>
         <th style="width:90px;" class="right">Rate</th>
         <th style="width:100px;" class="right">Amount</th>
@@ -230,7 +230,7 @@
         <td>1</td>
         <td><b>{{ kit_name }}</b></td>
         <td>{{ kit_hsn }}</td>
-        <td class="right">{{ "{0:.1f}%".format((overall_gst_pct or 0)|float) }}</td>
+        <!-- <td class="right">{{ "{0:.1f}%".format((overall_gst_pct or 0)|float) }}</td> -->
         <td class="right">1</td>
         <td class="right">{{ frappe.format(kit_price, {'fieldtype':'Currency','options': doc.currency}) }}</td>
         <td class="right">{{ frappe.format(kit_price, {'fieldtype':'Currency','options': doc.currency}) }}</td>
@@ -239,7 +239,7 @@
 
     <tfoot>
         <tr>
-            <td colspan="6" class="right"><b>Subtotal</b></td>
+            <td colspan="5" class="right"><b>Subtotal</b></td>
             <td class="right">
             {{ frappe.format(kit_price, {'fieldtype':'Currency','options': doc.currency}) }}
             </td>
@@ -248,11 +248,31 @@
 
   </table>
 
+  {# ===== ADDITIONAL KIT COMPONENTS / INCLUDED ITEMS ===== #}
+  {% if doc.items %}
+    <div class="blk" style="margin-top:6pt;">
+      <div class="box" style="font-size:9.5pt; line-height:1.5;">
+        <b>Includes:</b>
+        {% for it in doc.items %}
+          (
+          {{ it.item_name }}
+          {% if it.batch_no %}, Batch No. {{ it.batch_no }}{% endif %}
+          , Unit {{ it.qty }}
+          )
+        {% endfor %}
+        <br>
+        <span class="muted">
+          Including all packaging, consultation, courier charges if any.
+        </span>
+      </div>
+    </div>
+  {% endif %}
+
   {# ===== Bottom Right: Summary / Payment / Signature ===== #}
   <table style="width:100%; table-layout:fixed; border-collapse:collapse; margin-top:10pt;">
     <tr>
       {# ===== LEFT BLOCKS ===== #}
-      <td style="width:55%; padding-right:10pt; vertical-align:top;">
+      <td style="width:55%; padding-left:0pt !important; padding-right:10pt; vertical-align:top;">
         {% if doc.remarks %}
           <div class="blk">
             <h4>Notes</h4>
@@ -327,10 +347,24 @@
             <td class="v">{{ frappe.format(taxable_amount, {'fieldtype':'Currency','options': doc.currency}) }}</td>
           </tr>
 
-          <tr>
+          <!-- <tr>
             <td class="k">IGST @{{ overall_gst_pct }}%</td>
             <td class="v">{{ frappe.format(gst_amount, {'fieldtype':'Currency','options': doc.currency}) }}</td>
-          </tr>
+          </tr> -->
+
+          {% for t in doc.taxes %}
+            {% if t.tax_amount and t.tax_amount != 0 %}
+            <tr>
+                <td class="k">
+                  {{ (t.description or t.account_head).split(" - ")[0] }}
+                  {% if t.rate %} @ {{ t.rate }}%{% endif %}
+                </td>
+                <td class="v">
+                  {{ frappe.format(t.tax_amount, {'fieldtype':'Currency','options': doc.currency}) }}
+                </td>
+            </tr>
+            {% endif %}
+          {% endfor %}
 
           <tr>
             <td class="k">Grand Total</td>

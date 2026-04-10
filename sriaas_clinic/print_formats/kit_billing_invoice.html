@@ -1,4 +1,4 @@
-{# ===== Sales Invoice New (SRIAAS Clinic) ===== #}
+{# ================= SALES INVOICE - KIT ONLY ================= #}
 
 {# ===== self-contained address renderer ===== #}
 {% macro render_addr(address_name) -%}
@@ -17,10 +17,22 @@
   {% endif %}
 {%- endmacro %}
 
-{# ===== COMPANY + TAX INVOICE HEADER ===== #}
+{# ---------- BASIC VARIABLES ---------- #}
 {% set company = frappe.get_doc("Company", doc.company) %}
-{% set currency = doc.currency or company.default_currency or "INR" %}
-{% set grand = (doc.rounded_total if doc.rounded_total else doc.grand_total) or 0 %}
+{% set currency = doc.currency or "INR" %}
+{% set grand = doc.rounded_total or doc.grand_total or 0 %}
+
+{# ---------- KIT VARIABLES (ONLY SOURCE OF ITEM DATA) ---------- #}
+{% set kit_name = doc.sr_kit_name or "Treatment Kit" %}
+{% set kit_price = doc.sr_kit_total_price or 0 %}
+{% set kit_item = frappe.get_all(
+  "Item",
+  filters={"item_name": kit_name},
+  fields=["gst_hsn_code"],
+  limit=1
+) %}
+
+{% set kit_hsn = kit_item[0].gst_hsn_code if kit_item and kit_item[0].gst_hsn_code else "-" %}
 
 {# ===== Prefer the address linked on the invoice; else first Company address ===== #}
 {% set comp_addr_name = doc.company_address %}
@@ -45,6 +57,30 @@
 {% set company_email = company.email or company.email_id or company.company_email or "" %}
 {% set company_cin = company.sr_company_cin_no or company.cin or company.company_cin or company.custom_cin or "" %}
 {% set company_gstin = doc.company_gstin or (comp_addr.gstin if comp_addr and comp_addr.gstin else "") %}
+
+{# ==== Detect GST % safely (Jinja-safe) ==== #}
+{% set ns = namespace(gst_pct=0, tax_amt=0) %}
+
+{% for t in doc.taxes %}
+  {% if t.rate %}
+    {% set ns.gst_pct = ns.gst_pct + t.rate %}
+  {% endif %}
+  {% if t.tax_amount %}
+    {% set ns.tax_amt = ns.tax_amt + t.tax_amount %}
+  {% endif %}
+{% endfor %}
+
+{# fallback for safety #}
+{% if ns.gst_pct == 0 and doc.net_total and ns.tax_amt %}
+  {% set ns.gst_pct = ((ns.tax_amt / doc.net_total) * 100) | round(2) %}
+{% endif %}
+
+{% set overall_gst_pct = ns.gst_pct %}
+
+{# ===== GST Inclusive Calculation ===== #}
+{% set gst_rate = (overall_gst_pct or 0) / 100 %}
+{% set taxable_amount = (grand / (1 + gst_rate)) | round(2) %}
+{% set gst_amount = (grand - taxable_amount) | round(2) %}
 
 <style>
   /* ===== PRINT PAGE CONTROL ===== */
@@ -82,6 +118,7 @@
   .blk { margin-bottom:10pt; }
   .blk h4 { margin:0 0 6pt; text-transform:uppercase; }
   .blk .box { border:1px solid var(--sr-border); padding:5pt 2pt; }
+  .tax-break-up .table { margin-top: 0px !important; margin-bottom: 0px !important; }
   .scanner-box { width:80px; }
   .scanner-box .info { padding-left: 10px; }
   .sum{ width:100%; }
@@ -182,57 +219,68 @@
         <th style="width:36px;">#</th>
         <th>Item</th>
         <th style="width:90px;">HSN/SAC</th>
-        <th style="width:60px;" class="right">GST %</th>
+        <!-- <th style="width:60px;" class="right">GST %</th> -->
         <th style="width:80px;" class="right">Qty</th>
         <th style="width:90px;" class="right">Rate</th>
         <th style="width:100px;" class="right">Amount</th>
       </tr>
     </thead>
+
     <tbody>
-      {% for it in (doc.items or []) %}
-        {% set name = it.item_name or it.item_code %}
-        <tr>
-          <td>{{ loop.index }}</td>
-
-          <td>{{ it.item_name or it.item_code }}</td>
-
-          <td>{{ it.gst_hsn_code or it.sac or "" }}</td>
-
-          {% set item_gst = 0 %}
-
-          {% if it.item_tax_template %}
-              {% set tax_template = frappe.get_doc("Item Tax Template", it.item_tax_template) %}
-              {% set item_gst = tax_template.gst_rate %}
-          {% endif %}
-
-          <td class="right">{{ item_gst }}%</td>
-
-          <td class="right">{{ frappe.utils.fmt_money(it.qty or 0, 0) }}</td>
-
-          <td class="right">{{ frappe.utils.fmt_money(it.rate or 0, currency=currency) }}</td>
-
-          <td class="right">{{ frappe.utils.fmt_money(it.amount or 0, currency=currency) }}</td>
-
-        </tr>
-      {% endfor %}
-
-      {% if not doc.items or doc.items|length == 0 %}
-        <tr><td colspan="7" class="muted">No items</td></tr>
-      {% endif %}
-    </tbody>
-    <tfoot>
       <tr>
-        <td colspan="6" class="right"><b>Subtotal</b></td>
-        <td class="right">{{ frappe.format(doc.total or 0, {'fieldtype':'Currency','options': doc.currency}) }}</td>
+        <td>1</td>
+        <td><b>{{ kit_name }}</b></td>
+        <td>{{ kit_hsn }}</td>
+        <!-- <td class="right">{{ "{0:.1f}%".format((overall_gst_pct or 0)|float) }}</td> -->
+        <td class="right">1</td>
+        <td class="right">{{ frappe.format(kit_price, {'fieldtype':'Currency','options': doc.currency}) }}</td>
+        <td class="right">{{ frappe.format(kit_price, {'fieldtype':'Currency','options': doc.currency}) }}</td>
       </tr>
+    </tbody>
+
+    <tfoot>
+        <tr>
+            <td colspan="5" class="right"><b>Subtotal</b></td>
+            <td class="right">
+            {{ frappe.format(kit_price, {'fieldtype':'Currency','options': doc.currency}) }}
+            </td>
+        </tr>
     </tfoot>
+
   </table>
+  
+  {# ===== ADDITIONAL KIT COMPONENTS / INCLUDED ITEMS ===== #}
+  {% if doc.items %}
+    <div class="blk" style="margin-top:6pt;">
+      <div class="box" style="font-size:9.5pt; line-height:1.5;">
+        <b>Includes:</b>
+        {% for it in doc.items %}
+          (
+          {{ it.item_name }}
+          {% if it.batch_no %}, Batch No. {{ it.batch_no }}{% endif %}
+          , Unit {{ it.qty }}
+          )
+        {% endfor %}
+        <br>
+        <span class="muted">
+          Including all packaging, consultation, courier charges if any.
+        </span>
+      </div>
+    </div>
+  {% endif %}
+
+  {# ===== GST BREAKUP TABLE ===== #}
+  {% if doc.gst_breakup_table %}
+    <div class="blk gst_tbl" style="margin-top:10pt;">
+      {{ doc.gst_breakup_table | safe }}
+    </div>
+  {% endif %}
 
   {# ===== Bottom Right: Summary / Payment / Signature ===== #}
   <table style="width:100%; table-layout:fixed; border-collapse:collapse; margin-top:10pt;">
     <tr>
       {# ===== LEFT BLOCKS ===== #}
-      <td style="width:55%; padding-right:10pt; vertical-align:top;">
+      <td style="width:55%; padding-left:0pt !important; padding-right:10pt; vertical-align:top;">
         {% if doc.remarks %}
           <div class="blk">
             <h4>Notes</h4>
@@ -301,25 +349,16 @@
       {# ===== RIGHT BLOCKS ===== #}
       <td style="width:45%; padding-left:0pt !important; padding-right:0pt !important; vertical-align:top;">
         <table class="sum">
-          {# ===== Original taxable before discount ===== #}
-          <!-- <tr>
-            <td class="k"><b>Subtotal</b></td>
-            <td class="v">{{ frappe.format(doc.total or 0, {'fieldtype':'Currency','options': doc.currency}) }}</td>
-          </tr> -->
-
-          {# ===== Discount ===== #}
-          {% if (doc.additional_discount_percentage or 0) > 0 or (doc.discount_amount or 0) > 0 %}
-          <tr>
-            <td class="k">Discount Amount</td>
-            <td class="v">- {{ frappe.format(doc.discount_amount or 0, {'fieldtype':'Currency','options': doc.currency}) }}</td>
-          </tr>
-          {% endif %}
-
           {# ===== Taxable amount after discount ===== #}
           <tr>
             <td class="k">Taxable Amount</td>
-            <td class="v">{{ frappe.format(doc.net_total or doc.total or 0, {'fieldtype':'Currency','options': doc.currency}) }}</td>
+            <td class="v">{{ frappe.format(taxable_amount, {'fieldtype':'Currency','options': doc.currency}) }}</td>
           </tr>
+
+          <!-- <tr>
+            <td class="k">IGST @{{ overall_gst_pct }}%</td>
+            <td class="v">{{ frappe.format(gst_amount, {'fieldtype':'Currency','options': doc.currency}) }}</td>
+          </tr> -->
 
           {% for t in doc.taxes %}
             {% if t.tax_amount and t.tax_amount != 0 %}

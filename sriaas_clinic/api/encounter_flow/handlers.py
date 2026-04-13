@@ -39,6 +39,7 @@ TAX_TEMPLATE_INTERSTATE = "Output GST Out-state"
 USE_POS_PAYMENTS_ROW = False
 
 DEFAULT_FALLBACK_WAREHOUSE: Optional[str] = None
+NON_KIT_ITEM_GROUP = "NON KIT ITEMS"
 
 ROW_KEYS = {
     "item_code": ["sr_item_code", "item_code"],
@@ -93,6 +94,12 @@ def _is_stock_item(item_code: str) -> int:
     return frappe.db.get_value("Item", item_code, "is_stock_item") or 0
 
 
+def _is_non_kit_item(item_code: Optional[str]) -> bool:
+    if not item_code:
+        return False
+    return frappe.db.get_value("Item", item_code, "item_group") == NON_KIT_ITEM_GROUP
+
+
 def _valid_warehouse(wh_name: Optional[str], company: str) -> bool:
     if not wh_name or not frappe.db.exists("Warehouse", wh_name):
         return False
@@ -103,6 +110,13 @@ def _valid_warehouse(wh_name: Optional[str], company: str) -> bool:
 def _is_order_online(doc) -> bool:
     return (
         str(doc.get(F_ENCOUNTER_TYPE) or "").strip().lower() == "order"
+        and str(doc.get(F_ENCOUNTER_PLACE) or "").strip().lower() in ("online", "opd")
+    )
+
+
+def _uses_draft_invoice_flow(doc) -> bool:
+    return (
+        str(doc.get(F_ENCOUNTER_TYPE) or "").strip().lower() in ("order", "appointment")
         and str(doc.get(F_ENCOUNTER_PLACE) or "").strip().lower() in ("online", "opd")
     )
 
@@ -610,7 +624,7 @@ def before_save_patient_encounter(doc, method):
 
 def clear_advance_dependent_fields(doc, method):
     """
-    Clear enc_multi_payments unless Encounter is Order + (Online or OPD).
+    Clear enc_multi_payments unless Encounter uses the Draft Invoice flow.
 
     Note: If you want to treat an empty place as allowed (to match the JS's
     `|| !place` behaviour), change the `place_allowed` logic to include `not place`.
@@ -624,9 +638,9 @@ def clear_advance_dependent_fields(doc, method):
     # Option B (if you want to match JS which shows when place is empty too):
     # place_allowed = (place in ("online", "opd")) or (place == "")
 
-    is_order_for_any_place = (etype == "order" and place_allowed)
+    uses_draft_invoice_flow = (etype in ("order", "appointment") and place_allowed)
 
-    if not is_order_for_any_place:
+    if not uses_draft_invoice_flow:
         # clear child table so payments don't persist accidentally
         if getattr(doc, "enc_multi_payments", None):
             doc.enc_multi_payments = []
@@ -644,8 +658,8 @@ def validate_required_before_submit(doc, method):
           * proof required: either mmp_payment_proof OR any sidebar attachment on the Encounter
     """
     try:
-        # Only validate for Orders — switch to `_is_order_online(doc)` if you want Online/OPD only
-        if str(doc.get(F_ENCOUNTER_TYPE) or "").strip().lower() != "order":
+        # Only validate when Draft Invoice flow is active
+        if not _uses_draft_invoice_flow(doc):
             return
 
         multi = getattr(doc, "enc_multi_payments", []) or []
@@ -712,7 +726,7 @@ def create_billing_on_submit(doc, method):
     """Run on Patient Encounter submit and create DRAFT SI (+ DRAFT PE if advance)."""
     if doc.docstatus != 1:
         return
-    if not _is_order_online(doc):
+    if not _uses_draft_invoice_flow(doc):
         return
     _create_billing_drafts_from_encounter(doc)
 
@@ -824,23 +838,27 @@ def _create_billing_drafts_from_encounter(doc):
 
     kit_name = None
 
-    for idx, it in enumerate(doc.get("sr_pe_order_items") or []):
+    for it in (doc.get("sr_pe_order_items") or []):
         qty = flt(it.sr_item_qty or 0)
+        item_code = it.sr_item_code
 
         # Entered (discounted) rate from Encounter
         entered_rate = flt(it.sr_item_rate or 0)
 
         # Actual selling rate from Item Price
         actual_rate = _get_item_selling_rate(
-            item_code=it.sr_item_code,
+            item_code=item_code,
             price_list="Standard Selling",
         )
+
+        if _is_non_kit_item(item_code):
+            continue
 
         actual_total_price += qty * actual_rate
         entered_total_price += qty * entered_rate
 
-        # First item defines Kit Name
-        if idx == 0:
+        # First kit-billable item defines Kit Name
+        if not kit_name:
             kit_name = it.sr_item_name
 
 

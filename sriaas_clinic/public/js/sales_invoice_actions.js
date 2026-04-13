@@ -1,8 +1,13 @@
 // sriaas_clinic/public/js/sales_invoice_actions.js
 
 frappe.ui.form.on('Sales Invoice', {
+  setup(frm) {
+    configure_item_grid(frm);
+  },
+
   refresh(frm) {
-    // Print Payment Entry
+    configure_item_grid(frm);
+
     const printBtn = frm.add_custom_button(__('Print Payment'), async () => {
       try {
         const r = await frappe.call({
@@ -43,41 +48,74 @@ frappe.ui.form.on('Sales Invoice', {
         frappe.msgprint(__('Could not fetch Payment Entries.'));
       }
     });
-    // decorate_button(printBtn, 'fa fa-money');
 
-    // Patient Dashboard
     if (frm.doc.patient) {
-      const dashBtn = frm.add_custom_button(__('Patient Dashboard'), () => {
+      frm.add_custom_button(__('Patient Dashboard'), () => {
         if (frm.doc.patient) {
           frappe.set_route('Form', 'Patient', frm.doc.patient);
         } else {
           frappe.msgprint(__('No Patient linked on this Sales Invoice.'));
         }
       });
-      // decorate_button(dashBtn, 'fa fa-user');
     }
   },
 });
 
+frappe.ui.form.on('Sales Invoice Item', {
+  item_tax_template(frm) {
+    recalculate_invoice(frm);
+  },
+
+  discount_percentage(frm) {
+    recalculate_invoice(frm);
+  },
+
+  qty(frm) {
+    recalculate_invoice(frm);
+  },
+
+  price_list_rate(frm) {
+    recalculate_invoice(frm);
+  },
+});
+
+function configure_item_grid(frm) {
+  const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
+  if (!grid) return;
+
+  ['amount'].forEach((fieldname) => {
+    grid.toggle_display(fieldname, false);
+    grid.update_docfield_property(fieldname, 'hidden', 1);
+  });
+
+  [
+    'batch_no',
+    'price_list_rate',
+    'rate',
+    'discount_percentage',
+    'discount_amount',
+    'item_tax_template',
+    'item_tax_rate',
+    'net_rate',
+    'sr_row_tax_amount',
+    'net_amount'
+  ].forEach((fieldname) => {
+    grid.toggle_display(fieldname, true);
+    grid.update_docfield_property(fieldname, 'hidden', 0);
+  });
+}
+
+function recalculate_invoice(frm) {
+  if (frm.cscript && typeof frm.cscript.calculate_taxes_and_totals === 'function') {
+    frm.cscript.calculate_taxes_and_totals();
+  }
+  frm.refresh_field('items');
+}
+
 function open_print(pe_name) {
   const doctype = 'Payment Entry';
-  const format = 'Standard'; // change to your custom print format if needed
+  const format = 'Standard';
   const no_letterhead = 0;
   const url = `/printview?doctype=${encodeURIComponent(doctype)}&name=${encodeURIComponent(pe_name)}&format=${encodeURIComponent(format)}&no_letterhead=${no_letterhead}`;
   window.open(frappe.urllib.get_full_url(url), '_blank');
-}
-
-// Small helper to add an icon + keep consistent style
-function decorate_button($btn, icon_class) {
-  try {
-    // $btn is a jQuery object in most builds
-    $btn.removeClass('btn-default').addClass('btn-secondary');
-    const el = $btn.get(0);
-    if (el && icon_class) {
-      // prepend icon
-      el.innerHTML = `<i class="${icon_class}" style="margin-right:6px;"></i>` + el.innerHTML;
-    }
-  } catch (e) {
-    // no-op if DOM shape changes
-  }
 }

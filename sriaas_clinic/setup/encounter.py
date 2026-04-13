@@ -31,7 +31,7 @@ def _make_encounter_fields():
                 "fieldname": "sr_encounter_type",
                 "label": "Encounter Type",
                 "fieldtype": "Select",
-                "options": "\nFollowup\nOrder",
+                "options": "\nFollowup\nOrder\nAppointment",
                 "reqd": 1,
                 "in_list_view": 1,
                 "in_standard_filter": 1,
@@ -507,9 +507,13 @@ def _setup_instructions_section():
 
 
 def _setup_draft_invoice_tab():
-    """Add Draft Invoice tab to Patient Encounter for 'Order' type encounters"""
+    """Add Draft Invoice tab to Patient Encounter for Order and Appointment encounters"""
 
     both_cond = (
+        'eval:["Order","Appointment"].includes(doc.sr_encounter_type) && '
+        '(doc.sr_encounter_place=="Online" || doc.sr_encounter_place=="OPD")'
+    )
+    order_only_cond = (
         'eval:doc.sr_encounter_type=="Order" && '
         '(doc.sr_encounter_place=="Online" || doc.sr_encounter_place=="OPD")'
     )
@@ -532,7 +536,7 @@ def _setup_draft_invoice_tab():
                 "options": "SR Delivery Type",
                 "insert_after": "sr_draft_invoice_tab",
                 "depends_on": both_cond,
-                "mandatory_depends_on": both_cond,
+                "mandatory_depends_on": order_only_cond,
             },
 
             {

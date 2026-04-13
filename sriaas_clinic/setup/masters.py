@@ -47,6 +47,7 @@ def apply():
     _ensure_sr_encounter_status()
     _ensure_sr_order_item()
     _ensure_sr_instruction()
+    _ensure_non_kit_item_group()
 
     # --------------------------------------------------------
     # Medication & Clinical Masters
@@ -158,6 +159,26 @@ def _ensure_sr_patient_disable_reason():
                 "delete": 1,
             },
         ],
+    }).insert(ignore_permissions=True)
+
+
+def _ensure_non_kit_item_group():
+    """Create NON KIT ITEMS group for items excluded from kit billing."""
+    if frappe.db.exists("Item Group", "NON KIT ITEMS"):
+        return
+
+    parent_item_group = (
+        frappe.db.exists("Item Group", "All Item Groups")
+        or frappe.db.get_value("Item Group", {"is_group": 1}, "name")
+    )
+    if not parent_item_group:
+        return
+
+    frappe.get_doc({
+        "doctype": "Item Group",
+        "item_group_name": "NON KIT ITEMS",
+        "parent_item_group": parent_item_group,
+        "is_group": 0,
     }).insert(ignore_permissions=True)
 
 

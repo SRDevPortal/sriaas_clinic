@@ -38,17 +38,17 @@ frappe.ui.form.on('Patient Encounter', {
   },
 });
 
-function is_order_for_any_place(frm) {
+function uses_draft_invoice_tab(frm) {
   const type  = (frm.doc.sr_encounter_type  || '').toLowerCase();
   const place = (frm.doc.sr_encounter_place || '').toLowerCase();
-  // show for Order + (Online OR OPD). Allow empty place while user types.
-  return type === 'order' && (place === 'online' || place === 'opd' || !place);
+  // show for Order/Appointment + (Online OR OPD). Allow empty place while user types.
+  return ['order', 'appointment'].includes(type) && (place === 'online' || place === 'opd' || !place);
 }
 
 function toggle_draft_invoice_ui(frm) {
   // Tab visibility is controlled server-side via depends_on;
   // here we toggle inner sections/fields (multi-payments only)
-  const show = is_order_for_any_place(frm);
+  const show = uses_draft_invoice_tab(frm);
 
   // Sections to show/hide.
   const sections = [

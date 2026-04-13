@@ -1,6 +1,7 @@
 # sriaas_clinic/api/si_payment_flow/handlers.py
 
 from typing import Optional, Set, Tuple
+import json
 import frappe
 from frappe.utils import nowdate, flt, money_in_words
 from erpnext.accounts.party import get_party_account
@@ -13,6 +14,7 @@ F_MOP   = "si_dp_mode_of_payment"
 F_REFNO = "si_dp_reference_no"
 F_REFD  = "si_dp_reference_date"
 F_PROOF = "si_dp_payment_proof"
+NON_KIT_ITEM_GROUP = "NON KIT ITEMS"
 
 # -----------------------------
 # Utilities
@@ -196,90 +198,218 @@ def set_created_by_agent(doc, method):
         doc.created_by_agent = user
 
 
+def _get_item_tax_template_map(item) -> dict:
+    template_name = item.get("item_tax_template")
+    if not template_name:
+        return {}
+
+    try:
+        template = frappe.get_cached_doc("Item Tax Template", template_name)
+    except Exception:
+        return {}
+
+    tax_map = {}
+    for row in template.get("taxes") or []:
+        tax_type = getattr(row, "tax_type", None)
+        tax_rate = flt(getattr(row, "tax_rate", 0))
+        if tax_type:
+            tax_map[tax_type] = tax_rate
+    return tax_map
+
+
+def _reset_parent_discount_fields(doc):
+    doc.apply_discount_on = None
+    doc.additional_discount_percentage = 0
+    doc.discount_amount = 0
+    doc.base_discount_amount = 0
+
+
+def _item_doc(item):
+    item_code = item.get("item_code")
+    if not item_code:
+        return None
+
+    try:
+        return frappe.get_cached_doc("Item", item_code)
+    except Exception:
+        return None
+
+
+def _is_non_kit_item(item) -> bool:
+    item_doc = _item_doc(item)
+    return bool(item_doc and item_doc.get("item_group") == NON_KIT_ITEM_GROUP)
+
+
+def _set_row_tax_from_template(item):
+    tax_map = _get_item_tax_template_map(item)
+    item.item_tax_rate = json.dumps(tax_map) if tax_map else "{}"
+    return tax_map
+
+
+def _sum_positive_tax_rates(tax_map: dict) -> float:
+    return sum(flt(rate) for rate in (tax_map or {}).values() if flt(rate) > 0)
+
+
+def _reset_items_to_base_price(doc):
+    for item in doc.items or []:
+        base_rate = flt(item.get("price_list_rate") or item.get("rate"))
+        qty = flt(item.get("qty") or 0) or 1
+        if base_rate > 0:
+            item.rate = base_rate
+        item.discount_percentage = 0
+        item.discount_amount = 0
+        item.distributed_discount_amount = 0
+        item.amount = flt(base_rate * qty, 6) if base_rate > 0 else 0
+        _set_row_tax_from_template(item)
+
+
+def _get_row_total(item) -> float:
+    if flt(item.get("amount")):
+        return flt(item.get("amount"))
+
+    tax_map = _get_item_tax_template_map(item)
+    tax_percent = _sum_positive_tax_rates(tax_map)
+    net_amount = flt(item.get("net_amount"))
+    if net_amount <= 0:
+        return 0.0
+    return flt(net_amount + ((net_amount * tax_percent) / 100), 6)
+
+
+def _sum_row_totals(items) -> float:
+    return sum(_get_row_total(item) for item in (items or []))
+
+
+def _split_kit_items(doc):
+    kit_items = []
+    non_kit_items = []
+    for item in doc.items or []:
+        if _is_non_kit_item(item):
+            non_kit_items.append(item)
+        else:
+            kit_items.append(item)
+    return kit_items, non_kit_items
+
+
+def _apply_discount_percentage(items, discount_pct: float):
+    multiplier = 1 - (flt(discount_pct) / 100)
+
+    for item in items or []:
+        base_rate = flt(item.get("price_list_rate") or item.get("rate"))
+        qty = flt(item.get("qty") or 0) or 1
+
+        if base_rate <= 0:
+            _set_row_tax_from_template(item)
+            continue
+
+        discounted_rate = flt(base_rate * multiplier, 6)
+        per_unit_discount = flt(base_rate - discounted_rate, 6)
+
+        item.rate = discounted_rate
+        item.discount_percentage = flt(discount_pct, 6)
+        item.discount_amount = per_unit_discount
+        item.distributed_discount_amount = flt(per_unit_discount * qty, 6)
+        item.amount = flt(discounted_rate * qty, 6)
+        _set_row_tax_from_template(item)
+
+
+def _rebalance_items_to_target_total(items, target_total: float):
+    if not items:
+        return
+
+    current_total = flt(sum(flt(item.get("amount"), 2) for item in items), 2)
+    diff = flt(flt(target_total, 2) - current_total, 2)
+    if not diff:
+        return
+
+    last_item = items[-1]
+    qty = flt(last_item.get("qty") or 0) or 1
+    adjusted_amount = flt(flt(last_item.get("amount")) + diff, 2)
+    adjusted_rate = flt(adjusted_amount / qty, 6)
+    base_rate = flt(last_item.get("price_list_rate") or last_item.get("rate"))
+
+    last_item.amount = adjusted_amount
+    last_item.rate = adjusted_rate
+
+    if base_rate > 0:
+        per_unit_discount = flt(base_rate - adjusted_rate, 6)
+        last_item.discount_amount = per_unit_discount
+        last_item.distributed_discount_amount = flt(per_unit_discount * qty, 6)
+        last_item.discount_percentage = flt((per_unit_discount / base_rate) * 100, 6)
+
+
+def _update_row_tax_debug_fields(doc):
+    for item in doc.items or []:
+        tax_map = _get_item_tax_template_map(item)
+        tax_percent = _sum_positive_tax_rates(tax_map)
+        row_total = flt(item.get("amount"))
+        taxable_value = flt(item.get("net_amount"))
+        tax_amount = flt(row_total - taxable_value)
+
+        if hasattr(item, "sr_row_tax_percent"):
+            item.sr_row_tax_percent = tax_percent
+        if hasattr(item, "sr_row_tax_amount"):
+            item.sr_row_tax_amount = tax_amount
+        if hasattr(item, "sr_row_total"):
+            item.sr_row_total = row_total
+
+
 # before_save handler
 def apply_kit_discount_from_grand_total(doc, method=None):
-    """
-    Force final payable = sr_kit_total_price
-    """
+    """Apply kit discount as one common item-level discount percentage."""
 
-    # -------------------------------
-    # HARD SAFETY
-    # -------------------------------
     if doc.doctype != "Sales Invoice":
         return
 
-    if doc.docstatus != 0:   # 🔒 never touch submitted invoices
+    if doc.docstatus != 0:
         return
-    
-    # -------------------------------
-    # ENSURE KIT VALUES
-    # -------------------------------
+
     ensure_kit_values(doc)
+    doc.disable_rounded_total = 1
+
+    _reset_parent_discount_fields(doc)
+    _reset_items_to_base_price(doc)
+    doc.sr_non_kit_total_price = 0
+
+    doc.calculate_taxes_and_totals()
+
+    kit_items, non_kit_items = _split_kit_items(doc)
+    current_kit_total = flt(_sum_row_totals(kit_items), 6)
+    current_non_kit_total = flt(_sum_row_totals(non_kit_items), 6)
+    doc.sr_non_kit_total_price = current_non_kit_total
 
     kit_price = flt(doc.sr_kit_total_price)
-    if kit_price <= 0:
+    if kit_price <= 0 or not kit_items:
+        _update_row_tax_debug_fields(doc)
         return
 
-    # -------------------------------
-    # RESET DISCOUNT
-    # -------------------------------
-    doc.apply_discount_on = "Grand Total"
-    doc.additional_discount_percentage = 0
-    doc.discount_amount = 0
-
-    # Base calculation (no discount)
-    doc.calculate_taxes_and_totals()
-
-    base_grand_total = flt(doc.base_grand_total)
-    if base_grand_total <= 0:
+    if current_kit_total <= 0:
+        _update_row_tax_debug_fields(doc)
         return
 
-    if kit_price > base_grand_total:
-        frappe.throw("Kit Price cannot be greater than Invoice Grand Total")
+    if kit_price > current_kit_total:
+        frappe.throw("Kit Price cannot be greater than the total of kit-billable items")
 
-    discount_amount = base_grand_total - kit_price
+    discount_amount = current_kit_total - kit_price
     if discount_amount <= 0:
+        _update_row_tax_debug_fields(doc)
         return
-    
-    discount_pct = (discount_amount / base_grand_total) * 100
 
-    # -------------------------------
-    # APPLY DISCOUNT
-    # -------------------------------
-    doc.additional_discount_percentage = flt(discount_pct, 6)
+    discount_pct = (discount_amount / current_kit_total) * 100
+    if discount_pct <= 0:
+        _update_row_tax_debug_fields(doc)
+        return
 
-    # Final ERPNext calc
+    _apply_discount_percentage(kit_items, discount_pct)
+    _reset_parent_discount_fields(doc)
     doc.calculate_taxes_and_totals()
+    _rebalance_items_to_target_total(kit_items, kit_price)
+    _, non_kit_items = _split_kit_items(doc)
+    doc.sr_non_kit_total_price = flt(_sum_row_totals(non_kit_items), 6)
+    _update_row_tax_debug_fields(doc)
 
-    # -------------------------------
-    # LOCK FINAL PAYABLE
-    # -------------------------------
-    doc.rounded_total = kit_price
-    doc.grand_total = kit_price
-    doc.outstanding_amount = kit_price
-
-    # -------------------------------
-    # FIX IN-WORDS (REQUIRED)
-    # -------------------------------
-    doc.in_words = money_in_words(
-        doc.grand_total,
-        doc.currency
-    )
-
-    doc.base_in_words = money_in_words(
-        doc.grand_total,
-        doc.company_currency
-    )
-
-    # -------------------------------
-    # CLEAN ITEM-LEVEL DISCOUNTS
-    # (ONLY FOR KIT-BASED INVOICES)
-    # -------------------------------
-    if doc.get("source_encounter") and flt(doc.sr_kit_total_price) > 0:
-        for item in doc.items:
-            item.discount_percentage = 0
-            item.discount_amount = 0
-            item.distributed_discount_amount = 0
+    doc.outstanding_amount = doc.grand_total
+    doc.in_words = money_in_words(doc.grand_total, doc.currency)
+    doc.base_in_words = money_in_words(doc.grand_total, doc.company_currency)
 
 
 # before_submit handler
@@ -473,3 +603,9 @@ def create_pe_from_si_dp(si, method):
     )
 
     refresh_payment_history(si)
+
+
+
+
+
+

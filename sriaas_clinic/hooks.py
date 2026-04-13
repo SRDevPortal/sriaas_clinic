@@ -120,6 +120,12 @@ doc_events = {
         ],
     },
     "Sales Invoice": {
+        "onload": [
+            "sriaas_clinic.api.gst_breakup.update_gst_breakup_table",
+        ],
+        "before_print": [
+            "sriaas_clinic.api.gst_breakup.update_gst_breakup_table",
+        ],
         "before_insert": [
             "sriaas_clinic.api.si_payment_flow.handlers.set_created_by_agent",
         ],
@@ -129,6 +135,7 @@ doc_events = {
         "before_save": [
             "sriaas_clinic.api.sales_invoice_cost.before_save",
             "sriaas_clinic.api.si_payment_flow.handlers.apply_kit_discount_from_grand_total",
+            "sriaas_clinic.api.gst_breakup.refresh_gst_breakup_on_save",
         ],
         "before_submit": [
             "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
@@ -139,7 +146,7 @@ doc_events = {
             "sriaas_clinic.api.encounter_flow.handlers.link_pending_payment_entries",
             # "sriaas_clinic.api.si_payment_flow.handlers.create_pe_from_si_dp",
             # "sriaas_clinic.api.integrations.n8n_shiprocket.send_to_n8n_on_submit",
-        ],        
+        ],
         "before_cancel": [
             "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
         ],

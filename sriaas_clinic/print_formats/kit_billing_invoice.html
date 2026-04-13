@@ -20,7 +20,7 @@
 {# ---------- BASIC VARIABLES ---------- #}
 {% set company = frappe.get_doc("Company", doc.company) %}
 {% set currency = doc.currency or "INR" %}
-{% set grand = doc.rounded_total or doc.grand_total or 0 %}
+{% set grand = doc.grand_total or doc.rounded_total or 0 %}
 
 {# ---------- KIT VARIABLES (ONLY SOURCE OF ITEM DATA) ---------- #}
 {% set kit_name = doc.sr_kit_name or "Treatment Kit" %}
@@ -33,6 +33,17 @@
 ) %}
 
 {% set kit_hsn = kit_item[0].gst_hsn_code if kit_item and kit_item[0].gst_hsn_code else "-" %}
+{% set item_groups = namespace(kit_items=[], non_kit_items=[]) %}
+{% set totals = namespace(kit_taxable_total=0) %}
+{% for it in (doc.items or []) %}
+  {% set item_group = frappe.db.get_value("Item", it.item_code, "item_group") if it.item_code else "" %}
+  {% if item_group == "NON KIT ITEMS" %}
+    {% set _ = item_groups.non_kit_items.append(it) %}
+  {% else %}
+    {% set _ = item_groups.kit_items.append(it) %}
+    {% set totals.kit_taxable_total = totals.kit_taxable_total + (it.net_amount or 0) %}
+  {% endif %}
+{% endfor %}
 
 {# ===== Prefer the address linked on the invoice; else first Company address ===== #}
 {% set comp_addr_name = doc.company_address %}
@@ -77,10 +88,9 @@
 
 {% set overall_gst_pct = ns.gst_pct %}
 
-{# ===== GST Inclusive Calculation ===== #}
-{% set gst_rate = (overall_gst_pct or 0) / 100 %}
-{% set taxable_amount = (grand / (1 + gst_rate)) | round(2) %}
-{% set gst_amount = (grand - taxable_amount) | round(2) %}
+{# ===== Summary totals should come from saved invoice values, not a blended GST reverse calculation ===== #}
+{% set taxable_amount = doc.net_total or 0 %}
+{% set gst_amount = doc.total_taxes_and_charges or 0 %}
 
 <style>
   /* ===== PRINT PAGE CONTROL ===== */
@@ -222,6 +232,7 @@
         <!-- <th style="width:60px;" class="right">GST %</th> -->
         <th style="width:80px;" class="right">Qty</th>
         <th style="width:90px;" class="right">Rate</th>
+        <th style="width:100px;" class="right">Taxable Amt</th>
         <th style="width:100px;" class="right">Amount</th>
       </tr>
     </thead>
@@ -234,13 +245,14 @@
         <!-- <td class="right">{{ "{0:.1f}%".format((overall_gst_pct or 0)|float) }}</td> -->
         <td class="right">1</td>
         <td class="right">{{ frappe.format(kit_price, {'fieldtype':'Currency','options': doc.currency}) }}</td>
+        <td class="right">{{ frappe.format((totals.kit_taxable_total or 0), {'fieldtype':'Currency','options': doc.currency}) }}</td>
         <td class="right">{{ frappe.format(kit_price, {'fieldtype':'Currency','options': doc.currency}) }}</td>
       </tr>
     </tbody>
 
     <tfoot>
         <tr>
-            <td colspan="5" class="right"><b>Subtotal</b></td>
+            <td colspan="6" class="right"><b>Subtotal</b></td>
             <td class="right">
             {{ frappe.format(kit_price, {'fieldtype':'Currency','options': doc.currency}) }}
             </td>
@@ -248,13 +260,53 @@
     </tfoot>
 
   </table>
+
+  {% if item_groups.non_kit_items %}
+  <table class="tbl" style="margin-top:10pt;">
+    <thead>
+      <tr style="background:#fafbfc;">
+        <th colspan="7" style="text-align:left;">Non Kit Items</th>
+      </tr>
+      <tr style="background:#fafbfc;">
+        <th style="width:36px;">#</th>
+        <th>Item</th>
+        <th style="width:90px;">HSN/SAC</th>
+        <th style="width:70px;" class="right">Qty</th>
+        <th style="width:90px;" class="right">Rate</th>
+        <th style="width:100px;" class="right">Taxable Amt</th>
+        <th style="width:100px;" class="right">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for it in item_groups.non_kit_items %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ it.item_name or it.item_code }}</td>
+        <td>{{ it.gst_hsn_code or "-" }}</td>
+        <td class="right">{{ it.qty }}</td>
+        <td class="right">{{ frappe.format(it.rate, {'fieldtype':'Currency','options': doc.currency}) }}</td>
+        <td class="right">{{ frappe.format(it.net_amount, {'fieldtype':'Currency','options': doc.currency}) }}</td>
+        <td class="right">{{ frappe.format(it.amount, {'fieldtype':'Currency','options': doc.currency}) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="6" class="right"><b>Non Kit Total</b></td>
+        <td class="right">
+          {{ frappe.format((doc.sr_non_kit_total_price or 0), {'fieldtype':'Currency','options': doc.currency}) }}
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+  {% endif %}
   
   {# ===== ADDITIONAL KIT COMPONENTS / INCLUDED ITEMS ===== #}
-  {% if doc.items %}
+  {% if item_groups.kit_items %}
     <div class="blk" style="margin-top:6pt;">
       <div class="box" style="font-size:9.5pt; line-height:1.5;">
         <b>Includes:</b>
-        {% for it in doc.items %}
+        {% for it in item_groups.kit_items %}
           (
           {{ it.item_name }}
           {% if it.batch_no %}, Batch No. {{ it.batch_no }}{% endif %}
@@ -376,7 +428,7 @@
 
           <tr>
             <td class="k">Grand Total</td>
-            <td class="v">{{ (doc.rounded_total and doc.get_formatted('rounded_total')) or doc.get_formatted('grand_total') }}</td>
+            <td class="v">{{ doc.get_formatted('grand_total') }}</td>
           </tr>
 
           {# ===== Received = allocated advances on this invoice ===== #}

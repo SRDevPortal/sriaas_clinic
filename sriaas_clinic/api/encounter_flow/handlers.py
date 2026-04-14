@@ -583,8 +583,8 @@ def set_default_encounter_status(doc, method):
 
 def enforce_agent_encounter_place(doc, method=None):
     """
-    Force Encounter Place = Online ONLY for pure Agent users.
-    Admin / Doctor / System Manager are allowed OPD.
+    Force Encounter Place = Online for pure Agent users only when
+    Encounter Type is Followup or Order. Appointment may be Online or OPD.
     """
     user = frappe.session.user
     roles = frappe.get_roles(user)
@@ -596,7 +596,7 @@ def enforce_agent_encounter_place(doc, method=None):
         and "Healthcare Practitioner" not in roles
     )
 
-    if is_pure_agent:
+    if is_pure_agent and doc.sr_encounter_type in ("Followup", "Order"):
         doc.sr_encounter_place = "Online"
 
 

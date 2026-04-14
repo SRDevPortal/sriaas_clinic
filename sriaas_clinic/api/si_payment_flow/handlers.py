@@ -403,6 +403,7 @@ def apply_kit_discount_from_grand_total(doc, method=None):
     _reset_parent_discount_fields(doc)
     doc.calculate_taxes_and_totals()
     _rebalance_items_to_target_total(kit_items, kit_price)
+    doc.calculate_taxes_and_totals()
     _, non_kit_items = _split_kit_items(doc)
     doc.sr_non_kit_total_price = flt(_sum_row_totals(non_kit_items), 6)
     _update_row_tax_debug_fields(doc)
@@ -603,9 +604,3 @@ def create_pe_from_si_dp(si, method):
     )
 
     refresh_payment_history(si)
-
-
-
-
-
-

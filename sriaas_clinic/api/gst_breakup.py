@@ -27,6 +27,22 @@ def update_gst_breakup_table(doc, method=None, *args, **kwargs):
     doc.set("gst_breakup_table", _render_breakup_html(doc, breakup_data))
 
 
+
+def prepare_gst_validation_fields(doc, method=None, *args, **kwargs):
+    if doc.doctype != "Sales Invoice":
+        return
+
+    for item in doc.get("items") or []:
+        taxable_amount = flt(
+            item.get("base_net_amount")
+            or item.get("net_amount")
+            or item.get("taxable_value")
+            or 0,
+            BREAKUP_PRECISION,
+        )
+        item.taxable_value = taxable_amount
+        if hasattr(item, "base_taxable_value"):
+            item.base_taxable_value = taxable_amount
 def refresh_gst_breakup_on_save(doc, method=None, *args, **kwargs):
     if doc.doctype != "Sales Invoice":
         return
@@ -64,19 +80,18 @@ def _build_breakup_rows_from_items(doc) -> list[OrderedDict]:
     rows_by_key: OrderedDict[tuple, OrderedDict] = OrderedDict()
 
     for item in doc.get("items") or []:
-        row_total = flt(item.get("amount"), BREAKUP_PRECISION)
-        taxable_amount = flt(item.get("net_amount"), BREAKUP_PRECISION)
-        tax_total = flt(row_total - taxable_amount, BREAKUP_PRECISION)
-
-        tax_rates = {
-            "IGST": flt(item.get("igst_rate"), BREAKUP_PRECISION),
-            "CGST": flt(item.get("cgst_rate"), BREAKUP_PRECISION),
-            "SGST": flt(item.get("sgst_rate"), BREAKUP_PRECISION),
-            "CESS": flt(item.get("cess_rate"), BREAKUP_PRECISION),
-            "CESS Non Advol": flt(item.get("cess_non_advol_rate"), BREAKUP_PRECISION),
-        }
-        active_headers = [header for header, rate in tax_rates.items() if rate]
-        primary_rate = next((tax_rates[header] for header in TAX_HEADERS if tax_rates[header]), 0.0)
+        taxable_amount = flt(
+            item.get("taxable_value")
+            or item.get("net_amount")
+            or 0,
+            BREAKUP_PRECISION,
+        )
+        row_tax_breakdown = _get_item_tax_breakdown(item)
+        active_headers = [header for header in TAX_HEADERS if row_tax_breakdown.get(header)]
+        primary_rate = next(
+            (row_tax_breakdown[header]["tax_rate"] for header in TAX_HEADERS if row_tax_breakdown.get(header)),
+            0.0,
+        )
         row_key = (
             item.get("gst_hsn_code") or item.get("item_code") or item.get("item_name"),
             primary_rate,
@@ -92,23 +107,15 @@ def _build_breakup_rows_from_items(doc) -> list[OrderedDict]:
         )
         row["Taxable Amount"] = flt(row["Taxable Amount"] + taxable_amount, BREAKUP_PRECISION)
 
-        allocated = 0.0
-        total_rate = sum(tax_rates[header] for header in active_headers)
-        for index, header in enumerate(active_headers):
-            header_rate = tax_rates[header]
+        for header in active_headers:
             tax_data = row.setdefault(
                 header,
-                {"tax_rate": header_rate, "tax_amount": 0.0},
+                {"tax_rate": row_tax_breakdown[header]["tax_rate"], "tax_amount": 0.0},
             )
-            if total_rate <= 0:
-                header_tax_amount = 0.0
-            elif index == len(active_headers) - 1:
-                header_tax_amount = flt(tax_total - allocated, BREAKUP_PRECISION)
-            else:
-                header_tax_amount = flt(tax_total * (header_rate / total_rate), BREAKUP_PRECISION)
-                allocated += header_tax_amount
-
-            tax_data["tax_amount"] = flt(tax_data["tax_amount"] + header_tax_amount, BREAKUP_PRECISION)
+            tax_data["tax_amount"] = flt(
+                tax_data["tax_amount"] + row_tax_breakdown[header]["tax_amount"],
+                BREAKUP_PRECISION,
+            )
 
     return list(rows_by_key.values())
 
@@ -144,10 +151,13 @@ def _get_item_derived_tax_totals(doc) -> dict[str, float]:
 
 
 def _get_item_tax_breakdown(item) -> dict[str, dict[str, float]]:
-    row_total = flt(item.get("amount"), BREAKUP_PRECISION)
-    taxable_amount = flt(item.get("net_amount"), BREAKUP_PRECISION)
-    tax_total = flt(row_total - taxable_amount, BREAKUP_PRECISION)
-    if not tax_total:
+    taxable_amount = flt(
+        item.get("taxable_value")
+        or item.get("net_amount")
+        or 0,
+        BREAKUP_PRECISION,
+    )
+    if taxable_amount <= 0:
         return {}
 
     tax_rates = {
@@ -158,19 +168,13 @@ def _get_item_tax_breakdown(item) -> dict[str, dict[str, float]]:
         "CESS Non Advol": flt(item.get("cess_non_advol_rate"), BREAKUP_PRECISION),
     }
     active_headers = [header for header, rate in tax_rates.items() if rate]
-    total_rate = sum(tax_rates[header] for header in active_headers)
-    if total_rate <= 0:
+    if not active_headers:
         return {}
 
     breakdown = {}
-    allocated = 0.0
-    for index, header in enumerate(active_headers):
+    for header in active_headers:
         header_rate = tax_rates[header]
-        if index == len(active_headers) - 1:
-            header_tax_amount = flt(tax_total - allocated, BREAKUP_PRECISION)
-        else:
-            header_tax_amount = flt(tax_total * (header_rate / total_rate), BREAKUP_PRECISION)
-            allocated += header_tax_amount
+        header_tax_amount = flt((taxable_amount * header_rate) / 100, BREAKUP_PRECISION)
 
         breakdown[header] = {
             "tax_rate": header_rate,
@@ -182,12 +186,22 @@ def _get_item_tax_breakdown(item) -> dict[str, dict[str, float]]:
 
 def _sync_item_tax_fields(doc) -> None:
     for item in doc.get("items") or []:
-        taxable_amount = flt(item.get("net_amount"), BREAKUP_PRECISION)
+        taxable_amount = flt(
+            item.get("taxable_value")
+            or item.get("net_amount")
+            or 0,
+            BREAKUP_PRECISION,
+        )
         row_tax_breakdown = _get_item_tax_breakdown(item)
 
         item.taxable_value = taxable_amount
         if hasattr(item, "base_taxable_value"):
-            item.base_taxable_value = flt(item.get("base_net_amount") or taxable_amount, BREAKUP_PRECISION)
+            item.base_taxable_value = flt(
+                item.get("base_taxable_value")
+                or item.get("base_net_amount")
+                or taxable_amount,
+                BREAKUP_PRECISION,
+            )
 
         item.igst_amount = flt(row_tax_breakdown.get("IGST", {}).get("tax_amount", 0), BREAKUP_PRECISION)
         item.cgst_amount = flt(row_tax_breakdown.get("CGST", {}).get("tax_amount", 0), BREAKUP_PRECISION)
@@ -334,3 +348,4 @@ def _render_breakup_html(doc, breakup_data: list[OrderedDict]) -> str:
     lines.append("\t</table>")
     lines.append("</div>")
     return "".join(lines)
+

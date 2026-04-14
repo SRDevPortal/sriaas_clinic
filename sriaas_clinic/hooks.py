@@ -129,12 +129,15 @@ doc_events = {
         "before_insert": [
             "sriaas_clinic.api.si_payment_flow.handlers.set_created_by_agent",
         ],
+        "before_validate": [
+            "sriaas_clinic.api.si_payment_flow.handlers.apply_kit_discount_from_grand_total",
+            "sriaas_clinic.api.gst_breakup.prepare_gst_validation_fields",
+        ],
         "validate": [
             "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
         ],
         "before_save": [
             "sriaas_clinic.api.sales_invoice_cost.before_save",
-            "sriaas_clinic.api.si_payment_flow.handlers.apply_kit_discount_from_grand_total",
             "sriaas_clinic.api.gst_breakup.refresh_gst_breakup_on_save",
         ],
         "before_submit": [

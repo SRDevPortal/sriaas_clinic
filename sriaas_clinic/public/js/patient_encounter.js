@@ -16,6 +16,7 @@ frappe.ui.form.on('Patient Encounter', {
     },
 
     sr_encounter_type(frm) {
+        handle_encounter_place_access(frm);
         handle_encounter_source_requirement(frm);
     },
 
@@ -40,6 +41,7 @@ function apply_encounter_access_rules(frm) {
 // --------------------------------------------------
 function handle_encounter_place_access(frm) {
     const roles = frappe.user_roles || [];
+    const encounter_type = frm.doc.sr_encounter_type;
 
     const is_pure_agent =
         roles.includes('Agent') &&
@@ -48,15 +50,25 @@ function handle_encounter_place_access(frm) {
         !roles.includes('Healthcare Practitioner');
 
     if (is_pure_agent) {
-        // Agent-only users → Online only
-        if (frm.doc.sr_encounter_place !== 'Online') {
-            frm.set_value('sr_encounter_place', 'Online');
+        if (['Followup', 'Order'].includes(encounter_type)) {
+            if (frm.doc.sr_encounter_place !== 'Online') {
+                frm.set_value('sr_encounter_place', 'Online');
+            }
+            frm.set_df_property('sr_encounter_place', 'read_only', 1);
+            return;
         }
+
+        if (encounter_type === 'Appointment') {
+            frm.set_df_property('sr_encounter_place', 'read_only', 0);
+            return;
+        }
+
         frm.set_df_property('sr_encounter_place', 'read_only', 1);
-    } else {
-        // Admin / Doctor / Others → full access
-        frm.set_df_property('sr_encounter_place', 'read_only', 0);
+        return;
     }
+
+    // Admin / Doctor / Others -> full access
+    frm.set_df_property('sr_encounter_place', 'read_only', 0);
 }
 
 
@@ -156,7 +168,7 @@ frappe.ui.form.on('SR Multi Mode Payment', {
 
 function apply_active_master_filters(frm) {
 
-    // SR Delivery Type → only active
+    // SR Delivery Type -> only active
     frm.set_query("sr_delivery_type", function() {
         return {
             filters: {
@@ -165,7 +177,7 @@ function apply_active_master_filters(frm) {
         };
     });
 
-    // SR Medication Template → only active
+    // SR Medication Template -> only active
     frm.set_query("sr_medication_template", function() {
         return {
             filters: {
@@ -174,7 +186,7 @@ function apply_active_master_filters(frm) {
         };
     });
 
-    // SR Encounter Status → only active
+    // SR Encounter Status -> only active
     frm.set_query("sr_encounter_status", function() {
         return {
             filters: {
@@ -183,7 +195,7 @@ function apply_active_master_filters(frm) {
         };
     });
 
-    // SR Encounter Source → only active
+    // SR Encounter Source -> only active
     frm.set_query("sr_encounter_source", function() {
         return {
             filters: {
@@ -192,7 +204,7 @@ function apply_active_master_filters(frm) {
         };
     });
 
-    // SR Sales Type → only active
+    // SR Sales Type -> only active
     frm.set_query("sr_sales_type", function() {
         return {
             filters: {

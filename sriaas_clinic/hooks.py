@@ -30,6 +30,7 @@ list_js = {
 
 doctype_list_js = {
     "CRM Lead": "public/js/crm_lead_list.js",
+    "Patient Encounter": "public/js/patient_encounter_list.js",
 }
 
 permission_query_conditions = {

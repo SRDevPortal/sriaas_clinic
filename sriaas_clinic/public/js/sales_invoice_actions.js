@@ -82,8 +82,16 @@ frappe.ui.form.on('Sales Invoice Item', {
 function configure_item_grid(frm) {
   const grid = frm.fields_dict.items && frm.fields_dict.items.grid;
   if (!grid) return;
+  const childDoctype = grid.doctype || (grid.df && grid.df.options);
+  const hasField = (fieldname) => {
+    if (!childDoctype || !frappe.meta || typeof frappe.meta.get_docfield !== 'function') {
+      return false;
+    }
+    return !!frappe.meta.get_docfield(childDoctype, fieldname, frm.doc.name);
+  };
 
   ['amount'].forEach((fieldname) => {
+    if (!hasField(fieldname)) return;
     grid.toggle_display(fieldname, false);
     grid.update_docfield_property(fieldname, 'hidden', 1);
   });
@@ -100,6 +108,7 @@ function configure_item_grid(frm) {
     'sr_row_tax_amount',
     'net_amount'
   ].forEach((fieldname) => {
+    if (!hasField(fieldname)) return;
     grid.toggle_display(fieldname, true);
     grid.update_docfield_property(fieldname, 'hidden', 0);
   });

@@ -3,9 +3,11 @@
 import os
 import frappe
 from frappe.core.doctype.file.file import File
+from frappe.core.doctype.file import file as file_module
 from frappe.utils.file_manager import get_file_path
 
 from .utils import extract_key, is_s3_enabled
+from .client import get_s3_client, get_bucket
 from .upload import upload_file_to_s3
 from .delete import delete_file_from_s3
 
@@ -15,6 +17,9 @@ from .delete import delete_file_from_s3
 # ==================================================
 
 _original_exists_on_disk = File.exists_on_disk
+
+if "s3://" not in file_module.URL_PREFIXES:
+    file_module.URL_PREFIXES = (*file_module.URL_PREFIXES, "s3://")
 
 
 def s3_safe_exists_on_disk(self):
@@ -65,6 +70,50 @@ def s3_safe_file_validate(self):
 
 
 File.validate = s3_safe_file_validate
+
+
+# ==================================================
+# PATCH 4: Read S3 files as remote content
+# ==================================================
+
+_original_get_full_path = File.get_full_path
+_original_get_content = File.get_content
+
+
+def s3_safe_get_full_path(self):
+    """
+    Keep S3 URLs out of local path validation.
+    """
+    if self.file_url and str(self.file_url).startswith("s3://"):
+        return self.file_url
+    return _original_get_full_path(self)
+
+
+def s3_safe_get_content(self):
+    """
+    Download bytes from S3 when Frappe asks for file content.
+    """
+    if self.file_url and str(self.file_url).startswith("s3://"):
+        key = extract_key(self.file_url)
+        s3 = get_s3_client()
+        bucket = get_bucket()
+
+        if not key or not s3 or not bucket:
+            frappe.throw(f"Cannot read S3 file: {self.file_url}")
+
+        try:
+            response = s3.get_object(Bucket=bucket, Key=key)
+            self._content = response["Body"].read()
+            return self._content
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "S3_READ_FAILED")
+            frappe.throw(f"Cannot read S3 file: {self.file_url}")
+
+    return _original_get_content(self)
+
+
+File.get_full_path = s3_safe_get_full_path
+File.get_content = s3_safe_get_content
 
 
 # ==================================================

@@ -98,6 +98,7 @@ doc_events = {
             "sriaas_clinic.api.encounter_flow.handlers.enforce_agent_encounter_place",
             "sriaas_clinic.api.encounter_flow.handlers.before_save_patient_encounter",
             "sriaas_clinic.api.encounter_flow.handlers.clear_advance_dependent_fields",
+            "sriaas_clinic.api.s3.file_hooks.cleanup_payment_proof_removals",
         ],
         "before_submit": [
             "sriaas_clinic.api.encounter_flow.handlers.validate_required_before_submit",

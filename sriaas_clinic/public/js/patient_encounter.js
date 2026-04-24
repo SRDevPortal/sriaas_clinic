@@ -146,26 +146,6 @@ function intercept_s3_attachments(frm) {
 }
 
 
-// --------------------------------------------------
-// Child Table: SR Multi Mode Payment
-// --------------------------------------------------
-frappe.ui.form.on('SR Multi Mode Payment', {
-    mmp_payment_proof(frm, cdt, cdn) {
-        const row = frappe.get_doc(cdt, cdn);
-
-        if (!row.mmp_payment_proof && row.__last_proof) {
-            frappe.call({
-                method: 'sriaas_clinic.api.s3.delete.delete_s3_by_url',
-                args: { file_url: row.__last_proof },
-                silent: true
-            });
-        }
-
-        row.__last_proof = row.mmp_payment_proof;
-    }
-});
-
-
 function apply_active_master_filters(frm) {
 
     // SR Delivery Type -> only active

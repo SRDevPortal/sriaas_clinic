@@ -122,6 +122,53 @@ File.get_content = s3_safe_get_content
 
 logger = frappe.logger("sriaas_s3")
 
+PAYMENT_PROOF_PARENT_DOCTYPE = "Patient Encounter"
+PAYMENT_PROOF_FIELD = "mmp_payment_proof"
+
+
+def _skip_s3_delete_file_names():
+    skip_names = getattr(frappe.flags, "sriaas_skip_s3_delete_file_names", None)
+    if skip_names is None:
+        skip_names = set()
+        frappe.flags.sriaas_skip_s3_delete_file_names = skip_names
+    return skip_names
+
+
+def _is_payment_proof_file(doc):
+    return (
+        doc.attached_to_doctype == PAYMENT_PROOF_PARENT_DOCTYPE
+        and doc.attached_to_field == PAYMENT_PROOF_FIELD
+    )
+
+
+def _delete_file_doc_only(file_name):
+    if not file_name:
+        return
+
+    skip_names = _skip_s3_delete_file_names()
+    skip_names.add(file_name)
+    try:
+        frappe.delete_doc("File", file_name, ignore_permissions=True)
+    except frappe.DoesNotExistError:
+        pass
+    finally:
+        skip_names.discard(file_name)
+
+
+def _delete_payment_proof_file_docs(attached_to_name=None, file_url=None):
+    filters = {
+        "attached_to_doctype": PAYMENT_PROOF_PARENT_DOCTYPE,
+        "attached_to_field": PAYMENT_PROOF_FIELD,
+    }
+
+    if attached_to_name:
+        filters["attached_to_name"] = attached_to_name
+    if file_url:
+        filters["file_url"] = file_url
+
+    for file_name in frappe.get_all("File", filters=filters, pluck="name"):
+        _delete_file_doc_only(file_name)
+
 
 # ==================================================
 # Hook: after_insert on File (Upload → S3 OR Local)
@@ -186,6 +233,12 @@ def handle_file_after_insert(doc, method=None):
         s3_url = f"s3://{key}"
         doc.db_set("file_url", s3_url, update_modified=False)
 
+        if _is_payment_proof_file(doc):
+            if local_path and os.path.exists(local_path):
+                os.remove(local_path)
+            _delete_file_doc_only(doc.name)
+            return
+
         # --------------------------------------------------
         # 4️⃣ Delete local file
         # --------------------------------------------------
@@ -201,7 +254,9 @@ def handle_file_after_insert(doc, method=None):
 # ==================================================
 
 def handle_file_on_trash(doc, method=None):
-    
+    if doc.name in _skip_s3_delete_file_names():
+        return
+
     if not doc.file_url:
         return
     
@@ -215,3 +270,36 @@ def handle_file_on_trash(doc, method=None):
 
     except Exception:
         frappe.log_error(frappe.get_traceback(), "S3_DELETE_FAILED")
+
+
+def cleanup_payment_proof_removals(doc, method=None):
+    previous_doc = doc.get_doc_before_save()
+    if not previous_doc:
+        return
+
+    previous_rows = {
+        row.name: (row.mmp_payment_proof or "").strip()
+        for row in (previous_doc.get("enc_multi_payments") or [])
+        if getattr(row, "name", None)
+    }
+    current_rows = {
+        row.name: (row.mmp_payment_proof or "").strip()
+        for row in (doc.get("enc_multi_payments") or [])
+        if getattr(row, "name", None)
+    }
+    current_urls = {url for url in current_rows.values() if url}
+    deleted_urls = set()
+
+    for row_name, old_url in previous_rows.items():
+        if not old_url:
+            continue
+
+        if current_rows.get(row_name) == old_url:
+            continue
+
+        if old_url in current_urls or old_url in deleted_urls:
+            continue
+
+        _delete_payment_proof_file_docs(attached_to_name=doc.name, file_url=old_url)
+        delete_file_from_s3(old_url)
+        deleted_urls.add(old_url)

@@ -1,5 +1,9 @@
 # sriaas_clinic/setup/print_formats.py
-import os, frappe
+import os
+import shutil
+import subprocess
+
+import frappe
 from .utils import MODULE_DEF_NAME, upsert_property_setter
 
 def _load(relpath: str) -> str:
@@ -30,7 +34,41 @@ def _upsert_pf(name: str, doctype: str, relpath: str):
     upsert_property_setter(doctype, None, "default_print_format", name, "Data", module=MODULE_DEF_NAME)
     frappe.clear_cache(doctype=doctype)
 
+def _install_pdf_fonts():
+    """
+    Register bundled fonts for wkhtmltopdf.
+
+    wkhtmltopdf is more reliable with fontconfig-installed fonts than with
+    @font-face URLs/data URIs, especially for Devanagari in generated PDFs.
+    """
+    app_path = frappe.get_app_path("sriaas_clinic")
+    source_dir = os.path.join(app_path, "public", "fonts")
+    if not os.path.isdir(source_dir):
+        return
+
+    target_dir = os.path.expanduser("~/.local/share/fonts")
+    os.makedirs(target_dir, exist_ok=True)
+
+    copied = False
+    for filename in os.listdir(source_dir):
+        if not filename.lower().endswith((".ttf", ".otf")):
+            continue
+
+        source = os.path.join(source_dir, filename)
+        target = os.path.join(target_dir, filename)
+        shutil.copy2(source, target)
+        copied = True
+
+    if copied and shutil.which("fc-cache"):
+        subprocess.run(
+            ["fc-cache", "-f", target_dir],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
 def apply():
+    _install_pdf_fonts()
     _upsert_pf("Patient Encounter New", "Patient Encounter", "print_formats/patient_encounter_new.html")
     _upsert_pf("Sales Invoice New", "Sales Invoice", "print_formats/sales_invoice_new.html")
     # _upsert_pf("Sales Invoice New2", "Sales Invoice", "print_formats/sales_invoice_new2.html")

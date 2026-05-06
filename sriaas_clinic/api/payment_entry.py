@@ -5,6 +5,143 @@ from frappe.utils import flt, nowdate
 from frappe import _
 
 
+def hydrate_missing_party_and_reference_fields(doc, method=None):
+    """
+    Restore standard Payment Entry fields that can be missing from the form payload
+    when local DocField metadata is stale, before ERPNext/HRMS validation runs.
+    """
+    if doc.get("party"):
+        _hydrate_missing_reference_fields(doc)
+        return
+
+    party = None
+    intended_si = doc.get("intended_sales_invoice")
+
+    if not doc.is_new() and frappe.db.has_column("Payment Entry", "party"):
+        party = frappe.db.get_value("Payment Entry", doc.name, "party")
+
+    if not party and intended_si:
+        party = frappe.db.get_value("Sales Invoice", intended_si, "customer")
+
+    if not party:
+        party = _get_party_from_reference_rows(doc)
+
+    if party:
+        doc.party_type = doc.get("party_type") or "Customer"
+        doc.party = party
+
+        if not doc.get("party_name"):
+            doc.party_name = frappe.db.get_value("Customer", party, "customer_name") or party
+
+        if doc.name and frappe.db.has_column("Payment Entry", "party") and not frappe.db.get_value("Payment Entry", doc.name, "party"):
+            frappe.db.set_value("Payment Entry", doc.name, "party", party, update_modified=False)
+
+    _hydrate_missing_reference_fields(doc)
+
+
+def _get_party_from_reference_rows(doc):
+    for row in doc.get("references") or []:
+        if row.get("reference_doctype") == "Sales Invoice" and row.get("reference_name"):
+            return frappe.db.get_value("Sales Invoice", row.reference_name, "customer")
+    return None
+
+
+def _hydrate_missing_reference_fields(doc):
+    intended_si = doc.get("intended_sales_invoice")
+    for row in doc.get("references") or []:
+        for fieldname in (
+            "payment_term",
+            "payment_request",
+            "advance_voucher_type",
+            "advance_voucher_no",
+        ):
+            if not hasattr(row, fieldname):
+                setattr(row, fieldname, None)
+
+        if not hasattr(row, "reference_name") or not row.get("reference_name"):
+            reference_name = None
+            if not row.is_new() and frappe.db.has_column("Payment Entry Reference", "reference_name"):
+                reference_name = frappe.db.get_value("Payment Entry Reference", row.name, "reference_name")
+
+            if not reference_name and row.get("reference_doctype") == "Sales Invoice":
+                reference_name = intended_si
+
+            if reference_name:
+                row.reference_name = reference_name
+
+
+def repair_payment_entry_ledger_links(doc, method=None):
+    """Repair ledger rows when stale DocField metadata drops Dynamic Link values."""
+    if doc.docstatus != 1:
+        return
+
+    remarks = doc.get("remarks") or ""
+    if frappe.db.has_column("GL Entry", "voucher_no"):
+        frappe.db.sql(
+            """
+            update `tabGL Entry`
+            set voucher_no = %s,
+                party = case
+                    when account = %s and (party is null or party = '') then %s
+                    else party
+                end
+            where voucher_type = 'Payment Entry'
+              and (voucher_no is null or voucher_no = '')
+              and company = %s
+              and ifnull(remarks, '') = %s
+            """,
+            (doc.name, doc.get("paid_from"), doc.get("party"), doc.company, remarks),
+        )
+
+    for row in doc.get("references") or []:
+        if row.get("reference_doctype") != "Sales Invoice" or not row.get("reference_name"):
+            continue
+
+        if frappe.db.has_column("Payment Ledger Entry", "voucher_no"):
+            frappe.db.sql(
+                """
+                update `tabPayment Ledger Entry`
+                set voucher_no = %s,
+                    against_voucher_no = %s,
+                    party = %s
+                where voucher_type = 'Payment Entry'
+                  and (voucher_no is null or voucher_no = '')
+                  and company = %s
+                  and account = %s
+                  and ifnull(remarks, '') = %s
+                  and delinked = 0
+                """,
+                (
+                    doc.name,
+                    row.reference_name,
+                    doc.get("party"),
+                    doc.company,
+                    doc.get("paid_from"),
+                    remarks,
+                ),
+            )
+
+        _refresh_sales_invoice_outstanding(row.reference_name, doc)
+
+
+def _refresh_sales_invoice_outstanding(invoice_name, doc):
+    try:
+        from erpnext.accounts.utils import update_voucher_outstanding
+
+        update_voucher_outstanding(
+            voucher_type="Sales Invoice",
+            voucher_no=invoice_name,
+            account=doc.get("paid_from"),
+            party_type="Customer",
+            party=doc.get("party"),
+        )
+    except Exception:
+        frappe.log_error(
+            frappe.get_traceback(),
+            f"Failed refreshing outstanding for Sales Invoice {invoice_name}",
+        )
+
+
 # before_insert handler to set created_by_agent if not provided
 def set_created_by_agent(doc, method):
     """

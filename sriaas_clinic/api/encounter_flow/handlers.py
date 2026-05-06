@@ -190,6 +190,12 @@ def _create_draft_payment_entry(
     pe.set_missing_values()
     pe.flags.ignore_permissions = True
     pe.insert(ignore_permissions=True)
+
+    # Some sites can have a stale Payment Entry meta cache where the standard
+    # party field is present in the table but not written through Document.update.
+    if customer and frappe.db.has_column("Payment Entry", "party") and not frappe.db.get_value("Payment Entry", pe.name, "party"):
+        frappe.db.set_value("Payment Entry", pe.name, "party", customer, update_modified=False)
+
     return pe.name
 
 
@@ -1002,8 +1008,6 @@ def link_pending_payment_entries(si, method):
         filters={
             "docstatus": 0,
             "company": si.company,
-            "party_type": "Customer",
-            "party": si.customer,
             "intended_sales_invoice": si.name,
         },
         pluck="name",
@@ -1020,6 +1024,41 @@ def link_pending_payment_entries(si, method):
             break
 
         pe = frappe.get_doc("Payment Entry", pe_name)
+        if frappe.db.has_column("Payment Entry Reference", "reference_name"):
+            frappe.db.sql(
+                """
+                delete from `tabPayment Entry Reference`
+                where parent = %s
+                  and reference_doctype = 'Sales Invoice'
+                  and (reference_name is null or reference_name = '')
+                """,
+                pe.name,
+            )
+            pe.reload()
+
+        existing_si_refs = [
+            r for r in (pe.get("references") or [])
+            if r.reference_doctype == "Sales Invoice" and r.reference_name == si.name
+        ]
+        if existing_si_refs:
+            outstanding -= sum(flt(r.allocated_amount) for r in existing_si_refs)
+            continue
+
+        if pe.get("party_type") != "Customer":
+            pe.party_type = "Customer"
+        if si.customer and not pe.get("party"):
+            pe.party = si.customer
+        if si.customer and frappe.db.has_column("Payment Entry", "party") and not frappe.db.get_value("Payment Entry", pe.name, "party"):
+            frappe.db.set_value("Payment Entry", pe.name, "party", si.customer, update_modified=False)
+
+        party_acc = _party_account(si.company, "Customer", si.customer) \
+            or frappe.db.get_value("Company", si.company, "default_receivable_account")
+        if party_acc:
+            if not pe.get("party_account"):
+                pe.party_account = party_acc
+            if not pe.get("paid_from"):
+                pe.paid_from = party_acc
+
         already_alloc = sum(flt(r.allocated_amount) for r in (pe.get("references") or []))
         pay_total = flt(pe.get("received_amount") or pe.get("paid_amount") or 0)
         unallocated = max(pay_total - already_alloc, 0)
@@ -1031,10 +1070,23 @@ def link_pending_payment_entries(si, method):
             "reference_doctype": "Sales Invoice",
             "reference_name": si.name,
             "due_date": si.get("due_date") or si.get("posting_date"),
+            "total_amount": flt(si.get("grand_total") or 0),
+            "outstanding_amount": flt(si.get("outstanding_amount") or si.get("grand_total") or 0),
             "allocated_amount": alloc,
         })
-        pe.set_missing_values()
         pe.flags.ignore_permissions = True
+        pe.flags.ignore_validate = True
         pe.save(ignore_permissions=True)
+        if frappe.db.has_column("Payment Entry Reference", "reference_name"):
+            frappe.db.sql(
+                """
+                update `tabPayment Entry Reference`
+                set reference_name = %s
+                where parent = %s
+                  and reference_doctype = 'Sales Invoice'
+                  and (reference_name is null or reference_name = '')
+                """,
+                (si.name, pe.name),
+            )
 
         outstanding -= alloc

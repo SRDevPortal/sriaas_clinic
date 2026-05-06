@@ -148,6 +148,7 @@ doc_events = {
             # "sriaas_clinic.api.si_payment_flow.handlers.validate_dp_before_submit",
         ],        
         "on_submit": [
+            "sriaas_clinic.api.sales_invoice_ledger.repair_sales_invoice_ledger_links",
             "sriaas_clinic.api.encounter_flow.handlers.link_pending_payment_entries",
             # "sriaas_clinic.api.si_payment_flow.handlers.create_pe_from_si_dp",
             # "sriaas_clinic.api.integrations.n8n_shiprocket.send_to_n8n_on_submit",
@@ -163,9 +164,15 @@ doc_events = {
         "validate": "sriaas_clinic.api.item_package_weight.calculate_pkg_weights",
     },
     "Payment Entry": {
+        "before_validate": [
+            "sriaas_clinic.api.payment_entry.hydrate_missing_party_and_reference_fields",
+        ],
         "before_insert": [
             "sriaas_clinic.api.payment_entry.set_created_by_agent",
         ],        
+        "on_submit": [
+            "sriaas_clinic.api.payment_entry.repair_payment_entry_ledger_links",
+        ],
         # "before_save": [
         #     "sriaas_clinic.api.payment_entry.sync_parent_mode_from_children_server",
         # ],

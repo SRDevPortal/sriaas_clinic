@@ -360,6 +360,12 @@ def apply_kit_discount_from_grand_total(doc, method=None):
     if doc.doctype != "Sales Invoice":
         return
 
+    if doc.get("is_return") and doc.get("return_against"):
+        return
+
+    if doc.flags.get("skip_kit_discount_from_grand_total"):
+        return
+
     if doc.docstatus != 0:
         return
 

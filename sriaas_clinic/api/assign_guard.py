@@ -5,6 +5,7 @@ import frappe
 from frappe.utils import cstr
 
 LEAD_DT = "CRM Lead"
+TEAM_LEADER_FIELD = "sr_reports_to_team_leader"
 
 
 # ---------------------------------------------------------------------------
@@ -15,7 +16,13 @@ def _is_team_leader(user: str) -> bool:
     if (user or "").lower() == "administrator":
         return True
     roles = set(frappe.get_roles(user))
-    return "Team Leader" in roles or "System Manager" in roles
+    if "System Manager" in roles:
+        return True
+    if "Team Leader" not in roles:
+        return False
+    if frappe.db.has_column("User", TEAM_LEADER_FIELD):
+        return not frappe.db.get_value("User", user, TEAM_LEADER_FIELD)
+    return True
 
 
 # ---------------------------------------------------------------------------

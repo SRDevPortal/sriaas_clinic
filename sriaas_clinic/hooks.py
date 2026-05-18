@@ -218,6 +218,14 @@ doc_events = {
             "sriaas_clinic.api.assign_guard.todo_on_trash",
         ],
     },
+    "Team": {
+        "on_update": [
+            "sriaas_clinic.api.team_sync.sync_user_team_leaders",
+        ],
+        "on_trash": [
+            "sriaas_clinic.api.team_sync.sync_user_team_leaders",
+        ],
+    },
     # "User": {
     #     "after_insert": "sriaas_clinic.api.user_department_membership.after_insert",
     #     "on_update":    "sriaas_clinic.api.user_department_membership.on_update",

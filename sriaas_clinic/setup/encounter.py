@@ -13,6 +13,7 @@ def apply():
     _setup_allopathy_section()
     _setup_instructions_section()
     _setup_draft_invoice_tab()
+    _setup_meta_details_tab()
     _apply_encounter_ui_customizations()
 
 def _make_encounter_fields():
@@ -571,6 +572,62 @@ def _setup_draft_invoice_tab():
                 "insert_after": "enc_mmp_sb",
                 "in_list_view": 0,
             },
+        ]
+    })
+
+
+def _setup_meta_details_tab():
+    """Add Meta Details tab to Patient Encounter using the CRM Lead structure."""
+
+    has_draft_invoice_fields = (
+        frappe.get_meta(DT).get_field("enc_multi_payments")
+        or frappe.db.exists("Custom Field", {"dt": DT, "fieldname": "enc_multi_payments"})
+    )
+    meta_insert_after = "enc_multi_payments" if has_draft_invoice_fields else "clinical_notes"
+
+    create_cf_with_module({
+        DT: [
+            # Meta Details fields
+            {"fieldname": "sr_meta_tab", "label": "Meta Details", "fieldtype": "Tab Break", "insert_after": meta_insert_after},
+
+            # Meta Details - General Tracking
+            {"fieldname": "sr_meta_general_sb", "label": "General Tracking", "fieldtype": "Section Break", "insert_after": "sr_meta_tab"},
+            {"fieldname": "sr_ip_address", "label": "IP Address", "fieldtype": "Data", "read_only": 1, "insert_after": "sr_meta_general_sb"},
+            {"fieldname": "sr_vpn_status", "label": "VPN Status", "fieldtype": "Data", "read_only": 1, "insert_after": "sr_ip_address"},
+            {"fieldname": "sr_landing_page", "label": "Landing Page", "fieldtype": "Data", "read_only": 1, "insert_after": "sr_vpn_status"},
+            {"fieldname": "sr_meta_general_cb2", "fieldtype": "Column Break", "insert_after": "sr_landing_page"},
+            {"fieldname": "sr_remote_location", "label": "Remote Location", "fieldtype": "Small Text", "read_only": 1, "insert_after": "sr_meta_general_cb2"},
+            {"fieldname": "sr_user_agent", "label": "User Agent", "fieldtype": "Small Text", "read_only": 1, "insert_after": "sr_remote_location"},
+
+            # Meta Details - Google Tracking
+            {"fieldname": "sr_meta_google_sb", "label": "Google Tracking", "fieldtype": "Section Break", "insert_after": "sr_user_agent"},
+            {"fieldname": "sr_utm_source", "label": "UTM Source", "fieldtype": "Data", "read_only": 1, "insert_after": "sr_meta_google_sb"},
+            {"fieldname": "sr_utm_campaign", "label": "UTM Campaign", "fieldtype": "Data", "read_only": 1, "insert_after": "sr_utm_source"},
+            {"fieldname": "sr_utm_campaign_id", "label": "UTM Campaign ID", "fieldtype": "Data", "read_only": 1, "insert_after": "sr_utm_campaign"},
+            {"fieldname": "sr_gclid", "label": "GCLID", "fieldtype": "Data", "read_only": 1, "insert_after": "sr_utm_campaign_id"},
+            {"fieldname": "sr_meta_google_cb2", "fieldtype": "Column Break", "insert_after": "sr_gclid"},
+            {"fieldname": "sr_utm_medium", "label": "UTM Medium", "fieldtype": "Data", "read_only": 1, "insert_after": "sr_meta_google_cb2"},
+            {"fieldname": "sr_utm_term", "label": "UTM Term", "fieldtype": "Data", "read_only": 1, "insert_after": "sr_utm_medium"},
+            {"fieldname": "sr_utm_adgroup_id", "label": "UTM Ad Group ID", "fieldtype": "Data", "read_only": 1, "insert_after": "sr_utm_term"},
+
+            # Meta Details - Facebook Tracking
+            {"fieldname": "sr_meta_facebook_sb", "label": "Facebook Tracking", "fieldtype": "Section Break", "insert_after": "sr_utm_adgroup_id"},
+            {"fieldname": "sr_f_ad_id", "label": "Facebook Ad ID", "fieldtype": "Data", "read_only": 1, "insert_after": "sr_meta_facebook_sb"},
+            {"fieldname": "sr_f_ad_name", "label": "Facebook Ad Name", "fieldtype": "Data", "read_only": 1, "insert_after": "sr_f_ad_id"},
+            {"fieldname": "sr_f_adset_id", "label": "Facebook Ad Set ID", "fieldtype": "Data", "read_only": 1, "insert_after": "sr_f_ad_name"},
+            {"fieldname": "sr_f_adset_name", "label": "Facebook Ad Set Name", "fieldtype": "Data", "read_only": 1, "insert_after": "sr_f_adset_id"},
+            {"fieldname": "sr_f_campaign_id", "label": "Facebook Campaign ID", "fieldtype": "Data", "read_only": 1, "insert_after": "sr_f_adset_name"},
+            {"fieldname": "sr_f_campaign_name", "label": "Facebook Campaign Name", "fieldtype": "Data", "read_only": 1, "insert_after": "sr_f_campaign_id"},
+            {"fieldname": "sr_f_utm_medium", "label": "UTM Medium (Facebook)", "fieldtype": "Data", "read_only": 1, "insert_after": "sr_f_campaign_name"},
+            {"fieldname": "sr_fbclid", "label": "FBCLID", "fieldtype": "Data", "length": 255, "read_only": 1, "insert_after": "sr_f_utm_medium"},
+
+            # Meta Details - Interakt Tracking
+            {"fieldname": "sr_meta_interakt_sb", "label": "Interakt Tracking", "fieldtype": "Section Break", "insert_after": "sr_fbclid"},
+            {"fieldname": "sr_w_source_id", "label": "W Source_id", "fieldtype": "Data", "read_only": 1, "insert_after": "sr_meta_interakt_sb"},
+            {"fieldname": "sr_w_source_url", "label": "W Source_url", "fieldtype": "Data", "read_only": 1, "insert_after": "sr_w_source_id"},
+            {"fieldname": "sr_w_ctwa_clid", "label": "W Ctwa_clid", "fieldtype": "Data", "read_only": 1, "insert_after": "sr_w_source_url"},
+            {"fieldname": "sr_w_team_id", "label": "W Team (Id)", "fieldtype": "Data", "hidden": 1, "read_only": 1, "insert_after": "sr_w_ctwa_clid"},
+            {"fieldname": "sr_w_team_user", "label": "W Team (User)", "fieldtype": "Link", "options": "User", "read_only": 1, "insert_after": "sr_w_ctwa_clid"},
         ]
     })
 

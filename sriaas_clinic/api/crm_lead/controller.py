@@ -138,6 +138,7 @@ def assign_crm_lead_owner(leads, new_owner):
             "name": lead,
             "notify": 1
         })
+        _repair_assignment_reference(lead, new_owner)
 
         # Audit trail
         doc.add_comment(
@@ -146,6 +147,21 @@ def assign_crm_lead_owner(leads, new_owner):
         )
 
     return {"status": "ok"}
+
+
+def _repair_assignment_reference(lead, owner):
+    frappe.db.sql(
+        """
+        UPDATE `tabToDo`
+        SET reference_name = %s
+        WHERE reference_type = 'CRM Lead'
+          AND allocated_to = %s
+          AND status = 'Open'
+          AND (reference_name IS NULL OR reference_name = '')
+          AND description LIKE %s
+        """,
+        (lead, owner, f"%{lead}%"),
+    )
 
 
 # ---------------------------------------------------------------------------

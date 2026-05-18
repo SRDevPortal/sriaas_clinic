@@ -23,9 +23,28 @@ def _is_super(user: str) -> bool:
 
 
 def _reports_to_team_leader(user: str) -> str | None:
-    if not frappe.db.has_column("User", TEAM_LEADER_FIELD):
-        return None
-    return frappe.db.get_value("User", user, TEAM_LEADER_FIELD)
+    if _has_team_doctype():
+        rows = frappe.db.sql(
+            """
+            SELECT t.team_lead
+            FROM `tabTeam User` tu
+            INNER JOIN `tabTeam` t ON t.name = tu.parent
+            WHERE tu.parenttype = 'Team'
+              AND tu.user = %s
+              AND tu.is_active = 1
+              AND t.is_active = 1
+              AND t.team_lead IS NOT NULL
+              AND t.team_lead != ''
+              AND t.team_lead != %s
+            LIMIT 1
+            """,
+            (user, user),
+            as_dict=True,
+        )
+        if rows:
+            return rows[0].team_lead
+
+    return None
 
 
 def _is_effective_team_leader(user: str) -> bool:
@@ -33,16 +52,7 @@ def _is_effective_team_leader(user: str) -> bool:
 
 
 def _lead_owner_sql_for_team(user: str) -> str:
-    owners = [user]
-
-    if frappe.db.has_column("User", TEAM_LEADER_FIELD):
-        owners.extend(
-            frappe.get_all(
-                "User",
-                filters={TEAM_LEADER_FIELD: user, "enabled": 1},
-                pluck="name",
-            )
-        )
+    owners = _team_owner_values(user)
 
     owners = sorted(set(owner for owner in owners if owner))
     if not owners:
@@ -55,7 +65,24 @@ def _lead_owner_sql_for_team(user: str) -> str:
 def _team_owner_values(user: str) -> set[str]:
     owners = {user}
 
-    if frappe.db.has_column("User", TEAM_LEADER_FIELD):
+    if _has_team_doctype():
+        rows = frappe.db.sql(
+            """
+            SELECT DISTINCT tu.user
+            FROM `tabTeam User` tu
+            INNER JOIN `tabTeam` t ON t.name = tu.parent
+            WHERE tu.parenttype = 'Team'
+              AND t.team_lead = %s
+              AND t.is_active = 1
+              AND tu.is_active = 1
+              AND tu.user IS NOT NULL
+              AND tu.user != ''
+            """,
+            user,
+            as_dict=True,
+        )
+        owners.update(row.user for row in rows)
+    elif frappe.db.has_column("User", TEAM_LEADER_FIELD):
         owners.update(
             frappe.get_all(
                 "User",
@@ -66,6 +93,13 @@ def _team_owner_values(user: str) -> set[str]:
         )
 
     return {owner for owner in owners if owner}
+
+
+def _has_team_doctype() -> bool:
+    return bool(
+        frappe.db.exists("DocType", "Team")
+        and frappe.db.exists("DocType", "Team User")
+    )
 
 
 def _allowed_pipelines(user: str) -> set[str]:

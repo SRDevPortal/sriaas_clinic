@@ -30,5 +30,5 @@ def is_s3_enabled():
         frappe.conf.get("aws_access_key_id"),
         frappe.conf.get("aws_secret_access_key"),
         frappe.conf.get("aws_region"),
-        frappe.conf.get("aws_s3_bucket"),
+        frappe.conf.get("aws_bucket"),
     ])

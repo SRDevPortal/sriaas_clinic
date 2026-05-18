@@ -119,7 +119,7 @@ def upload_file_to_s3(file_doc):
     # --------------------------------------------------
     # Normalize S3 path
     # --------------------------------------------------
-    raw_prefix = frappe.conf.get("aws_s3_prefix") or _get_company_abbr(file_doc)
+    raw_prefix = frappe.conf.get("aws_prefix") or _get_company_abbr(file_doc)
 
     prefix = normalize_part(raw_prefix)
     doctype = normalize_part(file_doc.attached_to_doctype or "misc")

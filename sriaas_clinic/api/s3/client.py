@@ -24,10 +24,10 @@ def get_bucket():
     if not is_s3_enabled():
         return None
 
-    bucket = frappe.conf.get("aws_s3_bucket")
+    bucket = frappe.conf.get("aws_bucket")
 
     if not bucket:
-        frappe.log_error("Missing aws_s3_bucket", "S3_CONFIG_ERROR")
+        frappe.log_error("Missing aws_bucket", "S3_CONFIG_ERROR")
         return None
 
     return bucket

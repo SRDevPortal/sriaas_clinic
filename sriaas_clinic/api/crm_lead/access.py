@@ -7,6 +7,7 @@ import frappe
 AGENT_ROLE = "Agent"
 TL_ROLE = "Team Leader"
 LEAD_DOCTYPE = "CRM Lead"
+TEAM_LEADER_FIELD = "sr_reports_to_team_leader"
 
 
 # ---------------------------------------------------------------------------
@@ -21,39 +22,78 @@ def _is_super(user: str) -> bool:
     return user == "Administrator" or _has_role(user, "System Manager")
 
 
-def _current_assignees(lead_name: str) -> set[str]:
-    rows = frappe.get_all(
-        "ToDo",
-        filters={
-            "reference_type": LEAD_DOCTYPE,
-            "reference_name": lead_name,
-            "status": "Open",
-        },
-        pluck="allocated_to",
-    )
-    return set(rows or [])
+def _reports_to_team_leader(user: str) -> str | None:
+    if not frappe.db.has_column("User", TEAM_LEADER_FIELD):
+        return None
+    return frappe.db.get_value("User", user, TEAM_LEADER_FIELD)
 
 
-def _allowed_pipelines_sql(user: str) -> str:
-    """
-    Restrict pipelines using User Permission (Allow = 'SR Lead Pipeline')
-    Used ONLY for permission_query_conditions (SQL context)
-    """
+def _is_effective_team_leader(user: str) -> bool:
+    return _has_role(user, TL_ROLE) and not _reports_to_team_leader(user)
+
+
+def _lead_owner_sql_for_team(user: str) -> str:
+    owners = [user]
+
+    if frappe.db.has_column("User", TEAM_LEADER_FIELD):
+        owners.extend(
+            frappe.get_all(
+                "User",
+                filters={TEAM_LEADER_FIELD: user, "enabled": 1},
+                pluck="name",
+            )
+        )
+
+    owners = sorted(set(owner for owner in owners if owner))
+    if not owners:
+        return "1=0"
+
+    esc = ", ".join(frappe.db.escape(owner) for owner in owners)
+    return f"`tabCRM Lead`.`lead_owner` IN ({esc})"
+
+
+def _team_owner_values(user: str) -> set[str]:
+    owners = {user}
+
+    if frappe.db.has_column("User", TEAM_LEADER_FIELD):
+        owners.update(
+            frappe.get_all(
+                "User",
+                filters={TEAM_LEADER_FIELD: user, "enabled": 1},
+                pluck="name",
+            )
+            or []
+        )
+
+    return {owner for owner in owners if owner}
+
+
+def _allowed_pipelines(user: str) -> set[str]:
     from frappe.core.doctype.user_permission.user_permission import get_user_permissions
 
     perms = get_user_permissions(user) or {}
     raw = perms.get("SR Lead Pipeline") or []
 
-    values: list[str] = []
+    values = set()
     for v in raw:
         if isinstance(v, str):
-            values.append(v)
+            values.add(v)
         elif isinstance(v, dict):
-            values.append(v.get("doc") or v.get("value") or v.get("name") or "")
+            values.add(v.get("doc") or v.get("value") or v.get("name"))
 
-    values = [v for v in values if v]
+    values.discard("")
+    values.discard(None)
+    return values
+
+
+def _allowed_pipelines_sql(user: str, deny_if_missing: bool = True) -> str:
+    """
+    Restrict pipelines using User Permission (Allow = 'SR Lead Pipeline')
+    Used ONLY for permission_query_conditions (SQL context)
+    """
+    values = sorted(_allowed_pipelines(user))
     if not values:
-        return "1=0"  # deny all
+        return "1=0" if deny_if_missing else "1=1"
 
     esc = ", ".join(frappe.db.escape(v) for v in values)
     return f"`tabCRM Lead`.`sr_lead_pipeline` IN ({esc})"
@@ -70,24 +110,20 @@ def crm_lead_pqc(user: str) -> str:
     if _is_super(user):
         return ""
 
-    # Team Leader → everything
-    if _has_role(user, TL_ROLE):
-        return ""
+    # Team Leader: self + direct team members. If the TL has explicit
+    # pipeline user permissions, apply those too.
+    if _is_effective_team_leader(user):
+        owner_cond = _lead_owner_sql_for_team(user)
+        pipeline_cond = _allowed_pipelines_sql(user, deny_if_missing=False)
+        return f"({owner_cond}) AND ({pipeline_cond})"
 
-    # Agent → ONLY assigned (open ToDo) + allowed pipeline
-    if _has_role(user, AGENT_ROLE):
-        assignment_cond = (
-            "EXISTS ("
-            "SELECT 1 FROM `tabToDo` t "
-            "WHERE t.reference_type='CRM Lead' "
-            "AND t.reference_name=`tabCRM Lead`.name "
-            "AND t.status='Open' "
-            f"AND t.allocated_to={frappe.db.escape(user)}"
-            ")"
-        )
-
+    # Agent: only lead_owner + allowed pipeline
+    if _has_role(user, AGENT_ROLE) or _reports_to_team_leader(user):
+        # lead_owner is the authoritative visibility field. ToDo assignments
+        # are UI/task helpers and can drift independently.
+        owner_cond = f"`tabCRM Lead`.`lead_owner`={frappe.db.escape(user)}"
         pipeline_cond = _allowed_pipelines_sql(user)
-        return f"({assignment_cond}) AND ({pipeline_cond})"
+        return f"({owner_cond}) AND ({pipeline_cond})"
 
     # Everyone else → nothing
     return "1=0"
@@ -104,26 +140,23 @@ def crm_lead_has_permission(doc, user: str | None = None, ptype: str | None = No
     if _is_super(user):
         return True
 
-    # Team Leader
-    if _has_role(user, TL_ROLE):
-        return True
-
-    # Agent → MUST be assigned + pipeline allowed
-    if _has_role(user, AGENT_ROLE):
-        if user not in _current_assignees(doc.name):
+    # Team Leader: self + direct team members, optionally narrowed by pipeline
+    if _is_effective_team_leader(user):
+        if getattr(doc, "lead_owner", None) not in _team_owner_values(user):
             return False
 
-        from frappe.core.doctype.user_permission.user_permission import get_user_permissions
-        raw = (get_user_permissions(user) or {}).get("SR Lead Pipeline") or []
+        allowed = _allowed_pipelines(user)
+        if allowed:
+            return getattr(doc, "sr_lead_pipeline", None) in allowed
 
-        allowed = {
-            v if isinstance(v, str)
-            else (v.get("doc") or v.get("value") or v.get("name") or "")
-            for v in raw
-        }
-        allowed.discard("")
-        allowed.discard(None)
+        return True
 
+    # Agent: must be lead_owner + pipeline allowed
+    if _has_role(user, AGENT_ROLE) or _reports_to_team_leader(user):
+        if getattr(doc, "lead_owner", None) != user:
+            return False
+
+        allowed = _allowed_pipelines(user)
         if not allowed:
             return False
 

@@ -132,10 +132,12 @@ doc_events = {
             "sriaas_clinic.api.si_payment_flow.handlers.set_created_by_agent",
         ],
         "before_validate": [
+            "sriaas_clinic.api.sales_invoice.set_sales_invoice_series",
             "sriaas_clinic.api.si_payment_flow.handlers.apply_kit_discount_from_grand_total",
             "sriaas_clinic.api.gst_breakup.prepare_gst_validation_fields",
         ],
         "validate": [
+            "sriaas_clinic.api.sales_invoice.validate_sales_invoice_series",
             "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
         ],
         "before_save": [
@@ -269,6 +271,7 @@ doctype_js = {
         "public/js/item_package_weight.js",
     ],
     "Sales Invoice": [
+        "public/js/sales_invoice_series.js",
         "public/js/sales_invoice_actions.js",
         "public/js/sales_invoice_barcode.js",
         # "public/js/shipkia_sales_invoice.js",

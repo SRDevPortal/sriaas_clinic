@@ -1,4 +1,50 @@
 // CRM Lead: Add PEX launcher + Patient Appointment launcher
+const SR_CRM_LEAD_META_FIELDS = [
+  'sr_ip_address',
+  'sr_vpn_status',
+  'sr_landing_page',
+  'sr_remote_location',
+  'sr_user_agent',
+  'sr_utm_source',
+  'sr_utm_campaign',
+  'sr_utm_campaign_id',
+  'sr_gclid',
+  'sr_utm_medium',
+  'sr_utm_term',
+  'sr_utm_adgroup_id',
+  'sr_f_ad_id',
+  'sr_f_ad_name',
+  'sr_f_adset_id',
+  'sr_f_adset_name',
+  'sr_f_campaign_id',
+  'sr_f_campaign_name',
+  'sr_f_utm_medium',
+  'sr_fbclid',
+  'sr_w_source_id',
+  'sr_w_source_url',
+  'sr_w_ctwa_clid',
+  'sr_w_team_id',
+  'sr_w_team_user',
+];
+
+function get_crm_lead_meta_route_options(frm) {
+  const meta_values = {};
+
+  SR_CRM_LEAD_META_FIELDS.forEach((fieldname) => {
+    meta_values[fieldname] = frm.doc[fieldname] || '';
+  });
+
+  return meta_values;
+}
+
+function apply_patient_encounter_route_options(doc, route_options) {
+  Object.keys(route_options).forEach((fieldname) => {
+    if (frappe.meta.has_field('Patient Encounter', fieldname)) {
+      doc[fieldname] = route_options[fieldname];
+    }
+  });
+}
+
 frappe.ui.form.on('CRM Lead', {
   refresh(frm) {
     
@@ -26,16 +72,21 @@ frappe.ui.form.on('CRM Lead', {
         `);
 
         $w.find('#open_full_pe').on('click', () => {
-          frappe.route_options = {
+          const meta_values = get_crm_lead_meta_route_options(frm);
+
+          const pe_route_options = {
             __from_pex: 1,
             company: frm.doc.company || frappe.defaults.get_default('company'),
             practitioner: frm.doc.primary_healthcare_practitioner || '',
             pex_copy_forward: $w.find('#pex_copy_forward').is(':checked') ? 1 : 0,
             pex_fill_draft: $w.find('#pex_fill_draft').is(':checked') ? 1 : 0,
             sr_encounter_type: "Order",
-            patient: frm.doc.name, // mapping Lead → Patient if applicable
+            sr_encounter_source: frm.doc.source || '',
+            ...meta_values,
           };
-          frappe.new_doc('Patient Encounter');
+          frappe.new_doc('Patient Encounter', pe_route_options, (doc) => {
+            apply_patient_encounter_route_options(doc, pe_route_options);
+          });
         });
       }
     }

@@ -62,6 +62,10 @@ def _lead_owner_sql_for_team(user: str) -> str:
     return f"`tabCRM Lead`.`lead_owner` IN ({esc})"
 
 
+def _blank_lead_owner_sql() -> str:
+    return "(`tabCRM Lead`.`lead_owner` IS NULL OR `tabCRM Lead`.`lead_owner` = '')"
+
+
 def _team_owner_values(user: str) -> set[str]:
     owners = {user}
 
@@ -145,11 +149,18 @@ def crm_lead_pqc(user: str) -> str:
         return ""
 
     # Team Leader: self + direct team members. If the TL has explicit
-    # pipeline user permissions, apply those too.
+    # pipeline user permissions, apply those too. Blank-owner leads are
+    # visible only when a pipeline permission identifies the TL's pipeline.
     if _is_effective_team_leader(user):
         owner_cond = _lead_owner_sql_for_team(user)
-        pipeline_cond = _allowed_pipelines_sql(user, deny_if_missing=False)
-        return f"({owner_cond}) AND ({pipeline_cond})"
+        allowed = _allowed_pipelines(user)
+
+        if not allowed:
+            return owner_cond
+
+        pipeline_cond = _allowed_pipelines_sql(user)
+        blank_owner_cond = _blank_lead_owner_sql()
+        return f"(({owner_cond}) OR ({blank_owner_cond})) AND ({pipeline_cond})"
 
     # Agent: only lead_owner + allowed pipeline
     if _has_role(user, AGENT_ROLE) or _reports_to_team_leader(user):
@@ -174,16 +185,22 @@ def crm_lead_has_permission(doc, user: str | None = None, ptype: str | None = No
     if _is_super(user):
         return True
 
-    # Team Leader: self + direct team members, optionally narrowed by pipeline
+    # Team Leader: self + direct team members, optionally narrowed by pipeline.
+    # Blank-owner leads are visible only inside explicitly permitted pipelines.
     if _is_effective_team_leader(user):
-        if getattr(doc, "lead_owner", None) not in _team_owner_values(user):
-            return False
-
         allowed = _allowed_pipelines(user)
-        if allowed:
-            return getattr(doc, "sr_lead_pipeline", None) in allowed
+        pipeline = getattr(doc, "sr_lead_pipeline", None)
+        lead_owner = getattr(doc, "lead_owner", None)
 
-        return True
+        if lead_owner in _team_owner_values(user):
+            if allowed:
+                return pipeline in allowed
+            return True
+
+        if not lead_owner and allowed:
+            return pipeline in allowed
+
+        return False
 
     # Agent: must be lead_owner + pipeline allowed
     if _has_role(user, AGENT_ROLE) or _reports_to_team_leader(user):

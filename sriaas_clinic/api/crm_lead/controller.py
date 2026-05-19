@@ -2,6 +2,7 @@
 # Public APIs (normalize / assign / clear) for CRM Lead
 
 import frappe
+from sriaas_clinic.api.crm_lead.config import REF_DOCTYPE, get_config, get_locked_fields
 from sriaas_clinic.api.crm_lead.utils import clean_spaces
 from frappe.core.doctype.user_permission.user_permission import get_user_permissions
 
@@ -18,7 +19,7 @@ def normalize_phoneish_fields(doc, method=None):
     Uses a bypass flag so the field-guard doesn't treat these
     programmatic updates as user edits.
     """
-    if doc.doctype != "CRM Lead":
+    if doc.doctype != get_config().ref_doctype:
         return
 
     CANDIDATE_FIELDS = (
@@ -49,8 +50,12 @@ def _agent_allowed_for_pipeline(user: str, pipeline: str) -> bool:
     """
     Check whether agent has User Permission for given SR Lead Pipeline
     """
+    pipeline_doctype = get_config().pipeline_doctype
+    if not pipeline_doctype:
+        return False
+
     perms = get_user_permissions(user) or {}
-    raw = perms.get("SR Lead Pipeline") or []
+    raw = perms.get(pipeline_doctype) or []
 
     allowed = set()
     for v in raw:
@@ -64,6 +69,39 @@ def _agent_allowed_for_pipeline(user: str, pipeline: str) -> bool:
     return pipeline in allowed
 
 
+@frappe.whitelist()
+def get_crm_lead_role_context():
+    from sriaas_clinic.api.assign_guard import _is_team_leader
+    from sriaas_clinic.api.crm_lead.access import _reports_to_team_leader
+    from sriaas_role_permissions.api.roles import has_agent_role, has_team_leader_role, is_privileged
+
+    user = frappe.session.user
+    config = get_config()
+    locked = get_locked_fields()
+    reports_to = _reports_to_team_leader(user)
+    can_manage = _is_team_leader(user)
+
+    return {
+        "user": user,
+        "ref_doctype": config.ref_doctype,
+        "pipeline_doctype": config.pipeline_doctype,
+        "pipeline_fieldname": config.pipeline_fieldname,
+        "owner_fieldname": config.owner_fieldname,
+        "team_leader_fieldname": config.team_leader_fieldname,
+        "team_leader_label": config.team_leader_label,
+        "agent_label": config.agent_label,
+        "privileged_label": config.privileged_label,
+        "lock_after_insert_fields": sorted(locked["lock_after_insert"]),
+        "agent_always_lock_fields": sorted(locked["agent_always_lock"]),
+        "is_privileged": is_privileged(user, REF_DOCTYPE),
+        "has_team_leader_role": has_team_leader_role(user, REF_DOCTYPE),
+        "has_agent_role": has_agent_role(user, REF_DOCTYPE),
+        "reports_to_team_leader": reports_to,
+        "is_effective_team_leader": can_manage,
+        "can_manage_assignment": can_manage,
+    }
+
+
 # ---------------------------------------------------------------------------
 # ASSIGN CRM LEAD OWNER (Team Leader only)
 # ---------------------------------------------------------------------------
@@ -74,7 +112,7 @@ def assign_crm_lead_owner(leads, new_owner):
 
     if not _is_team_leader(frappe.session.user):
         frappe.throw(
-            "Only Team Leaders can assign CRM Leads.",
+            f"Only configured {get_config().team_leader_label} users can assign {get_config().ref_doctype} records.",
             frappe.PermissionError
         )
 
@@ -85,10 +123,11 @@ def assign_crm_lead_owner(leads, new_owner):
         frappe.throw("Invalid or disabled user selected")
 
     for lead in leads:
-        doc = frappe.get_doc("CRM Lead", lead)
+        config = get_config()
+        doc = frappe.get_doc(config.ref_doctype, lead)
 
         # 🔒 HARD BLOCK: pipeline permission enforcement
-        pipeline = doc.sr_lead_pipeline
+        pipeline = doc.get(config.pipeline_fieldname)
         if pipeline and not _agent_allowed_for_pipeline(new_owner, pipeline):
             # frappe.throw(
             #     f"❌ Assignment blocked.<br>"
@@ -108,33 +147,33 @@ def assign_crm_lead_owner(leads, new_owner):
             frappe.throw(
                 frappe._(
                     "This lead belongs to <b>{0}</b> pipeline.<br>"
-                    "Agent <b>{1}</b> is not allowed for this pipeline."
-                ).format(pipeline, new_owner),
+                    "{2} <b>{1}</b> is not allowed for this pipeline."
+                ).format(pipeline, new_owner, config.agent_label),
                 title="Assignment Not Allowed"
             )
 
         # Skip if already owner
-        if doc.lead_owner == new_owner:
+        if doc.get(config.owner_fieldname) == new_owner:
             continue
 
         # Set owner
-        doc.lead_owner = new_owner
+        doc.set(config.owner_fieldname, new_owner)
         doc.save(ignore_permissions=True)
 
         # Close existing assignments
         frappe.db.sql("""
             UPDATE `tabToDo`
             SET status='Closed'
-            WHERE reference_type='CRM Lead'
+            WHERE reference_type=%s
               AND reference_name=%s
               AND status='Open'
-        """, lead)
+        """, (config.ref_doctype, lead))
 
         # Assign to new owner
         from frappe.desk.form.assign_to import add
         add({
             "assign_to": [new_owner],
-            "doctype": "CRM Lead",
+            "doctype": config.ref_doctype,
             "name": lead,
             "notify": 1
         })
@@ -150,17 +189,18 @@ def assign_crm_lead_owner(leads, new_owner):
 
 
 def _repair_assignment_reference(lead, owner):
+    config = get_config()
     frappe.db.sql(
         """
         UPDATE `tabToDo`
         SET reference_name = %s
-        WHERE reference_type = 'CRM Lead'
+        WHERE reference_type = %s
           AND allocated_to = %s
           AND status = 'Open'
           AND (reference_name IS NULL OR reference_name = '')
           AND description LIKE %s
         """,
-        (lead, owner, f"%{lead}%"),
+        (lead, config.ref_doctype, owner, f"%{lead}%"),
     )
 
 
@@ -174,7 +214,7 @@ def clear_crm_lead_owner(leads):
 
     if not _is_team_leader(frappe.session.user):
         frappe.throw(
-            "Only Team Leaders can clear CRM Lead assignments.",
+            f"Only configured {get_config().team_leader_label} users can clear {get_config().ref_doctype} assignments.",
             frappe.PermissionError
         )
 
@@ -186,13 +226,14 @@ def clear_crm_lead_owner(leads):
         frappe.flags._sr_skip_owner_restore = True
 
         # 1️⃣ Clear assignment (ToDo)
-        clear("CRM Lead", lead)
+        config = get_config()
+        clear(config.ref_doctype, lead)
 
         # 2️⃣ Explicitly clear lead_owner
         frappe.db.set_value(
-            "CRM Lead",
+            config.ref_doctype,
             lead,
-            "lead_owner",
+            config.owner_fieldname,
             None,
             update_modified=False
         )

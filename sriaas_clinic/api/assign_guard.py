@@ -12,16 +12,12 @@ from sriaas_clinic.api.crm_lead.config import REF_DOCTYPE, get_config
 # ---------------------------------------------------------------------------
 
 def _is_team_leader(user: str) -> bool:
-    from sriaas_role_permissions.api.roles import has_team_leader_role, is_privileged
+    from sriaas_clinic.api.crm_lead.access import _is_effective_team_leader
+    from sriaas_role_permissions.api.roles import is_privileged
 
-    config = get_config()
     if is_privileged(user, REF_DOCTYPE):
         return True
-    if not has_team_leader_role(user, REF_DOCTYPE):
-        return False
-    if config.team_leader_fieldname and frappe.db.has_column("User", config.team_leader_fieldname):
-        return not frappe.db.get_value("User", user, config.team_leader_fieldname)
-    return True
+    return _is_effective_team_leader(user)
 
 
 # ---------------------------------------------------------------------------

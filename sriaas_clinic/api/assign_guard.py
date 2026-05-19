@@ -4,8 +4,7 @@ from __future__ import annotations
 import frappe
 from frappe.utils import cstr
 
-LEAD_DT = "CRM Lead"
-TEAM_LEADER_FIELD = "sr_reports_to_team_leader"
+from sriaas_clinic.api.crm_lead.config import REF_DOCTYPE, get_config
 
 
 # ---------------------------------------------------------------------------
@@ -13,15 +12,15 @@ TEAM_LEADER_FIELD = "sr_reports_to_team_leader"
 # ---------------------------------------------------------------------------
 
 def _is_team_leader(user: str) -> bool:
-    if (user or "").lower() == "administrator":
+    from sriaas_role_permissions.api.roles import has_team_leader_role, is_privileged
+
+    config = get_config()
+    if is_privileged(user, REF_DOCTYPE):
         return True
-    roles = set(frappe.get_roles(user))
-    if "System Manager" in roles:
-        return True
-    if "Team Leader" not in roles:
+    if not has_team_leader_role(user, REF_DOCTYPE):
         return False
-    if frappe.db.has_column("User", TEAM_LEADER_FIELD):
-        return not frappe.db.get_value("User", user, TEAM_LEADER_FIELD)
+    if config.team_leader_fieldname and frappe.db.has_column("User", config.team_leader_fieldname):
+        return not frappe.db.get_value("User", user, config.team_leader_fieldname)
     return True
 
 
@@ -33,12 +32,13 @@ def _ensure_can_assign_for_lead(docname: str, doctype: str) -> None:
     """
     Only Team Leader / System Manager can assign or unassign CRM Leads
     """
-    if doctype != LEAD_DT:
+    config = get_config()
+    if doctype != config.ref_doctype:
         return
 
     if not _is_team_leader(frappe.session.user):
         frappe.throw(
-            "Only Team Leaders can assign or unassign CRM Leads.",
+            f"Only configured {config.team_leader_label} users can assign or unassign {config.ref_doctype} records.",
             frappe.PermissionError
         )
 
@@ -54,7 +54,8 @@ def todo_on_trash(doc, method=None):
     preserve lead_owner UNLESS this is an intentional clear.
     """
 
-    if doc.reference_type != LEAD_DT:
+    config = get_config()
+    if doc.reference_type != config.ref_doctype:
         return
 
     if not doc.reference_name:
@@ -66,9 +67,9 @@ def todo_on_trash(doc, method=None):
 
     # Capture lead_owner BEFORE assignment removal
     owner = frappe.db.get_value(
-        LEAD_DT,
+        config.ref_doctype,
         doc.reference_name,
-        "lead_owner"
+        config.owner_fieldname
     )
 
     if owner:

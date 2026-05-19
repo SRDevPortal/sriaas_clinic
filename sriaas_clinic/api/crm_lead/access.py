@@ -55,7 +55,72 @@ def _reports_to_team_leader(user: str) -> str | None:
 
 
 def _is_effective_team_leader(user: str) -> bool:
-    return _has_team_leader_role(user) and not _reports_to_team_leader(user)
+    if not _has_team_leader_role(user):
+        return False
+
+    if _has_team_doctype():
+        return bool(_managed_team_names(user))
+
+    return not _reports_to_team_leader(user)
+
+
+def _is_main_team_lead(user: str) -> bool:
+    return bool(_teams_led_by(user))
+
+
+def _is_assistant_team_lead(user: str) -> bool:
+    if not _has_team_leader_role(user) or not _has_team_doctype():
+        return False
+    return bool(_teams_where_user_is_active_member(user) - _teams_led_by(user))
+
+
+def _teams_led_by(user: str) -> set[str]:
+    if not _has_team_doctype():
+        return set()
+
+    rows = frappe.get_all(
+        "Team",
+        filters={"team_lead": user, "is_active": 1},
+        pluck="name",
+    )
+    return set(rows or [])
+
+
+def _teams_where_user_is_active_member(user: str) -> set[str]:
+    if not _has_team_doctype():
+        return set()
+
+    rows = frappe.db.sql(
+        """
+        SELECT DISTINCT t.name
+        FROM `tabTeam User` tu
+        INNER JOIN `tabTeam` t ON t.name = tu.parent
+        WHERE tu.parenttype = 'Team'
+          AND tu.user = %s
+          AND tu.is_active = 1
+          AND t.is_active = 1
+        """,
+        user,
+        as_dict=True,
+    )
+    return {row.name for row in rows}
+
+
+def _managed_team_names(user: str) -> set[str]:
+    if not _has_team_doctype() or not _has_team_leader_role(user):
+        return set()
+
+    return _teams_led_by(user) | _teams_where_user_is_active_member(user)
+
+
+def get_managed_team_users(user: str | None = None) -> list[str]:
+    user = user or frappe.session.user
+    if _is_privileged(user):
+        return []
+    if not _is_effective_team_leader(user):
+        return []
+
+    return sorted(_team_owner_values(user))
 
 
 def _lead_owner_sql_for_team(user: str) -> str:
@@ -80,22 +145,34 @@ def _team_owner_values(user: str) -> set[str]:
     owners = {user}
 
     if _has_team_doctype():
+        teams = _managed_team_names(user)
+        if not teams:
+            return owners
+
+        esc_teams = ", ".join(frappe.db.escape(team) for team in sorted(teams))
         rows = frappe.db.sql(
-            """
+            f"""
             SELECT DISTINCT tu.user
             FROM `tabTeam User` tu
             INNER JOIN `tabTeam` t ON t.name = tu.parent
             WHERE tu.parenttype = 'Team'
-              AND t.team_lead = %s
+              AND t.name IN ({esc_teams})
               AND t.is_active = 1
               AND tu.is_active = 1
               AND tu.user IS NOT NULL
               AND tu.user != ''
             """,
-            user,
             as_dict=True,
         )
         owners.update(row.user for row in rows)
+        owners.update(
+            frappe.get_all(
+                "Team",
+                filters={"name": ["in", list(teams)], "is_active": 1},
+                pluck="team_lead",
+            )
+            or []
+        )
     elif config.team_leader_fieldname and frappe.db.has_column("User", config.team_leader_fieldname):
         owners.update(
             frappe.get_all(
@@ -162,9 +239,8 @@ def crm_lead_pqc(user: str) -> str:
     if _is_privileged(user):
         return ""
 
-    # Team Leader: self + direct team members. If the TL has explicit
-    # pipeline user permissions, apply those too. Blank-owner leads are
-    # visible only when a pipeline permission identifies the TL's pipeline.
+    # Team managers see all leads owned by active users in their managed team.
+    # Blank-owner leads stay limited to explicitly allowed pipelines.
     if _is_effective_team_leader(user):
         owner_cond = _lead_owner_sql_for_team(user)
         allowed = _allowed_pipelines(user)
@@ -174,7 +250,7 @@ def crm_lead_pqc(user: str) -> str:
 
         pipeline_cond = _allowed_pipelines_sql(user)
         blank_owner_cond = _blank_lead_owner_sql()
-        return f"(({owner_cond}) OR ({blank_owner_cond})) AND ({pipeline_cond})"
+        return f"({owner_cond}) OR (({blank_owner_cond}) AND ({pipeline_cond}))"
 
     # Agent: only lead_owner + allowed pipeline
     if _has_agent_role(user) or _reports_to_team_leader(user):
@@ -199,8 +275,8 @@ def crm_lead_has_permission(doc, user: str | None = None, ptype: str | None = No
     if _is_privileged(user):
         return True
 
-    # Team Leader: self + direct team members, optionally narrowed by pipeline.
-    # Blank-owner leads are visible only inside explicitly permitted pipelines.
+    # Team managers can open all leads owned by their active team users.
+    # Blank-owner leads require an explicitly allowed pipeline.
     if _is_effective_team_leader(user):
         config = get_config()
         allowed = _allowed_pipelines(user)
@@ -208,8 +284,6 @@ def crm_lead_has_permission(doc, user: str | None = None, ptype: str | None = No
         lead_owner = getattr(doc, config.owner_fieldname, None)
 
         if lead_owner in _team_owner_values(user):
-            if allowed:
-                return pipeline in allowed
             return True
 
         if not lead_owner and allowed:

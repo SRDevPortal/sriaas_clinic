@@ -4,22 +4,29 @@
 from __future__ import annotations
 import frappe
 
-AGENT_ROLE = "Agent"
-TL_ROLE = "Team Leader"
-LEAD_DOCTYPE = "CRM Lead"
-TEAM_LEADER_FIELD = "sr_reports_to_team_leader"
+from sriaas_clinic.api.crm_lead.config import REF_DOCTYPE, get_config, sql_column
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _has_role(user: str, role: str) -> bool:
-    return role in frappe.get_roles(user)
+def _is_privileged(user: str) -> bool:
+    from sriaas_role_permissions.api.roles import is_privileged
+
+    return is_privileged(user, REF_DOCTYPE)
 
 
-def _is_super(user: str) -> bool:
-    return user == "Administrator" or _has_role(user, "System Manager")
+def _has_team_leader_role(user: str) -> bool:
+    from sriaas_role_permissions.api.roles import has_team_leader_role
+
+    return has_team_leader_role(user, REF_DOCTYPE)
+
+
+def _has_agent_role(user: str) -> bool:
+    from sriaas_role_permissions.api.roles import has_agent_role
+
+    return has_agent_role(user, REF_DOCTYPE)
 
 
 def _reports_to_team_leader(user: str) -> str | None:
@@ -48,10 +55,11 @@ def _reports_to_team_leader(user: str) -> str | None:
 
 
 def _is_effective_team_leader(user: str) -> bool:
-    return _has_role(user, TL_ROLE) and not _reports_to_team_leader(user)
+    return _has_team_leader_role(user) and not _reports_to_team_leader(user)
 
 
 def _lead_owner_sql_for_team(user: str) -> str:
+    config = get_config()
     owners = _team_owner_values(user)
 
     owners = sorted(set(owner for owner in owners if owner))
@@ -59,14 +67,16 @@ def _lead_owner_sql_for_team(user: str) -> str:
         return "1=0"
 
     esc = ", ".join(frappe.db.escape(owner) for owner in owners)
-    return f"`tabCRM Lead`.`lead_owner` IN ({esc})"
+    return f"{sql_column(config.owner_fieldname)} IN ({esc})"
 
 
 def _blank_lead_owner_sql() -> str:
-    return "(`tabCRM Lead`.`lead_owner` IS NULL OR `tabCRM Lead`.`lead_owner` = '')"
+    owner_col = sql_column(get_config().owner_fieldname)
+    return f"({owner_col} IS NULL OR {owner_col} = '')"
 
 
 def _team_owner_values(user: str) -> set[str]:
+    config = get_config()
     owners = {user}
 
     if _has_team_doctype():
@@ -86,11 +96,11 @@ def _team_owner_values(user: str) -> set[str]:
             as_dict=True,
         )
         owners.update(row.user for row in rows)
-    elif frappe.db.has_column("User", TEAM_LEADER_FIELD):
+    elif config.team_leader_fieldname and frappe.db.has_column("User", config.team_leader_fieldname):
         owners.update(
             frappe.get_all(
                 "User",
-                filters={TEAM_LEADER_FIELD: user, "enabled": 1},
+                filters={config.team_leader_fieldname: user, "enabled": 1},
                 pluck="name",
             )
             or []
@@ -109,8 +119,12 @@ def _has_team_doctype() -> bool:
 def _allowed_pipelines(user: str) -> set[str]:
     from frappe.core.doctype.user_permission.user_permission import get_user_permissions
 
+    pipeline_doctype = get_config().pipeline_doctype
+    if not pipeline_doctype:
+        return set()
+
     perms = get_user_permissions(user) or {}
-    raw = perms.get("SR Lead Pipeline") or []
+    raw = perms.get(pipeline_doctype) or []
 
     values = set()
     for v in raw:
@@ -134,7 +148,7 @@ def _allowed_pipelines_sql(user: str, deny_if_missing: bool = True) -> str:
         return "1=0" if deny_if_missing else "1=1"
 
     esc = ", ".join(frappe.db.escape(v) for v in values)
-    return f"`tabCRM Lead`.`sr_lead_pipeline` IN ({esc})"
+    return f"{sql_column(get_config().pipeline_fieldname)} IN ({esc})"
 
 
 # ---------------------------------------------------------------------------
@@ -145,7 +159,7 @@ def crm_lead_pqc(user: str) -> str:
     user = user or frappe.session.user
 
     # Admin / System Manager → everything
-    if _is_super(user):
+    if _is_privileged(user):
         return ""
 
     # Team Leader: self + direct team members. If the TL has explicit
@@ -163,10 +177,10 @@ def crm_lead_pqc(user: str) -> str:
         return f"(({owner_cond}) OR ({blank_owner_cond})) AND ({pipeline_cond})"
 
     # Agent: only lead_owner + allowed pipeline
-    if _has_role(user, AGENT_ROLE) or _reports_to_team_leader(user):
+    if _has_agent_role(user) or _reports_to_team_leader(user):
         # lead_owner is the authoritative visibility field. ToDo assignments
         # are UI/task helpers and can drift independently.
-        owner_cond = f"`tabCRM Lead`.`lead_owner`={frappe.db.escape(user)}"
+        owner_cond = f"{sql_column(get_config().owner_fieldname)}={frappe.db.escape(user)}"
         pipeline_cond = _allowed_pipelines_sql(user)
         return f"({owner_cond}) AND ({pipeline_cond})"
 
@@ -182,15 +196,16 @@ def crm_lead_has_permission(doc, user: str | None = None, ptype: str | None = No
     user = user or frappe.session.user
 
     # Admin / System Manager
-    if _is_super(user):
+    if _is_privileged(user):
         return True
 
     # Team Leader: self + direct team members, optionally narrowed by pipeline.
     # Blank-owner leads are visible only inside explicitly permitted pipelines.
     if _is_effective_team_leader(user):
+        config = get_config()
         allowed = _allowed_pipelines(user)
-        pipeline = getattr(doc, "sr_lead_pipeline", None)
-        lead_owner = getattr(doc, "lead_owner", None)
+        pipeline = getattr(doc, config.pipeline_fieldname, None)
+        lead_owner = getattr(doc, config.owner_fieldname, None)
 
         if lead_owner in _team_owner_values(user):
             if allowed:
@@ -203,15 +218,16 @@ def crm_lead_has_permission(doc, user: str | None = None, ptype: str | None = No
         return False
 
     # Agent: must be lead_owner + pipeline allowed
-    if _has_role(user, AGENT_ROLE) or _reports_to_team_leader(user):
-        if getattr(doc, "lead_owner", None) != user:
+    if _has_agent_role(user) or _reports_to_team_leader(user):
+        config = get_config()
+        if getattr(doc, config.owner_fieldname, None) != user:
             return False
 
         allowed = _allowed_pipelines(user)
         if not allowed:
             return False
 
-        pipeline = getattr(doc, "sr_lead_pipeline", None)
+        pipeline = getattr(doc, config.pipeline_fieldname, None)
         if not pipeline:
             return False
 
@@ -240,15 +256,16 @@ def restore_lead_owner_after_unassign(doc, method=None):
     if not data:
         return
 
-    if doc.doctype != LEAD_DOCTYPE:
+    config = get_config()
+    if doc.doctype != config.ref_doctype:
         return
 
     if doc.name != data.get("lead"):
         return
 
-    if not doc.lead_owner:
+    if not doc.get(config.owner_fieldname):
         doc.db_set(
-            "lead_owner",
+            config.owner_fieldname,
             data.get("owner"),
             update_modified=False,
         )

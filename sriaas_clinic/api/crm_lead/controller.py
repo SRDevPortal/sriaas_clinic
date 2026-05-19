@@ -72,7 +72,13 @@ def _agent_allowed_for_pipeline(user: str, pipeline: str) -> bool:
 @frappe.whitelist()
 def get_crm_lead_role_context():
     from sriaas_clinic.api.assign_guard import _is_team_leader
-    from sriaas_clinic.api.crm_lead.access import _reports_to_team_leader
+    from sriaas_clinic.api.crm_lead.access import (
+        _is_assistant_team_lead,
+        _is_effective_team_leader,
+        _is_main_team_lead,
+        _reports_to_team_leader,
+        get_managed_team_users,
+    )
     from sriaas_role_permissions.api.roles import has_agent_role, has_team_leader_role, is_privileged
 
     user = frappe.session.user
@@ -97,9 +103,43 @@ def get_crm_lead_role_context():
         "has_team_leader_role": has_team_leader_role(user, REF_DOCTYPE),
         "has_agent_role": has_agent_role(user, REF_DOCTYPE),
         "reports_to_team_leader": reports_to,
-        "is_effective_team_leader": can_manage,
+        "is_main_team_lead": _is_main_team_lead(user),
+        "is_assistant_team_lead": _is_assistant_team_lead(user),
+        "is_effective_team_leader": _is_effective_team_leader(user),
+        "managed_team_users": get_managed_team_users(user),
         "can_manage_assignment": can_manage,
     }
+
+
+def _ensure_assignment_target_allowed(new_owner: str) -> None:
+    from sriaas_clinic.api.crm_lead.access import _is_privileged, get_managed_team_users
+
+    if _is_privileged(frappe.session.user):
+        return
+
+    managed_users = set(get_managed_team_users(frappe.session.user))
+    if new_owner not in managed_users:
+        frappe.throw(
+            frappe._("{0} can assign only to active members of their managed team.").format(
+                get_config().team_leader_label
+            ),
+            title="Assignment Not Allowed",
+            exc=frappe.PermissionError,
+        )
+
+
+def _ensure_can_manage_lead(doc) -> None:
+    from sriaas_clinic.api.crm_lead.access import _is_privileged, crm_lead_has_permission
+
+    if _is_privileged(frappe.session.user):
+        return
+
+    if not crm_lead_has_permission(doc, frappe.session.user):
+        frappe.throw(
+            frappe._("You can manage only leads visible to your managed team."),
+            title="Lead Not Allowed",
+            exc=frappe.PermissionError,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -122,9 +162,12 @@ def assign_crm_lead_owner(leads, new_owner):
     if not frappe.db.exists("User", {"name": new_owner, "enabled": 1}):
         frappe.throw("Invalid or disabled user selected")
 
+    _ensure_assignment_target_allowed(new_owner)
+
     for lead in leads:
         config = get_config()
         doc = frappe.get_doc(config.ref_doctype, lead)
+        _ensure_can_manage_lead(doc)
 
         # 🔒 HARD BLOCK: pipeline permission enforcement
         pipeline = doc.get(config.pipeline_fieldname)
@@ -222,11 +265,14 @@ def clear_crm_lead_owner(leads):
         leads = frappe.parse_json(leads)
 
     for lead in leads:
+        config = get_config()
+        doc = frappe.get_doc(config.ref_doctype, lead)
+        _ensure_can_manage_lead(doc)
+
         # 🚫 Explicit signal: this is an intentional clear
         frappe.flags._sr_skip_owner_restore = True
 
         # 1️⃣ Clear assignment (ToDo)
-        config = get_config()
         clear(config.ref_doctype, lead)
 
         # 2️⃣ Explicitly clear lead_owner

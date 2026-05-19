@@ -4,6 +4,7 @@ app_publisher = "SRIAAS"
 app_description = "Clinic customizations packaged as clean installable/uninstallable app."
 app_email = "webdevelopersriaas@gmail.com"
 app_license = "mit"
+required_apps = ["sriaas_role_permissions"]
 
 # Installation
 # before_install = "sriaas_clinic.install.before_install"

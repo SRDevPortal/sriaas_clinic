@@ -4,16 +4,7 @@
 from __future__ import annotations
 import frappe
 
-TL = "Team Leader"
-AG = "Agent"
-
-# Locked after first save for TL/Agent
-ALWAYS_LOCK = {"sr_lead_pipeline", "sr_lead_platform", "source", "mobile_no", "phone"}
-# Agents can never change this
-AGENT_LOCK  = {"lead_owner"}
-
-PRIVILEGED_USERS = {"Administrator"}
-PRIVILEGED_ROLES = {"System Manager"}
+from sriaas_clinic.api.crm_lead.config import REF_DOCTYPE, get_config, get_locked_fields
 
 def _roles(user: str) -> set[str]:
     try:
@@ -23,15 +14,21 @@ def _roles(user: str) -> set[str]:
 
 
 def _is_privileged(user: str) -> bool:
-    # 1) explicit usernames
-    if user in PRIVILEGED_USERS:
-        return True
-    # 2) role-based
-    return bool(_roles(user) & PRIVILEGED_ROLES)
+    from sriaas_role_permissions.api.roles import is_privileged
+
+    return is_privileged(user, REF_DOCTYPE)
 
 
-def _has_role(user: str, role: str) -> bool:
-    return role in _roles(user)
+def _has_team_leader_role(user: str) -> bool:
+    from sriaas_role_permissions.api.roles import has_team_leader_role
+
+    return has_team_leader_role(user, REF_DOCTYPE)
+
+
+def _has_agent_role(user: str) -> bool:
+    from sriaas_role_permissions.api.roles import has_agent_role
+
+    return has_agent_role(user, REF_DOCTYPE)
 
 
 def _changed(doc, field: str) -> bool:
@@ -45,7 +42,8 @@ def _changed(doc, field: str) -> bool:
 
 def guard_restricted_fields(doc, method=None):
     # Only protect CRM Lead
-    if doc.doctype != "CRM Lead":
+    config = get_config()
+    if doc.doctype != config.ref_doctype:
         return
 
     # programmatic bypass (patches, normalizers, imports)
@@ -59,8 +57,11 @@ def guard_restricted_fields(doc, method=None):
     if _is_privileged(user):
         return
 
-    is_tl    = _has_role(user, TL)
-    is_agent = _has_role(user, AG)
+    is_tl = _has_team_leader_role(user)
+    is_agent = _has_agent_role(user)
+    locked_fields = get_locked_fields()
+    lock_after_insert = locked_fields["lock_after_insert"]
+    agent_always_lock = locked_fields["agent_always_lock"]
 
     blocked: set[str] = set()
 
@@ -68,7 +69,7 @@ def guard_restricted_fields(doc, method=None):
     # - TL can set on INSERT only
     # - Later edits blocked for TL/Agent
     # - Agents blocked even on insert
-    for f in ALWAYS_LOCK:
+    for f in lock_after_insert:
         if _changed(doc, f):
             if doc.is_new():
                 if not is_tl:
@@ -77,8 +78,9 @@ def guard_restricted_fields(doc, method=None):
                 blocked.add(f)
 
     # Agents cannot change lead_owner
-    if is_agent and _changed(doc, "lead_owner"):
-        blocked.add("lead_owner")
+    for f in agent_always_lock:
+        if is_agent and _changed(doc, f):
+            blocked.add(f)
 
     if blocked:
         frappe.throw(

@@ -37,7 +37,6 @@ def _make_invoice_fields():
             {"fieldname": "sr_si_encounter_place", "label": "Encounter Place", "fieldtype": "Data", "in_list_view": 1, "in_standard_filter": 1, "insert_after": "sr_si_order_source"},
             {"fieldname": "sr_si_sales_type", "label": "Sales Type", "fieldtype": "Link", "options": "SR Sales Type", "in_list_view": 1, "in_standard_filter": 1, "insert_after": "sr_si_encounter_place"},
             {"fieldname": "sr_si_delivery_type", "label": "Delivery Type", "fieldtype": "Link", "options": "SR Delivery Type", "in_list_view": 1, "in_standard_filter": 1, "allow_on_submit": 1, "insert_after": "sr_si_sales_type"},
-            {"fieldname": "sent_to_shipkia", "label": "Sent to Shipkia", "fieldtype": "Check", "default": "0", "read_only": 1, "hidden": 1, "print_hide": 1, "insert_after": "sr_si_delivery_type"},
             {"fieldname": "created_by_agent", "label": "Created By", "fieldtype": "Link", "options": "User", "read_only": 1, "insert_after": "due_date"},
         ]
     })
@@ -142,10 +141,7 @@ def _apply_invoice_ui_customizations():
         upsert_property_setter(PARENT, "contact_mobile", "in_list_view", "1", "Check")
         upsert_property_setter(PARENT, "contact_mobile", "in_standard_filter", "1", "Check")
 
-    if meta.get_field("sent_to_shipkia"):
-        upsert_property_setter(PARENT, "sent_to_shipkia", "hidden", "1", "Check")
-        upsert_property_setter(PARENT, "sent_to_shipkia", "print_hide", "1", "Check")
-        upsert_property_setter(PARENT, "sent_to_shipkia", "in_list_view", "0", "Check")
+    _delete_custom_field(PARENT, "sent_to_shipkia")
 
     if meta.get_field("created_by_agent"):
         upsert_property_setter(PARENT, "created_by_agent", "hidden", "0", "Check")
@@ -160,6 +156,14 @@ def _apply_invoice_ui_customizations():
     upsert_property_setter(PARENT, "sr_non_kit_total_price", "read_only", "1", "Check")
     upsert_title_field(PARENT, "patient_name")
 
+
+def _delete_custom_field(doctype: str, fieldname: str):
+    name = frappe.db.get_value("Custom Field", {"dt": doctype, "fieldname": fieldname}, "name")
+    if not name:
+        return
+    frappe.delete_doc("Custom Field", name, ignore_permissions=True, force=True)
+    frappe.clear_cache(doctype=doctype)
+    frappe.db.commit()
 
 
 

@@ -1,5 +1,6 @@
 # sriaas_clinic/api/s3/presign.py
 import frappe
+from botocore.exceptions import ClientError
 from .client import get_s3_client, get_bucket
 from .utils import extract_key
 
@@ -39,7 +40,18 @@ def get_presigned_url(file_url, expires=900):
         if not s3 or not bucket:
             logger.info("S3_DISABLED → returning original URL")
             return file_url
-        
+        try:
+            s3.head_object(Bucket=bucket, Key=key)
+        except ClientError as e:
+            error_code = (e.response.get("Error") or {}).get("Code")
+            if error_code in ("404", "NoSuchKey", "NotFound"):
+                logger.error(f"PRESIGN_MISSING_KEY | bucket={bucket} | key={key}")
+                frappe.throw(
+                    "This attachment record points to S3, but the file is missing from the bucket. "
+                    "Please re-upload the attachment."
+                )
+            raise
+
         # --------------------------------------------------
         # Validate expiry
         # --------------------------------------------------

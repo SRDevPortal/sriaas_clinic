@@ -5,6 +5,7 @@ from .utils import create_cf_with_module, upsert_property_setter, collapse_secti
 DT = "Patient Encounter"
 
 def apply():
+    _remove_deprecated_encounter_fields()
     _make_encounter_fields()
     _setup_clinical_notes_section()
     _setup_diet_chart_field()
@@ -155,6 +156,24 @@ def _make_encounter_fields():
             },
 
             {
+                "fieldname": "sr_source_crm_lead",
+                "label": "Source CRM Lead",
+                "fieldtype": "Link",
+                "options": "CRM Lead",
+                "read_only": 1,
+                "hidden": 1,
+                "insert_after": "sr_encounter_source",
+            },
+
+            {
+                "fieldname": "sr_lead_notes",
+                "label": "Lead Notes",
+                "fieldtype": "Small Text",
+                "read_only": 1,
+                "insert_after": "sr_source_crm_lead",
+            },
+
+            {
                 "fieldname": "sr_encounter_status",
                 "label": "Encounter Status",
                 "fieldtype": "Link",
@@ -162,7 +181,7 @@ def _make_encounter_fields():
                 "in_list_view": 1,
                 "in_standard_filter": 1,
                 "allow_on_submit": 1,
-                "insert_after": "sr_encounter_source",
+                "insert_after": "sr_lead_notes",
             },
 
             # {
@@ -630,6 +649,21 @@ def _setup_meta_details_tab():
             {"fieldname": "sr_w_team_user", "label": "W Team (User)", "fieldtype": "Link", "options": "User", "read_only": 1, "insert_after": "sr_w_ctwa_clid"},
         ]
     })
+
+
+def _remove_deprecated_encounter_fields():
+    deprecated_fields = ("sr_lead_message",)
+
+    for fieldname in deprecated_fields:
+        custom_field = frappe.db.get_value(
+            "Custom Field",
+            {"dt": DT, "fieldname": fieldname},
+            "name",
+        )
+        if custom_field:
+            frappe.delete_doc("Custom Field", custom_field, ignore_permissions=True)
+
+    frappe.clear_cache(doctype=DT)
 
 
 def _apply_encounter_ui_customizations():

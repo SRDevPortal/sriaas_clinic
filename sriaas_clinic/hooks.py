@@ -95,6 +95,9 @@ doc_events = {
             "sriaas_clinic.api.encounter_flow.handlers.set_created_by_agent",
             "sriaas_clinic.api.encounter_flow.handlers.set_default_encounter_status",
         ],
+        "after_insert": [
+            "sriaas_clinic.api.crm_lead.attachments.copy_crm_lead_attachments_to_encounter",
+        ],
         "before_save": [
             "sriaas_clinic.api.encounter_flow.handlers.enforce_agent_encounter_place",
             "sriaas_clinic.api.encounter_flow.handlers.before_save_patient_encounter",
@@ -272,6 +275,7 @@ doctype_js = {
         "public/js/healthcare_practitioner.js",
     ],
     "CRM Lead": [
+        "public/js/s3_attachment_links.js",
         "public/js/crm_lead_disposition_filter.js",
         "public/js/crm_lead_lock_fields.js",
         "public/js/crm_lead_pex_launcher.js",

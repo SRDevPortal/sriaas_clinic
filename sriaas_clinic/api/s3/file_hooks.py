@@ -259,6 +259,10 @@ def handle_file_on_trash(doc, method=None):
 
     if not doc.file_url:
         return
+
+    if _file_url_used_by_another_file(doc):
+        logger.info(f"S3_DELETE_SKIPPED | shared_file_url={doc.file_url} | file={doc.name}")
+        return
     
     key = extract_key(doc.file_url)
     if not key:
@@ -270,6 +274,22 @@ def handle_file_on_trash(doc, method=None):
 
     except Exception:
         frappe.log_error(frappe.get_traceback(), "S3_DELETE_FAILED")
+
+
+def _file_url_used_by_another_file(doc) -> bool:
+    if not doc.file_url:
+        return False
+
+    return bool(
+        frappe.db.exists(
+            "File",
+            {
+                "name": ["!=", doc.name],
+                "file_url": doc.file_url,
+                "is_folder": 0,
+            },
+        )
+    )
 
 
 def cleanup_payment_proof_removals(doc, method=None):

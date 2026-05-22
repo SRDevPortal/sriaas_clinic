@@ -45,8 +45,26 @@ function apply_patient_encounter_route_options(doc, route_options) {
   });
 }
 
+function get_crm_lead_notes(frm) {
+  const notes = [];
+
+  if (frm.doc.sr_lead_message) {
+    notes.push(`Lead Message:\n${frm.doc.sr_lead_message}`);
+  }
+
+  if (frm.doc.sr_lead_notes) {
+    notes.push(`Lead Notes:\n${frm.doc.sr_lead_notes}`);
+  }
+
+  return notes.join('\n\n');
+}
+
 frappe.ui.form.on('CRM Lead', {
   refresh(frm) {
+    if (!frm.is_new() && typeof window.sriaas_intercept_s3_attachments === 'function') {
+      window.sriaas_intercept_s3_attachments(frm);
+    }
+
     
     // =====================================================
     // 🔹 PEX Launcher
@@ -82,6 +100,9 @@ frappe.ui.form.on('CRM Lead', {
             pex_fill_draft: $w.find('#pex_fill_draft').is(':checked') ? 1 : 0,
             sr_encounter_type: "Order",
             sr_encounter_source: frm.doc.source || '',
+            sr_source_crm_lead: frm.doc.name || '',
+            sr_lead_notes: frm.doc.sr_lead_notes || '',
+            sr_notes: get_crm_lead_notes(frm),
             ...meta_values,
           };
           frappe.new_doc('Patient Encounter', pe_route_options, (doc) => {

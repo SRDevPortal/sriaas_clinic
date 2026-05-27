@@ -135,21 +135,20 @@ def _apply_crm_lead_ui_customizations():
 
     # Hide unwanted flags/fieldss
     targets = (
-        "organization",
-        "website",
-        "territory",
-        "industry",
-        "job_title",
-        "salutation",
-        "lead_name",
-        "no_of_employees",
-        "annual_revenue",
-        "image",
-        "converted",        
-        "products",
-        "total",
-        "net_total",
+        # Hide From Lead Details tab
+        "organization", "website", "territory", "industry", "job_title",
+        # hide from Patient Details tab
+        "salutation", "lead_name",
+        # hide from Others tab
+        "naming_series", "no_of_employees", "annual_revenue", "image", "converted",
+        # hide from Products tab
+        "products", "total", "net_total",
+        # hide SLA tab
         "sla_tab",
+        # hide Syncing tab
+        "syncing_tab",
+        # hide Lost Details tab
+        "lost_details_tab",
     )
     for f in targets:
         cfname = frappe.db.get_value("Custom Field", {"dt": DT, "fieldname": f}, "name")

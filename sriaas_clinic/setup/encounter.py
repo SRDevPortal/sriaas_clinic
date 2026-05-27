@@ -687,13 +687,7 @@ def _apply_encounter_ui_customizations():
     set_label(DT, "section_break_33", "Review")
 
     # Make drug prescription section collapsible
-    upsert_property_setter(
-        DT,
-        "sb_drug_prescription",
-        "collapsible",
-        "0",
-        "Check",
-    )
+    upsert_property_setter(DT, "sb_drug_prescription", "collapsible", "0","Check")
 
     # Rename drug prescription section to Ayurvedic Medications
     set_label(DT, "sb_drug_prescription", "Ayurvedic Medications")
@@ -788,11 +782,5 @@ def _apply_encounter_ui_customizations():
     # - hidden in print
     upsert_property_setter(DT, "created_by_agent", "hidden", "0", "Check")
     upsert_property_setter(DT, "created_by_agent", "in_list_view", "0", "Check")
-    upsert_property_setter(
-        DT,
-        "created_by_agent",
-        "in_standard_filter",
-        "0",
-        "Check",
-    )
+    upsert_property_setter(DT, "created_by_agent", "in_standard_filter", "0", "Check")
     upsert_property_setter(DT, "created_by_agent", "print_hide", "1", "Check")

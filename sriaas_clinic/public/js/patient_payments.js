@@ -7,16 +7,9 @@ frappe.ui.form.on("Patient", {
 		frm.clear_table("sr_payment_entry_list");
 
 		frappe.call({
-			method: "frappe.client.get_list",
+			method: "sriaas_clinic.api.patient_payments.get_patient_payment_entries",
 			args: {
-				doctype: "Payment Entry",
-				filters: {
-					party_type: "Customer",
-					party: frm.doc.customer,
-					docstatus: 1, // Submitted; remove if you want drafts too
-				},
-				fields: ["name", "posting_date", "paid_amount", "mode_of_payment"],
-				order_by: "posting_date desc",
+				patient: frm.doc.name,
 				limit_page_length: 100,
 			},
 			callback(r) {
@@ -27,6 +20,9 @@ frappe.ui.form.on("Patient", {
 					row.sr_paid_amount = entry.paid_amount;
 					row.sr_mode_of_payment = entry.mode_of_payment;
 				});
+				frm.refresh_field("sr_payment_entry_list");
+			},
+			error() {
 				frm.refresh_field("sr_payment_entry_list");
 			},
 		});

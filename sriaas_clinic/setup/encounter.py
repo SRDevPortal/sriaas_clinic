@@ -161,7 +161,7 @@ def _make_encounter_fields():
                 "fieldtype": "Link",
                 "options": "CRM Lead",
                 "read_only": 1,
-                "hidden": 1,
+                "hidden": 0,
                 "insert_after": "sr_encounter_source",
             },
 
@@ -170,6 +170,7 @@ def _make_encounter_fields():
                 "label": "Lead Notes",
                 "fieldtype": "Small Text",
                 "read_only": 1,
+                "hidden": 1,
                 "insert_after": "sr_source_crm_lead",
             },
 

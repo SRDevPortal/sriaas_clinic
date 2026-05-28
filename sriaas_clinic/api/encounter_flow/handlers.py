@@ -442,6 +442,33 @@ def validate_order_items_required(doc, method=None):
         )
 
 
+def link_crm_lead_source_patient_from_encounter(doc, method=None):
+    """Link source CRM Lead to the selected Patient when Encounter came from PEX."""
+    lead_name = doc.get("sr_source_crm_lead")
+    patient = doc.get("patient")
+
+    if not lead_name or not patient:
+        return
+
+    if not frappe.get_meta("CRM Lead").has_field("sr_source_patient"):
+        return
+
+    if not frappe.db.exists("CRM Lead", lead_name):
+        return
+
+    existing_patient = frappe.db.get_value("CRM Lead", lead_name, "sr_source_patient")
+    if existing_patient:
+        return
+
+    frappe.db.set_value(
+        "CRM Lead",
+        lead_name,
+        "sr_source_patient",
+        patient,
+        update_modified=False,
+    )
+
+
 def validate_encounter_workflow(doc, method):
     roles = frappe.get_roles(frappe.session.user)
 

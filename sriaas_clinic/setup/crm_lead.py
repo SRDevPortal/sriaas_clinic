@@ -18,8 +18,8 @@ def _make_crm_lead_fields():
         DT: [
             {"fieldname": "sr_lead_disposition","label": "Lead Disposition","fieldtype": "Link","options": "SR Lead Disposition","insert_after": "status","depends_on": "eval: !!doc.status"},
             {"fieldname": "sr_lead_country","label": "Country","fieldtype": "Link","options": "Country","in_list_view": 1,"in_standard_filter": 1,"insert_after": "email"},
-            {"fieldname": "sr_lead_personal_cb2","fieldtype": "Column Break","insert_after": "mobile_no"},
-            # {"fieldname": "sr_lead_department","label": "Department","fieldtype": "Link","options": "Medical Department","insert_after": "sr_lead_personal_cb2"},
+            {"fieldname": "sr_source_patient","label": "Linked Patient","fieldtype": "Link","options": "Patient","read_only": 1,"in_list_view": 1,"in_standard_filter": 1,"insert_after": "gender"},
+            {"fieldname": "sr_lead_personal_cb2","fieldtype": "Column Break","insert_after": "sr_source_patient"},
             {"fieldname": "sr_lead_message","label": "Message","fieldtype": "Small Text","insert_after": "sr_lead_personal_cb2"},
             {"fieldname": "sr_lead_notes","label": "Notes","fieldtype": "Small Text","insert_after": "sr_lead_message"},
             {"fieldname": "sr_lead_disease","label": "Disease","fieldtype": "Data","insert_after": "sr_lead_notes"},
@@ -74,8 +74,6 @@ def _make_crm_lead_fields():
             {"fieldname": "sr_f_utm_medium","label":"UTM Medium (Facebook)","fieldtype":"Data","read_only":1,"insert_after":"sr_f_campaign_name"},
             {"fieldname": "sr_fbclid","label":"FBCLID","fieldtype":"Data","length": 255,"read_only":1,"insert_after":"sr_f_utm_medium"},
 
-
-
             # Meta Details - Interakt Tracking
             {"fieldname": "sr_meta_interakt_sb","label":"Interakt Tracking","fieldtype":"Section Break","insert_after":"sr_fbclid"},
             {"fieldname": "sr_w_source_id","label":"W Source_id","fieldtype":"Data","read_only":1,"insert_after":"sr_meta_interakt_sb"},
@@ -99,6 +97,7 @@ def _apply_crm_lead_ui_customizations():
     # Standard label/filters
     upsert_property_setter(DT, "status", "in_standard_filter", "1", "Check")
     upsert_property_setter(DT, "status", "default", "Fresh", "Data")
+    upsert_property_setter(DT, "", "show_title_field_in_link", "0", "Check")
     
     upsert_property_setter(DT, "first_name", "reqd", "0", "Check")
     
@@ -119,6 +118,8 @@ def _apply_crm_lead_ui_customizations():
     ensure_field_after(DT, "lead_name", "last_name")
     ensure_field_after(DT, "phone", "mobile_no")
     ensure_field_after(DT, "gender", "phone")
+    ensure_field_after(DT, "sr_source_patient", "gender")
+    ensure_field_after(DT, "sr_lead_personal_cb2", "sr_source_patient")
 
     ensure_field_after(DT, "lead_owner", "sr_lead_pipeline")
     ensure_field_after(DT, "source", "lead_owner")

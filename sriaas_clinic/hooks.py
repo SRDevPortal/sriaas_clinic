@@ -100,6 +100,7 @@ doc_events = {
         ],
         "before_save": [
             "sriaas_clinic.api.encounter_flow.handlers.enforce_agent_encounter_place",
+            "sriaas_clinic.api.encounter_flow.handlers.link_crm_lead_source_patient_from_encounter",
             "sriaas_clinic.api.encounter_flow.handlers.before_save_patient_encounter",
             "sriaas_clinic.api.encounter_flow.handlers.clear_advance_dependent_fields",
             "sriaas_clinic.api.s3.file_hooks.cleanup_payment_proof_removals",

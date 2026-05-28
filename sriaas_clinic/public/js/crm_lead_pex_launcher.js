@@ -101,7 +101,6 @@ frappe.ui.form.on('CRM Lead', {
             sr_encounter_type: "Order",
             sr_encounter_source: frm.doc.source || '',
             sr_source_crm_lead: frm.doc.name || '',
-            sr_lead_notes: frm.doc.sr_lead_notes || '',
             sr_notes: get_crm_lead_notes(frm),
             ...meta_values,
           };

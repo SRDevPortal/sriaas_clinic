@@ -30,7 +30,6 @@ list_js = {
 }
 
 doctype_list_js = {
-    "CRM Lead": "public/js/crm_lead_list.js",
     "Patient Encounter": "public/js/patient_encounter_list.js",
 }
 
@@ -208,20 +207,6 @@ doc_events = {
         "before_save": [
             "sriaas_clinic.api.crm_lead.controller.normalize_phoneish_fields",
         ],
-        "after_save": [
-            "sriaas_clinic.api.crm_lead.access.restore_lead_owner_after_unassign",
-        ],
-        "after_insert": [
-            "sriaas_clinic.api.crm_lead.lifecycle.after_insert",
-        ],
-        "on_update": [
-            "sriaas_clinic.api.crm_lead.lifecycle.on_update",
-        ],
-    },
-    "ToDo": {
-        "on_trash": [
-            "sriaas_clinic.api.assign_guard.todo_on_trash",
-        ],
     },
     "Team": {
         "on_update": [
@@ -298,12 +283,6 @@ doctype_js = {
     "Stock Entry": [
         "public/js/stock_entry_barcode.js",
     ],
-}
-
-override_whitelisted_methods = {
-    "frappe.desk.form.assign_to.add": "sriaas_clinic.api.assign_guard.add",
-    "frappe.desk.form.assign_to.remove": "sriaas_clinic.api.assign_guard.remove",
-    "frappe.desk.form.assign_to.clear": "sriaas_clinic.api.assign_guard.clear",
 }
 
 fixtures = [

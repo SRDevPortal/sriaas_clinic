@@ -47,10 +47,11 @@ doc_events = {
             "sriaas_clinic.api.patient.set_patient_series",
         ],
         "before_insert": [
+            "sriaas_clinic.api.patient.set_patient_creator",
+            # Normalize early
             "sriaas_clinic.api.patient.normalize_patient_contact_numbers",
             "sriaas_clinic.api.patient.validate_unique_contact_mobile",
-            "sriaas_clinic.api.patient.set_patient_id",
-            "sriaas_clinic.api.patient.set_patient_creator",
+            "sriaas_clinic.api.patient.set_patient_id",            
             "sriaas_clinic.api.patient.set_followup_id",
             "sriaas_clinic.api.patient.set_followup_day",
         ],
@@ -70,6 +71,11 @@ doc_events = {
             "sriaas_clinic.api.customer.sanitize_customer_contact_numbers",
         ],
     },
+    "Contact": {
+        "before_save": [
+            "sriaas_clinic.api.contact.normalize_phoneish_fields",
+        ],
+    },
     "Address": {
         "before_validate": [
             "sriaas_clinic.api.address.validate_state",
@@ -78,10 +84,27 @@ doc_events = {
             "sriaas_clinic.api.address.ensure_address_has_customer_link",
         ],
     },
-    "Contact": {
-        "before_save": [
-            "sriaas_clinic.api.contact.normalize_phoneish_fields",
+    "CRM Lead": {
+        "validate": [
+            "sriaas_clinic.api.crm_lead.guards.guard_restricted_fields",
         ],
+        "before_save": [
+            "sriaas_clinic.api.crm_lead.controller.normalize_phoneish_fields",
+        ],
+    },
+    "Healthcare Practitioner": {
+        "before_validate": [
+            "sriaas_clinic.api.practitioner.compose_full_name",
+        ],
+    },
+    "Patient Appointment": {
+        "before_insert": [
+            "sriaas_clinic.api.patient_appointment.set_created_by_agent",
+        ],
+        # "on_update": [
+        #     "sriaas_clinic.api.patient_appointment.create_payment_entries_from_child_table",
+        #     "sriaas_clinic.api.patient_appointment.on_update_create_payments",
+        # ],
     },
     "Patient Encounter": {
         "validate": [
@@ -111,19 +134,8 @@ doc_events = {
             "sriaas_clinic.api.encounter_flow.handlers.create_billing_on_submit",
         ],
     },
-    "Patient Appointment": {
-        "before_insert": [
-            "sriaas_clinic.api.patient_appointment.set_created_by_agent",
-        ],
-        # "on_update": [
-        #     "sriaas_clinic.api.patient_appointment.create_payment_entries_from_child_table",
-        #     "sriaas_clinic.api.patient_appointment.on_update_create_payments",
-        # ],
-    },
-    "Healthcare Practitioner": {
-        "before_validate": [
-            "sriaas_clinic.api.practitioner.compose_full_name",
-        ],
+    "Item": {
+        "validate": "sriaas_clinic.api.item_package_weight.calculate_pkg_weights",
     },
     "Sales Invoice": {
         "onload": [
@@ -166,9 +178,6 @@ doc_events = {
             "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
         ],
     },
-    "Item": {
-        "validate": "sriaas_clinic.api.item_package_weight.calculate_pkg_weights",
-    },
     "Payment Entry": {
         "before_validate": [
             "sriaas_clinic.api.payment_entry.hydrate_missing_party_and_reference_fields",
@@ -200,14 +209,6 @@ doc_events = {
     #         "sriaas_clinic.api.medical_department.on_rename",
     #     ],
     # },
-    "CRM Lead": {
-        "validate": [
-            "sriaas_clinic.api.crm_lead.guards.guard_restricted_fields",
-        ],
-        "before_save": [
-            "sriaas_clinic.api.crm_lead.controller.normalize_phoneish_fields",
-        ],
-    },
     "Team": {
         "on_update": [
             "sriaas_clinic.api.team_sync.sync_user_team_leaders",

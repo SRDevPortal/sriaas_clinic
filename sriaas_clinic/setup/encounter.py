@@ -184,51 +184,6 @@ def _make_encounter_fields():
                 "allow_on_submit": 1,
                 "insert_after": "sr_lead_notes",
             },
-
-            # {
-            #     "fieldname": "payment_status",
-            #     "label": "Payment Status",
-            #     "fieldtype": "Select",
-            #     "options": "\nPayment Approved\nPayment Disapproved",
-            #     "insert_after": "sr_encounter_status",
-            # },
-
-            # {
-            #     "fieldname": "payment_hold_reason",
-            #     "label": "Payment Hold Reason",
-            #     "fieldtype": "Small Text",
-            #     "insert_after": "payment_status",
-            # },
-
-            # {
-            #     "fieldname": "prx_status",
-            #     "label": "PRX Status",
-            #     "fieldtype": "Select",
-            #     "options": "\nPRX Ready\nPRX Hold",
-            #     "insert_after": "payment_hold_reason",
-            # },
-
-            # {
-            #     "fieldname": "prx_hold_reason",
-            #     "label": "PRX Hold Reason",
-            #     "fieldtype": "Small Text",
-            #     "insert_after": "prx_status",
-            # },
-
-            # {
-            #     "fieldname": "dispatch_status",
-            #     "label": "Dispatch Status",
-            #     "fieldtype": "Select",
-            #     "options": "\nDispatch\nHold\nDuplicate",
-            #     "insert_after": "prx_hold_reason",
-            # },
-
-            # {
-            #     "fieldname": "dispatch_hold_reason",
-            #     "label": "Dispatch Hold Reason",
-            #     "fieldtype": "Small Text",
-            #     "insert_after": "dispatch_status",
-            # },
         ]
     })
 
@@ -281,22 +236,6 @@ def _setup_clinical_notes_section():
                 "fieldtype":"Small Text",
                 "insert_after":"sr_diagnosis"
             },
-            # Use a child Table for multiple reports (one row per report)
-            # {
-            #     "fieldname": "sr_medical_reports_table",
-            #     "label": "Attach Medical Report",
-            #     "fieldtype": "Table",
-            #     "options": "SR Medical Report",
-            #     "insert_after": "sr_notes",
-            # },
-
-            # HTML preview area for gallery (JS will render here)
-            # {
-            #     "fieldname": "sr_medical_reports_preview",
-            #     "label": "Medical Reports / Attachments",
-            #     "fieldtype": "HTML",
-            #     "insert_after": "sr_medical_reports_table",
-            # },
         ]
     })
 

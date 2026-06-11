@@ -126,6 +126,10 @@ PAYMENT_PROOF_PARENT_DOCTYPE = "Patient Encounter"
 PAYMENT_PROOF_FIELD = "mmp_payment_proof"
 
 
+def _is_remote_file_url(file_url):
+    return str(file_url or "").strip().lower().startswith(("http://", "https://"))
+
+
 def _skip_s3_delete_file_names():
     skip_names = getattr(frappe.flags, "sriaas_skip_s3_delete_file_names", None)
     if skip_names is None:
@@ -206,6 +210,10 @@ def handle_file_after_insert(doc, method=None):
     # 🚨 Skip if already S3
     # --------------------------------------------------
     if doc.file_url and str(doc.file_url).startswith("s3://"):
+        return
+
+    # Remote provider URLs, such as Interakt media links, are not local files.
+    if _is_remote_file_url(doc.file_url):
         return
     
     # --------------------------------------------------

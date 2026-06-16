@@ -40,6 +40,13 @@ def apply():
     # Core Masters
     # --------------------------------------------------------
     _ensure_sr_patient_disable_reason()
+
+    create_followup_id_doctype()
+    _seed_followup_ids_data()
+
+    create_followup_day_doctype()
+    _seed_followup_days_data()
+
     _ensure_sr_patient_invoice_view()
     _ensure_sr_patient_payment_view()
     _ensure_sr_multi_mode_payment()
@@ -180,6 +187,155 @@ def _ensure_non_kit_item_group():
         "parent_item_group": parent_item_group,
         "is_group": 0,
     }).insert(ignore_permissions=True)
+
+
+def create_followup_id_doctype():
+    """Create SR Followup ID Master (0–9)."""
+
+    doctype = "SR Followup ID"
+
+    if not frappe.db.exists("DocType", doctype):
+
+        doc = frappe.get_doc({
+            "doctype": "DocType",
+            "name": doctype,
+            "module": MODULE_DEF_NAME,
+            "custom": 1,
+            "autoname": "field:digit",
+            "title_field": "digit",
+            "show_title_field_in_link": 1,
+            "search_fields": "digit",
+            "track_changes": 1,
+            "allow_rename": 0,
+            "fields": [
+                {
+                    "fieldname": "digit",
+                    "label": "Digit",
+                    "fieldtype": "Int",
+                    "reqd": 1,
+                    "unique": 1,
+                    "in_list_view": 1,
+                    "in_standard_filter": 1,
+                },
+                {
+                    "fieldname": "is_active",
+                    "label": "Is Active",
+                    "fieldtype": "Check",
+                    "default": 1,
+                    "in_list_view": 1,
+                },
+            ],
+            "permissions": [
+                {
+                    "role": "System Manager",
+                    "read": 1,
+                    "write": 1,
+                    "create": 1,
+                    "delete": 1,
+                    "export": 1,
+                },
+                {
+                    "role": "Healthcare Administrator",
+                    "read": 1,
+                },
+            ],
+        })
+        
+        doc.insert(ignore_permissions=True)
+        frappe.db.commit()
+
+
+def _seed_followup_ids_data():
+    """Insert digits 0-9 safely."""
+
+    for i in range(10):
+        if not frappe.db.exists("SR Followup ID", {"digit": i}):
+            frappe.get_doc({
+                "doctype": "SR Followup ID",
+                "digit": i,
+                "is_active": 1,
+            }).insert(ignore_permissions=True)
+
+    frappe.db.commit()
+
+
+def create_followup_day_doctype():
+    """Create SR Followup Day Master."""
+
+    doctype = "SR Followup Day"
+
+    if not frappe.db.exists("DocType", doctype):
+        
+        doc = frappe.get_doc({
+            "doctype": "DocType",
+            "name": doctype,
+            "module": MODULE_DEF_NAME,
+            "custom": 1,
+            "autoname": "field:day_name",
+            "title_field": "day_name",
+            "show_title_field_in_link": 1,
+            "search_fields": "day_name",
+            "track_changes": 1,
+            "allow_rename": 0,
+            "fields": [
+                {
+                    "fieldname": "day_name",
+                    "label": "Day",
+                    "fieldtype": "Data",
+                    "reqd": 1,
+                    "unique": 1,
+                    "in_list_view": 1,
+                    "in_standard_filter": 1,
+                },
+                {
+                    "fieldname": "sort_order",
+                    "label": "Sort Order",
+                    "fieldtype": "Int",
+                    "default": 0,
+                },
+                {
+                    "fieldname": "is_active",
+                    "label": "Is Active",
+                    "fieldtype": "Check",
+                    "default": 1,
+                    "in_list_view": 1,
+                },
+            ],
+            "permissions": [
+                {
+                    "role": "System Manager",
+                    "read": 1,
+                    "write": 1,
+                    "create": 1,
+                    "delete": 1,
+                    "export": 1,
+                },
+                {
+                    "role": "Healthcare Administrator",
+                    "read": 1,
+                },
+            ],
+        })
+        
+        doc.insert(ignore_permissions=True)
+        frappe.db.commit()
+
+
+def _seed_followup_days_data():
+    """Insert Mon-Sat safely."""
+
+    days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+    for idx, day in enumerate(days):
+        if not frappe.db.exists("SR Followup Day", {"day_name": day}):
+            frappe.get_doc({
+                "doctype": "SR Followup Day",
+                "day_name": day,
+                "sort_order": idx,
+                "is_active": 1,
+            }).insert(ignore_permissions=True)
+
+    frappe.db.commit()
 
 
 def _ensure_sr_patient_invoice_view():

@@ -14,7 +14,7 @@ def set_patient_series(doc, method=None):
     # keep if already correct
     if doc.name and doc.name.startswith(prefix):
         return
-    
+
     doc.name = make_autoname(series)
 
 
@@ -97,8 +97,8 @@ def set_patient_id(doc, method=None):
 
     if doc.get("sr_patient_id"):
         return
-    
-    # Patient has NO company field → use default
+
+    # Patient has NO company field -> use default
     company = frappe.defaults.get_global_default("company")
 
     if not company:
@@ -146,26 +146,9 @@ def set_patient_creator(doc, method):
         doc.created_by_agent = frappe.session.user or "Administrator"
 
 
-# -----------------------------------------------------------------
-# F) Follow-up fields: followup id + followup day cycler assignment
-# -----------------------------------------------------------------
-def set_followup_id(doc, method=None):
-    source = doc.get("sr_practo_id") or doc.get("sr_patient_id")
-
-    if not source:
-        return
-
-    source = source.strip()
-
-    last_digit = None
-    for ch in source:
-        if ch.isdigit():
-            last_digit = ch
-
-    if last_digit:
-        doc.sr_followup_id = last_digit
-
-
+# --------------------------------------------------------
+# F) Set Followup Day (Weekday Based)
+# --------------------------------------------------------
 def set_followup_day(doc, method=None):
     # Skip if already set
     if doc.get("sr_followup_day"):
@@ -174,5 +157,62 @@ def set_followup_day(doc, method=None):
     # Safe creation date
     creation_date = getdate(doc.creation) if doc.creation else getdate(nowdate())
 
-    # Assign weekday (Mon, Tue, Wed...)
-    doc.sr_followup_day = creation_date.strftime("%a")
+    # Get short weekday (Mon, Tue, Wed...)
+    weekday_name = creation_date.strftime("%a")
+
+    # Try exact weekday match (cached)
+    record = frappe.get_cached_value(
+        "SR Followup Day",
+        {"day_name": weekday_name, "is_active": 1},
+        "name"
+    )
+
+    if record:
+        doc.sr_followup_day = record
+        return
+
+    # Fallback: first active day
+    fallback = frappe.get_all(
+        "SR Followup Day",
+        filters={"is_active": 1},
+        order_by="sort_order asc",
+        limit=1,
+        pluck="name"
+    )
+
+    if fallback:
+        doc.sr_followup_day = fallback[0]
+
+
+def set_followup_id(doc, method=None):
+    if doc.get("sr_followup_id"):
+        return
+
+    source = (
+        doc.get("sr_practo_id")
+        or doc.get("sr_patient_id")
+        or doc.name
+    )
+
+    if not source:
+        return
+
+    source = str(source).strip()
+
+    digits = [ch for ch in source if ch.isdigit()]
+    if not digits:
+        return
+
+    try:
+        last_digit = int(digits[-1])
+    except (TypeError, ValueError):
+        return
+
+    record = frappe.get_cached_value(
+        "SR Followup ID",
+        {"digit": last_digit, "is_active": 1},
+        "name"
+    )
+
+    if record:
+        doc.sr_followup_id = record

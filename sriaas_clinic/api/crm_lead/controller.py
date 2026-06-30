@@ -7,6 +7,9 @@ from sriaas_clinic.api.crm_lead.utils import clean_spaces
 from frappe.core.doctype.user_permission.user_permission import get_user_permissions
 
 
+CRM_LEAD_ROLE_CONTEXT_CACHE_TTL = 120
+
+
 # ---------------------------------------------------------------------------
 # NORMALIZE PHONE-LIKE FIELDS
 # ---------------------------------------------------------------------------
@@ -71,6 +74,51 @@ def _agent_allowed_for_pipeline(user: str, pipeline: str) -> bool:
 
 @frappe.whitelist()
 def get_crm_lead_role_context():
+    user = frappe.session.user
+    cache_key = _crm_lead_role_context_cache_key(user)
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    context = _build_crm_lead_role_context(user)
+    _cache_set(cache_key, context, CRM_LEAD_ROLE_CONTEXT_CACHE_TTL)
+    return context
+
+
+def clear_crm_lead_role_context_cache(user: str | None = None) -> None:
+    if user:
+        _cache_delete(_crm_lead_role_context_cache_key(user))
+        return
+    # Frappe/Redis does not provide a cheap portable prefix delete here.
+    # Keep this as a focused API for known user changes; TTL handles broader invalidation.
+
+
+def _crm_lead_role_context_cache_key(user: str) -> str:
+    return f"sriaas_clinic:crm_lead_role_context:{user}"
+
+
+def _cache_get(key: str):
+    try:
+        return frappe.cache().get_value(key)
+    except Exception:
+        return None
+
+
+def _cache_set(key: str, value, ttl: int) -> None:
+    try:
+        frappe.cache().set_value(key, value, expires_in_sec=ttl)
+    except Exception:
+        pass
+
+
+def _cache_delete(key: str) -> None:
+    try:
+        frappe.cache().delete_value(key)
+    except Exception:
+        pass
+
+
+def _build_crm_lead_role_context(user: str):
     from sriaas_clinic.api.assign_guard import _is_team_leader
     from sriaas_clinic.api.crm_lead.access import (
         _is_assistant_team_lead,
@@ -81,7 +129,6 @@ def get_crm_lead_role_context():
     )
     from sriaas_role_permissions.api.roles import has_agent_role, has_team_leader_role, is_privileged
 
-    user = frappe.session.user
     config = get_config()
     locked = get_locked_fields()
     reports_to = _reports_to_team_leader(user)

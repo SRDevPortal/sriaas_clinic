@@ -472,6 +472,7 @@ def _ensure_sr_patient_payment_view():
 def _ensure_sr_multi_mode_payment():
     """Create SR Multi Mode Payment master."""
     if frappe.db.exists("DocType", "SR Multi Mode Payment"):
+        _ensure_sr_multi_mode_payment_orchestrator_fields()
         return
 
     frappe.get_doc({
@@ -489,6 +490,11 @@ def _ensure_sr_multi_mode_payment():
             "mmp_reference_no",
             "mmp_reference_date",
             "mmp_payment_proof",
+            "mmp_payment_intent",
+            "mmp_provider_payment_id",
+            "mmp_gateway",
+            "mmp_payment_mode",
+            "mmp_orchestrator_status",
         ],
         "fields": [
             {
@@ -542,9 +548,98 @@ def _ensure_sr_multi_mode_payment():
                 "in_list_view": 1,
                 "columns": 3,
             },
+            {
+                "fieldname": "mmp_payment_intent",
+                "label": "Payment Intent",
+                "fieldtype": "Data",
+                "read_only": 1,
+                "hidden": 1,
+            },
+            {
+                "fieldname": "mmp_provider_payment_id",
+                "label": "Provider Payment ID",
+                "fieldtype": "Data",
+                "read_only": 1,
+                "hidden": 1,
+            },
+            {
+                "fieldname": "mmp_gateway",
+                "label": "Gateway",
+                "fieldtype": "Data",
+                "read_only": 1,
+                "hidden": 1,
+            },
+            {
+                "fieldname": "mmp_payment_mode",
+                "label": "Payment Mode",
+                "fieldtype": "Data",
+                "read_only": 1,
+                "hidden": 1,
+            },
+            {
+                "fieldname": "mmp_orchestrator_status",
+                "label": "Orchestrator Status",
+                "fieldtype": "Data",
+                "read_only": 1,
+                "hidden": 1,
+            },
         ],
         "permissions": [],
     }).insert(ignore_permissions=True)
+
+
+def _ensure_sr_multi_mode_payment_orchestrator_fields():
+    """Keep orchestrator trace fields on existing SR Multi Mode Payment tables."""
+    doctype = "SR Multi Mode Payment"
+    doc = frappe.get_doc("DocType", doctype)
+    existing_fields = {field.fieldname for field in doc.fields}
+    fields = [
+        {
+            "fieldname": "mmp_payment_intent",
+            "label": "Payment Intent",
+            "fieldtype": "Data",
+            "read_only": 1,
+            "hidden": 1,
+        },
+        {
+            "fieldname": "mmp_provider_payment_id",
+            "label": "Provider Payment ID",
+            "fieldtype": "Data",
+            "read_only": 1,
+            "hidden": 1,
+        },
+        {
+            "fieldname": "mmp_gateway",
+            "label": "Gateway",
+            "fieldtype": "Data",
+            "read_only": 1,
+            "hidden": 1,
+        },
+        {
+            "fieldname": "mmp_payment_mode",
+            "label": "Payment Mode",
+            "fieldtype": "Data",
+            "read_only": 1,
+            "hidden": 1,
+        },
+        {
+            "fieldname": "mmp_orchestrator_status",
+            "label": "Orchestrator Status",
+            "fieldtype": "Data",
+            "read_only": 1,
+            "hidden": 1,
+        },
+    ]
+
+    changed = False
+    for field in fields:
+        if field["fieldname"] not in existing_fields:
+            doc.append("fields", field)
+            changed = True
+
+    if changed:
+        doc.save(ignore_permissions=True)
+        frappe.clear_cache(doctype=doctype)
 
 
 def _ensure_sr_sales_type():

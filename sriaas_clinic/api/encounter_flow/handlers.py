@@ -370,8 +370,12 @@ def _party_account(company: str, party_type: str, party: str) -> Optional[str]:
 
 def _mop_account(company: str, mop: str) -> Optional[str]:
     acc = frappe.db.get_value("Mode of Payment Account", {"parent": mop, "company": company}, "default_account")
-    if not acc:
+    if not acc and frappe.get_meta("Mode of Payment Account").has_field("account"):
         acc = frappe.db.get_value("Mode of Payment Account", {"parent": mop, "company": company}, "account")
+    if not acc:
+        acc = frappe.db.get_value("Company", company, "default_bank_account")
+    if not acc:
+        acc = frappe.db.get_value("Company", company, "default_cash_account")
     return acc
 
 

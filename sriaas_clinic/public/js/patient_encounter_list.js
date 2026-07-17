@@ -24,6 +24,12 @@
 
             listview.__sr_new_doc_patch_installed = true;
 
+            listview.page.add_inner_button(
+                __("Optimized Operations"),
+                () => frappe.set_route("query-report", "Patient Encounter Operations"),
+                __("View")
+            );
+
             listview.make_new_doc = function () {
                 const options = {};
                 const allowedFilterTypes = [

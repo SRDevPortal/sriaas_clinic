@@ -30,6 +30,32 @@
                 __("View")
             );
 
+            listview.page.add_inner_button(
+                __("Search by Mobile"),
+                () => {
+                    frappe.prompt(
+                        {
+                            fieldname: "mobile",
+                            fieldtype: "Data",
+                            label: __("Patient Mobile"),
+                            reqd: 1,
+                        },
+                        ({ mobile }) => {
+                            const digits = String(mobile || "").replace(/\D/g, "");
+                            if (digits.length < 10) {
+                                frappe.msgprint(__("Enter a phone number containing at least 10 digits."));
+                                return;
+                            }
+                            frappe.route_options = { mobile: digits.slice(-10) };
+                            frappe.set_route("query-report", "Patient Encounter Operations");
+                        },
+                        __("Search Patient Encounters"),
+                        __("Search")
+                    );
+                },
+                __("View")
+            );
+
             listview.make_new_doc = function () {
                 const options = {};
                 const allowedFilterTypes = [

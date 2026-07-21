@@ -107,6 +107,9 @@ doc_events = {
         # ],
     },
     "Patient Encounter": {
+        "before_validate": [
+            "sriaas_clinic.api.patient_encounter_phone.sync_normalized_mobile",
+        ],
         "validate": [
             "sriaas_clinic.api.encounter_flow.handlers.validate_agent_status_change",
             "sriaas_clinic.api.encounter_flow.handlers.validate_agent_followup_online_source",

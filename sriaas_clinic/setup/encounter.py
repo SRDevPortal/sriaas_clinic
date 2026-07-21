@@ -70,8 +70,18 @@ def _make_encounter_fields():
                 "depends_on": "eval:doc.patient",
                 "fetch_from": "patient.mobile",
                 "in_list_view": 1,
-                "in_standard_filter": 1,
+                "in_standard_filter": 0,
                 "insert_after": "inpatient_status",
+            },
+
+            {
+                "fieldname": "sr_pe_mobile_norm",
+                "label": "Normalized Patient Mobile",
+                "fieldtype": "Data",
+                "read_only": 1,
+                "hidden": 1,
+                "no_copy": 1,
+                "insert_after": "sr_pe_mobile",
             },
 
             {
@@ -83,7 +93,7 @@ def _make_encounter_fields():
                 "fetch_from": "patient.sr_patient_id",
                 "in_list_view": 1,
                 "in_standard_filter": 1,
-                "insert_after": "sr_pe_mobile",
+                "insert_after": "sr_pe_mobile_norm",
             },
 
             {

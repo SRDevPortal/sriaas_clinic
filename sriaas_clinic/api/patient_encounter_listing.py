@@ -6,6 +6,8 @@ import frappe
 from frappe import _
 from frappe.utils import cint
 
+from sriaas_clinic.phone_utils import normalize_phone_last10
+
 
 DEFAULT_PAGE_LENGTH = 20
 MAX_PAGE_LENGTH = 100
@@ -36,6 +38,7 @@ ALLOWED_FILTER_KEYS = EXACT_FILTER_FIELDS | {
     "creation_from",
     "creation_to",
 }
+INDEXED_PHONE_LOOKUP_CONFIG = "enable_indexed_patient_encounter_phone_lookup"
 
 
 @frappe.whitelist()
@@ -53,7 +56,7 @@ def get_optimized_encounters(filters=None, start=0, page_length=DEFAULT_PAGE_LEN
         "Patient Encounter",
         filters=query_filters,
         fields=fields,
-        order_by="modified desc",
+        order_by="modified desc, name desc",
         start=start,
         page_length=page_length + 1,
     )
@@ -98,7 +101,9 @@ def _build_parent_filters(filters: dict[str, Any], meta) -> list[list[Any]]:
     mobile = str(filters.get("mobile") or "").strip()
     if mobile:
         normalized = _normalize_phone_lookup(mobile)
-        if meta.has_field("sr_pe_mobile_norm"):
+        if not normalized:
+            frappe.throw(_("Enter a phone number containing at least 10 digits."))
+        if meta.has_field("sr_pe_mobile_norm") and _indexed_phone_lookup_enabled():
             query_filters.append(["sr_pe_mobile_norm", "=", normalized])
         elif meta.has_field("sr_pe_mobile"):
             # This exact compatibility path intentionally avoids a leading
@@ -115,8 +120,11 @@ def _build_parent_filters(filters: dict[str, Any], meta) -> list[list[Any]]:
 
 
 def _normalize_phone_lookup(value: str) -> str:
-    digits = "".join(character for character in str(value or "") if character.isdigit())
-    return digits[-10:] if len(digits) >= 10 else digits
+    return normalize_phone_last10(value)
+
+
+def _indexed_phone_lookup_enabled() -> bool:
+    return bool(cint(frappe.conf.get(INDEXED_PHONE_LOOKUP_CONFIG)))
 
 
 def _child_totals(doctype: str, amount_field: str, parents: list[str]) -> dict[str, Any]:
@@ -130,5 +138,6 @@ def _child_totals(doctype: str, amount_field: str, parents: list[str]) -> dict[s
         filters={"parenttype": "Patient Encounter", "parent": ["in", parents]},
         fields=["parent", f"sum(`{amount_field}`) as total"],
         group_by="parent",
+        limit_page_length=0,
     )
     return {row.parent: row.total or 0 for row in rows}

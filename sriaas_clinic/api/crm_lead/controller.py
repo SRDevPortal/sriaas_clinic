@@ -195,7 +195,7 @@ def _ensure_can_manage_lead(doc) -> None:
 
 @frappe.whitelist()
 def assign_crm_lead_owner(leads, new_owner):
-    from crm_lead_assignment.api.manual import assign_crm_leads
+    from new_assignement_system.api.manual import assign_crm_leads
 
     return assign_crm_leads(leads, new_owner)
 
@@ -304,7 +304,7 @@ def _repair_assignment_reference(lead, owner):
 
 @frappe.whitelist()
 def clear_crm_lead_owner(leads):
-    from crm_lead_assignment.api.manual import clear_crm_leads
+    from new_assignement_system.api.manual import clear_crm_leads
 
     return clear_crm_leads(leads)
 

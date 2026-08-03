@@ -55,6 +55,9 @@ doc_events = {
             "sriaas_clinic.api.patient.set_followup_id",
             "sriaas_clinic.api.patient.set_followup_day",
         ],
+        "validate": [
+            "sriaas_clinic.api.patient.validate_followup_status",
+        ],
         "after_save": [
             "sriaas_clinic.api.address.mirror_links_to_customer",
         ],
@@ -244,6 +247,7 @@ doc_events = {
 
 doctype_js = {
     "Patient": [
+        "public/js/patient_followup_marker.js",
         "public/js/patient_invoices.js",
         "public/js/patient_payments.js",
         "public/js/patient_pex_launcher.js",

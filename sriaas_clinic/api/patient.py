@@ -216,3 +216,33 @@ def set_followup_id(doc, method=None):
 
     if record:
         doc.sr_followup_id = record
+
+
+def validate_followup_status(doc, method=None):
+    """Allow only active follow-up statuses when the Patient value changes."""
+    status_name = str(doc.get("sr_followup_status") or "").strip()
+    if not status_name:
+        return
+
+    status = frappe.db.get_value(
+        "SR Followup Status",
+        status_name,
+        ["name", "is_active"],
+        as_dict=True,
+    )
+    if not status:
+        frappe.throw(f"Follow-up Status {status_name!r} does not exist.")
+
+    if status.is_active:
+        return
+
+    previous_status = None
+    if doc.name and not doc.is_new():
+        previous_status = frappe.db.get_value(
+            "Patient",
+            doc.name,
+            "sr_followup_status",
+        )
+
+    if previous_status != status_name:
+        frappe.throw(f"Follow-up Status {status_name!r} is inactive.")

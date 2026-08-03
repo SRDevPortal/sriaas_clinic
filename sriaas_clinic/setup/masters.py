@@ -15,6 +15,92 @@ JSON_DOCTYPES = [
     # "sr_patient_invoice_view",
 ]
 
+
+FOLLOWUP_STATUS_DEFAULTS = (
+    {
+        "status_name": "Pending",
+        "description": "Patient follow-up is pending.",
+        "is_active": 1,
+        "color": "#f39c12",
+        "sort_order": 1,
+    },
+    {
+        "status_name": "Done",
+        "description": "Patient follow-up is complete.",
+        "is_active": 1,
+        "color": "#27ae60",
+        "sort_order": 2,
+    },
+    {
+        "status_name": "Agent Not Available",
+        "description": "The assigned agent was not available for follow-up.",
+        "is_active": 1,
+        "color": "#7f8c8d",
+        "sort_order": 3,
+    },
+    {
+        "status_name": "Missed",
+        "description": "The planned follow-up was missed.",
+        "is_active": 0,
+        "color": "#e74c3c",
+        "sort_order": 4,
+    },
+    {
+        "status_name": "Rescheduled",
+        "description": "The follow-up was moved to another time.",
+        "is_active": 0,
+        "color": "#3498db",
+        "sort_order": 5,
+    },
+    {
+        "status_name": "Not Interested",
+        "description": "The patient is not interested in further follow-up.",
+        "is_active": 0,
+        "color": "#6c757d",
+        "sort_order": 6,
+    },
+)
+
+FOLLOWUP_STATUS_PERMISSION_FIELDS = (
+    "read",
+    "write",
+    "create",
+    "delete",
+    "submit",
+    "cancel",
+    "amend",
+    "report",
+    "export",
+    "import",
+    "share",
+    "print",
+    "email",
+    "select",
+)
+
+FOLLOWUP_STATUS_PERMISSIONS = (
+    {
+        "role": "System Manager",
+        "read": 1,
+        "write": 1,
+        "create": 1,
+        "delete": 1,
+        "report": 1,
+        "export": 1,
+        "share": 1,
+        "print": 1,
+        "email": 1,
+    },
+    {
+        "role": "Healthcare Administrator",
+        "read": 1,
+        "write": 1,
+        "create": 1,
+    },
+    {"role": "Agent", "read": 1},
+    {"role": "Team Leader", "read": 1},
+)
+
 def apply():
     """
     Apply all master setup steps for SRIAAS Clinic.
@@ -40,6 +126,9 @@ def apply():
     # Core Masters
     # --------------------------------------------------------
     _ensure_sr_patient_disable_reason()
+
+    ensure_followup_status_doctype()
+    seed_followup_statuses()
 
     create_followup_id_doctype()
     _seed_followup_ids_data()
@@ -187,6 +276,176 @@ def _ensure_non_kit_item_group():
         "parent_item_group": parent_item_group,
         "is_group": 0,
     }).insert(ignore_permissions=True)
+
+
+def ensure_followup_status_doctype():
+    """Create the Patient follow-up status master when it is missing."""
+    doctype = "SR Followup Status"
+
+    if frappe.db.exists("DocType", doctype):
+        ensure_followup_status_permissions()
+        return
+
+    frappe.get_doc(
+        {
+            "doctype": "DocType",
+            "name": doctype,
+            "module": MODULE_DEF_NAME,
+            "custom": 1,
+            "autoname": "field:status_name",
+            "title_field": "status_name",
+            "show_title_field_in_link": 1,
+            "search_fields": "status_name",
+            "track_changes": 1,
+            "allow_rename": 0,
+            "fields": [
+                {
+                    "fieldname": "status_name",
+                    "label": "Status Name",
+                    "fieldtype": "Data",
+                    "reqd": 1,
+                    "unique": 1,
+                    "in_list_view": 1,
+                    "in_standard_filter": 1,
+                },
+                {
+                    "fieldname": "description",
+                    "label": "Description",
+                    "fieldtype": "Small Text",
+                },
+                {
+                    "fieldname": "is_active",
+                    "label": "Is Active",
+                    "fieldtype": "Check",
+                    "default": 1,
+                    "in_list_view": 1,
+                },
+                {
+                    "fieldname": "color",
+                    "label": "Color",
+                    "fieldtype": "Color",
+                },
+                {
+                    "fieldname": "sort_order",
+                    "label": "Sort Order",
+                    "fieldtype": "Int",
+                    "default": 0,
+                    "in_list_view": 1,
+                },
+            ],
+            "permissions": [
+                _complete_followup_status_permission(row)
+                for row in FOLLOWUP_STATUS_PERMISSIONS
+            ],
+        }
+    ).insert(ignore_permissions=True)
+
+
+def ensure_followup_status_permissions():
+    """Keep master-management roles explicit; DocPerm CRUD defaults are permissive."""
+    if not frappe.db.exists("DocType", "SR Followup Status"):
+        return
+
+    doc = frappe.get_doc("DocType", "SR Followup Status")
+    expected = [
+        _complete_followup_status_permission(row)
+        for row in FOLLOWUP_STATUS_PERMISSIONS
+    ]
+    current = [
+        {
+            "role": row.role,
+            **{
+                fieldname: int(row.get(fieldname) or 0)
+                for fieldname in FOLLOWUP_STATUS_PERMISSION_FIELDS
+            },
+        }
+        for row in doc.permissions
+    ]
+    if current == expected:
+        return
+
+    doc.set("permissions", expected)
+    doc.save(ignore_permissions=True)
+    frappe.clear_cache(doctype="SR Followup Status")
+
+
+def _complete_followup_status_permission(values):
+    permission = {"role": values["role"]}
+    permission.update(
+        {
+            fieldname: int(values.get(fieldname) or 0)
+            for fieldname in FOLLOWUP_STATUS_PERMISSION_FIELDS
+        }
+    )
+    return permission
+
+
+def seed_followup_statuses():
+    """Insert the canonical statuses without overwriting configured records."""
+    ensure_followup_status_doctype()
+
+    for values in FOLLOWUP_STATUS_DEFAULTS:
+        status_name = values["status_name"]
+        if frappe.db.exists("SR Followup Status", status_name):
+            continue
+
+        frappe.get_doc(
+            {
+                "doctype": "SR Followup Status",
+                **values,
+            }
+        ).insert(ignore_permissions=True)
+
+
+def ensure_legacy_followup_statuses(status_names=None):
+    """Preserve every populated legacy Patient value as a master record."""
+    ensure_followup_status_doctype()
+
+    if status_names is None:
+        status_names = frappe.get_all(
+            "Patient",
+            filters={"sr_followup_status": ["is", "set"]},
+            pluck="sr_followup_status",
+            distinct=True,
+            limit_page_length=0,
+        )
+
+    cleaned_names = []
+    for raw_name in status_names:
+        status_name = str(raw_name or "")
+        if not status_name:
+            continue
+        if status_name != status_name.strip():
+            frappe.throw(
+                f"Patient Follow-up Status has surrounding whitespace: {status_name!r}"
+            )
+        if status_name not in cleaned_names:
+            cleaned_names.append(status_name)
+
+    existing_orders = frappe.get_all(
+        "SR Followup Status",
+        pluck="sort_order",
+    )
+    next_order = max((int(value or 0) for value in existing_orders), default=0) + 1
+
+    inserted = []
+    for status_name in cleaned_names:
+        if frappe.db.exists("SR Followup Status", status_name):
+            continue
+
+        frappe.get_doc(
+            {
+                "doctype": "SR Followup Status",
+                "status_name": status_name,
+                "description": "Preserved from the legacy Patient Follow-up Status field.",
+                "is_active": 1,
+                "sort_order": next_order,
+            }
+        ).insert(ignore_permissions=True)
+        inserted.append(status_name)
+        next_order += 1
+
+    return inserted
 
 
 def create_followup_id_doctype():

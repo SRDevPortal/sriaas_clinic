@@ -42,7 +42,17 @@ def _make_patient_fields():
              "insert_after":"sr_dpt_disease"},
 
             {"fieldname": "sr_followup_disable_reason","label":"Followup Disable Reason","fieldtype":"Link","options":"SR Patient Disable Reason","insert_after":"status","depends_on":'eval:doc.status=="Disabled"',"mandatory_depends_on":'eval:doc.status=="Disabled"'},
-            {"fieldname": "sr_followup_status","label":"Followup Status","fieldtype":"Select","options":"\nPending\nDone","insert_after":"user_id","in_list_view":1,"in_standard_filter":1},
+            {
+                "fieldname": "sr_followup_status",
+                "label": "Follow-up Status",
+                "fieldtype": "Link",
+                "options": "SR Followup Status",
+                "insert_after": "user_id",
+                "in_list_view": 1,
+                "in_standard_filter": 1,
+                "allow_in_quick_entry": 1,
+                "search_index": 1,
+            },
 
             {"fieldname": "sr_invoices_tab","label":"Invoices","fieldtype":"Tab Break","insert_after":"other_risk_factors"},
             {"fieldname": "sr_sales_invoice_list","label":"Sales Invoices","fieldtype":"Table","options":"SR Patient Invoice View","read_only":1,"insert_after":"sr_invoices_tab"},

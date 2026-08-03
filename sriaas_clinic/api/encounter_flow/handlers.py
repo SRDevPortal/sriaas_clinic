@@ -434,6 +434,15 @@ def validate_agent_followup_online_source(doc, method=None):
         )
 
 
+def validate_sales_type_required(doc, method=None):
+    """Require Sales Type for Order and Appointment encounters."""
+    if doc.get(F_ENCOUNTER_TYPE) in ("Order", "Appointment") and not doc.get(F_SALES_TYPE):
+        frappe.throw(
+            "Sales Type is mandatory for Order or Appointment encounters.",
+            title="Missing Required Field",
+        )
+
+
 def validate_order_items_required(doc, method=None):
     """
     Block saving Patient Encounter if Order Items are empty

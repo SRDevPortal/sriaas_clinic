@@ -57,8 +57,8 @@ def _make_encounter_fields():
                 "label": "Sales Type",
                 "fieldtype": "Link",
                 "options": "SR Sales Type",
-                "depends_on": 'eval:doc.sr_encounter_type=="Order"',
-                "mandatory_depends_on": 'eval:doc.sr_encounter_type=="Order"',
+                "depends_on": 'eval:["Order", "Appointment"].includes(doc.sr_encounter_type)',
+                "mandatory_depends_on": 'eval:["Order", "Appointment"].includes(doc.sr_encounter_type)',
                 "insert_after": "sr_encounter_place",
             },
 

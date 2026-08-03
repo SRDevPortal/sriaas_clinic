@@ -113,6 +113,7 @@ doc_events = {
         "validate": [
             "sriaas_clinic.api.encounter_flow.handlers.validate_agent_status_change",
             "sriaas_clinic.api.encounter_flow.handlers.validate_agent_followup_online_source",
+            "sriaas_clinic.api.encounter_flow.handlers.validate_sales_type_required",
             "sriaas_clinic.api.encounter_flow.handlers.validate_order_items_required",
             # "sriaas_clinic.api.encounter_flow.handlers.validate_encounter_workflow",
         ],

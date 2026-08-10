@@ -6,7 +6,7 @@ from collections import OrderedDict
 import frappe
 from frappe.utils import flt
 
-from india_compliance.gst_india.overrides.transaction import (
+from india_compliance.gst_india.utils.taxes_controller import (
     update_gst_details as update_india_compliance_gst_details,
 )
 

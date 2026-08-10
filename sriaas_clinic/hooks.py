@@ -4,7 +4,16 @@ app_publisher = "SRIAAS"
 app_description = "Clinic customizations packaged as clean installable/uninstallable app."
 app_email = "webdevelopersriaas@gmail.com"
 app_license = "mit"
-required_apps = ["sriaas_role_permissions"]
+
+required_apps = [
+    "erpnext",
+    "healthcare",
+    "crm",
+    "india_compliance",
+    "sriaas_role_permissions",
+    "team",
+    "payment_orchestrator",
+]
 
 # Installation
 # before_install = "sriaas_clinic.install.before_install"
@@ -25,11 +34,8 @@ app_include_js = [
 
 web_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
 
-list_js = {
-    "Sales Invoice": "public/js/sales_invoice_list.js",
-}
-
 doctype_list_js = {
+    "Sales Invoice": "public/js/sales_invoice_list.js",
     "Patient Encounter": "public/js/patient_encounter_list.js",
 }
 

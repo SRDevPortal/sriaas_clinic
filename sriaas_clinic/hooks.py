@@ -158,6 +158,7 @@ doc_events = {
             "sriaas_clinic.api.sales_invoice.set_sales_invoice_series",
             "sriaas_clinic.api.si_payment_flow.handlers.apply_kit_discount_from_grand_total",
             "sriaas_clinic.api.gst_breakup.prepare_gst_validation_fields",
+            "sriaas_clinic.api.compliance_barcode.prepare_sales_invoice_compliance",
         ],
         "validate": [
             "sriaas_clinic.api.sales_invoice.validate_sales_invoice_series",
@@ -170,6 +171,7 @@ doc_events = {
         "before_submit": [
             "sriaas_clinic.api.sales_invoice_guard.validate_sales_invoice_warehouse",
             "sriaas_clinic.api.sales_invoice_guard.validate_kit_total_vs_grand_total",
+            "sriaas_clinic.api.compliance_barcode.validate_sales_invoice_compliance",
             # "sriaas_clinic.api.si_payment_flow.handlers.validate_dp_before_submit",
         ],        
         "on_submit": [

@@ -97,7 +97,7 @@ function configure_item_grid(frm) {
   });
 
   [
-    'batch_no',
+    'sr_compliance_batch_no',
     'price_list_rate',
     'rate',
     'discount_percentage',

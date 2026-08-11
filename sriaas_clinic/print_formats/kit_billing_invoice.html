@@ -309,7 +309,10 @@
         {% for it in item_groups.kit_items %}
           (
           {{ it.item_name }}
-          {% if it.batch_no %}, Batch No. {{ it.batch_no }}{% endif %}
+          {% set printed_batch = it.sr_compliance_batch_no or it.batch_no or "" %}
+          {% if printed_batch %}, Batch No. {{ printed_batch }}{% endif %}
+          {% if it.sr_compliance_mfg_date %}, Mfg. {{ frappe.utils.formatdate(it.sr_compliance_mfg_date) }}{% endif %}
+          {% if it.sr_compliance_expiry_date %}, Exp. {{ frappe.utils.formatdate(it.sr_compliance_expiry_date) }}{% endif %}
           , Unit {{ it.qty }}
           )
         {% endfor %}

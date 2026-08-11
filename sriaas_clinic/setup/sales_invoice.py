@@ -76,7 +76,7 @@ def _setup_invoice_item_fields():
 
     meta = frappe.get_meta(CHILD)
     field_props = {
-        "batch_no": {"hidden": "0", "in_list_view": "1", "columns": "1"},
+        "batch_no": {"hidden": "1", "in_list_view": "0", "columns": "1"},
         "price_list_rate": {"hidden": "0", "in_list_view": "1", "columns": "1", "precision": "6"},
         "rate": {"hidden": "0", "in_list_view": "1", "columns": "1", "precision": "6"},
         "discount_percentage": {"hidden": "0", "in_list_view": "1", "columns": "1"},
@@ -106,7 +106,8 @@ def _apply_invoice_ui_customizations():
     ensure_field_after(PARENT, "sr_kit_total_price", "sr_kit_name")
     ensure_field_after(PARENT, "sr_non_kit_total_price", "sr_kit_total_price")
 
-    ensure_field_after(CHILD, "batch_no", "item_code")
+    # Standard batch_no is retained for historical/legacy rows but hidden by
+    # default. The hybrid scanner reveals it only for a legacy Batch scan.
     ensure_field_after(CHILD, "price_list_rate", "qty")
     ensure_field_after(CHILD, "rate", "price_list_rate")
     ensure_field_after(CHILD, "discount_percentage", "rate")
@@ -164,7 +165,6 @@ def _delete_custom_field(doctype: str, fieldname: str):
     frappe.delete_doc("Custom Field", name, ignore_permissions=True, force=True)
     frappe.clear_cache(doctype=doctype)
     frappe.db.commit()
-
 
 
 

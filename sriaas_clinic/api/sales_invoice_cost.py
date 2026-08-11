@@ -21,7 +21,7 @@ def _get_item_cost(item_code, buying_price_list):
             "buying": 1,
         },
         fields=["price_list_rate"],
-        order_by='IFNULL(valid_from, "1900-01-01") DESC, modified DESC',
+        order_by="valid_from desc, modified desc",
         limit=1,
     )
     return float((rows[0].price_list_rate if rows else 0) or 0)

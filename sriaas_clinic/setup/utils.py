@@ -3,7 +3,7 @@ import frappe
 import json
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields as _ccf
 
-MODULE_DEF_NAME = "SRIAAS Clinic"   # Desk Module Def label
+MODULE_DEF_NAME = "Sriaas Clinic"   # Canonical name from modules.txt / Module Def
 APP_PY_MODULE   = "sriaas_clinic"   # Python package
 
 def ensure_module_def():

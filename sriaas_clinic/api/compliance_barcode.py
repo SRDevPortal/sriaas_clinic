@@ -502,6 +502,132 @@ def _ensure_migration_permission():
 		frappe.throw(_("Only System Manager or Stock Manager can use compliance migration tools."), frappe.PermissionError)
 
 
+def _validate_replacement_item(legacy_item: str, replacement_item: str):
+	replacement = _get_item(replacement_item)
+	if replacement.has_batch_no:
+		frappe.throw(_("Replacement Item must have Has Batch No disabled."))
+	if replacement.has_serial_no:
+		frappe.throw(_("Replacement Item must have serial tracking disabled."))
+	if not replacement.is_stock_item:
+		frappe.throw(_("Replacement Item must remain a stock Item."))
+	if frappe.get_meta("Item").has_field("sr_legacy_item"):
+		linked_legacy = frappe.db.get_value("Item", replacement.name, "sr_legacy_item")
+		if linked_legacy != legacy_item:
+			frappe.throw(
+				_("Replacement Item {0} must link to legacy Item {1}.").format(
+					frappe.bold(replacement.name), frappe.bold(legacy_item)
+				)
+			)
+	return replacement
+
+
+def _copy_item_prices(legacy_item: str, replacement_item: str) -> dict:
+	"""Copy non-batch prices without converting batch-specific commercial rules."""
+	fields = [
+		"price_list",
+		"uom",
+		"packing_unit",
+		"valid_from",
+		"valid_upto",
+		"customer",
+		"supplier",
+		"batch_no",
+	]
+
+	def price_key(doc):
+		return tuple(doc.get(fieldname) or None for fieldname in fields)
+
+	existing_keys = {
+		price_key(row)
+		for row in frappe.get_all("Item Price", filters={"item_code": replacement_item}, fields=fields)
+	}
+	created = []
+	skipped = []
+	for row in frappe.get_all(
+		"Item Price", filters={"item_code": legacy_item}, fields=["name", *fields], order_by="creation asc"
+	):
+		if row.batch_no:
+			skipped.append({"name": row.name, "reason": "batch_specific_price_requires_review"})
+			continue
+		if price_key(row) in existing_keys:
+			skipped.append({"name": row.name, "reason": "already_copied"})
+			continue
+
+		price = frappe.copy_doc(frappe.get_doc("Item Price", row.name))
+		price.item_code = replacement_item
+		price.batch_no = None
+		price.insert(ignore_permissions=True)
+		created.append(price.name)
+		existing_keys.add(price_key(price))
+
+	return {"created": created, "skipped": skipped}
+
+
+@frappe.whitelist()
+def create_compliance_replacement_item(
+	legacy_item: str,
+	replacement_item: str | None = None,
+	confirm: bool | str = False,
+):
+	"""Create an unbatched replacement Item without making any stock or valuation entry."""
+	_ensure_migration_permission()
+	if str(confirm).lower() not in {"1", "true", "yes"}:
+		frappe.throw(_("Set confirm=1 after reviewing preview_item_migration."))
+
+	legacy = _get_item(legacy_item)
+	if not legacy.is_stock_item or not legacy.has_batch_no:
+		frappe.throw(_("Legacy Item must be a batch-enabled stock Item."))
+	if legacy.has_serial_no:
+		frappe.throw(_("Serialized Items require a separate migration design."))
+
+	replacement_item = (replacement_item or f"{legacy.name}-COMPLIANCE").strip()
+	if not replacement_item or replacement_item == legacy.name:
+		frappe.throw(_("Use a distinct replacement Item Code."))
+
+	item_created = False
+	if frappe.db.exists("Item", replacement_item):
+		replacement = _validate_replacement_item(legacy.name, replacement_item)
+	else:
+		source = frappe.get_doc("Item", legacy.name)
+		if source.get("variant_of") or source.get("has_variants"):
+			frappe.throw(_("Variant Items require a separately reviewed replacement Item."))
+
+		replacement = frappe.copy_doc(source)
+		replacement.item_code = replacement_item
+		replacement.item_name = _("{0} (Compliance)").format(source.item_name or source.name)
+		replacement.is_stock_item = 1
+		replacement.has_batch_no = 0
+		replacement.create_new_batch = 0
+		replacement.batch_number_series = None
+		replacement.has_expiry_date = 0
+		replacement.shelf_life_in_days = 0
+		replacement.retain_sample = 0
+		replacement.has_serial_no = 0
+		replacement.serial_no_series = None
+		replacement.opening_stock = 0
+		replacement.valuation_rate = 0
+		# Prevent after_insert from creating a second price. Existing Item Price
+		# records are copied explicitly below.
+		replacement.standard_rate = 0
+		replacement.set("barcodes", [])
+		replacement.sr_requires_compliance_batch = 1
+		replacement.sr_legacy_item = legacy.name
+		replacement.insert(ignore_permissions=True)
+		item_created = True
+
+	replacement = _validate_replacement_item(legacy.name, replacement.name)
+	prices = _copy_item_prices(legacy.name, replacement.name)
+	batches = import_legacy_batches(legacy.name, replacement.name, confirm=True)
+	return {
+		"legacy_item": legacy.name,
+		"replacement_item": replacement.name,
+		"item_created": item_created,
+		"item_prices": prices,
+		"compliance_batches": batches,
+		"stock_or_valuation_writes": False,
+	}
+
+
 @frappe.whitelist()
 def preview_item_migration(legacy_item: str, replacement_item: str | None = None):
 	"""Read-only pilot snapshot. It never changes stock, valuation, Batch, or bundles."""
@@ -569,7 +695,7 @@ def import_legacy_batches(
 	if replacement.has_serial_no:
 		frappe.throw(_("Replacement Item must have serial tracking disabled."))
 
-	fields = ["name", "manufacturing_date", "expiry_date"]
+	fields = ["name", "manufacturing_date", "expiry_date", "disabled"]
 	if not frappe.get_meta("Batch").has_field("sr_barcode"):
 		frappe.throw(_("Batch does not have the legacy sr_barcode field."))
 	fields.append("sr_barcode")
@@ -601,7 +727,7 @@ def import_legacy_batches(
 				"compliance_batch_no": batch.name,
 				"manufacturing_date": batch.manufacturing_date,
 				"expiry_date": batch.expiry_date,
-				"active": 1,
+				"active": 0 if batch.disabled else 1,
 				"legacy_batch": batch.name,
 			}
 		).insert(ignore_permissions=True)

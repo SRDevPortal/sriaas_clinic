@@ -7,6 +7,21 @@ CHILD = "Sales Invoice Item"
 
 RIGHT_COL_CB = "column_break1"
 
+HIDDEN_INVOICE_FIELDS = (
+    "ref_practitioner", "customer_name", "service_unit", "ewaybill", "e_waybill_status",
+    "allocate_advances_automatically", "get_advances", "advances", "redeem_loyalty_points",
+    "sr_si_payment_history_sb", "sr_si_payment_term", "sr_si_paid_amount", "sr_si_payment_history_cb",
+    "sr_si_mode_of_payment", "sr_si_outstanding_amount", "apply_discount_on",
+    "additional_discount_percentage", "discount_amount", "base_discount_amount",
+)
+
+LEGACY_CUSTOMER_PROPERTY_SETTERS = (
+    "hidden",
+    "print_hide",
+    "in_list_view",
+    "in_standard_filter",
+)
+
 
 def apply():
     _make_invoice_fields()
@@ -117,16 +132,10 @@ def _apply_invoice_ui_customizations():
     ensure_field_after(CHILD, "sr_row_tax_amount", "net_rate")
     ensure_field_after(CHILD, "net_amount", "sr_row_tax_amount")
 
-    targets = (
-        "customer", "ref_practitioner", "customer_name", "service_unit", "ewaybill", "e_waybill_status",
-        "allocate_advances_automatically", "get_advances", "advances", "redeem_loyalty_points",
-        "sr_si_payment_history_sb", "sr_si_payment_term", "sr_si_paid_amount", "sr_si_payment_history_cb",
-        "sr_si_mode_of_payment", "sr_si_outstanding_amount", "apply_discount_on", "additional_discount_percentage",
-        "discount_amount", "base_discount_amount",
-    )
+    _restore_customer_field_defaults()
 
     meta = frappe.get_meta(PARENT)
-    for fieldname in targets:
+    for fieldname in HIDDEN_INVOICE_FIELDS:
         if not meta.get_field(fieldname):
             continue
         upsert_property_setter(PARENT, fieldname, "hidden", "1", "Check")
@@ -157,6 +166,16 @@ def _apply_invoice_ui_customizations():
     upsert_title_field(PARENT, "patient_name")
 
 
+def _restore_customer_field_defaults():
+    """Remove legacy overrides that Frappe 16 rejects on the mandatory Customer field."""
+    for prop in LEGACY_CUSTOMER_PROPERTY_SETTERS:
+        name = f"{PARENT}-customer-{prop}"
+        if frappe.db.exists("Property Setter", name):
+            frappe.delete_doc("Property Setter", name, ignore_permissions=True, force=True)
+
+    frappe.clear_cache(doctype=PARENT)
+
+
 def _delete_custom_field(doctype: str, fieldname: str):
     name = frappe.db.get_value("Custom Field", {"dt": doctype, "fieldname": fieldname}, "name")
     if not name:
@@ -164,7 +183,6 @@ def _delete_custom_field(doctype: str, fieldname: str):
     frappe.delete_doc("Custom Field", name, ignore_permissions=True, force=True)
     frappe.clear_cache(doctype=doctype)
     frappe.db.commit()
-
 
 
 

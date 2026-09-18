@@ -21,6 +21,7 @@ app_include_css = [
 
 app_include_js = [
     "/assets/sriaas_clinic/js/patient_quick_entry_patch.js",
+    "/assets/privacy_shield/js/desk_privacy.js",
 ]
 
 web_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
@@ -275,6 +276,7 @@ doctype_js = {
         "public/js/s3_attachment_links.js",
         "public/js/crm_lead_disposition_filter.js",
         "public/js/crm_lead_lock_fields.js",
+        "public/js/crm_lead_number_privacy.js",
         "public/js/crm_lead_pex_launcher.js",
     ],
     "Item": [
@@ -311,3 +313,38 @@ fixtures = [
     {"dt": "Form Tour Step", "filters": [["module", "=", "Sriaas Clinic"]]},
     {"dt": "Custom DocPerm", "filters": [["module", "=", "Sriaas Clinic"]]},
 ]
+
+# CRM and Desk privacy integration is owned by Sriaas Clinic.
+# The adapters delegate unchanged until the development pilot gate is enabled.
+override_whitelisted_methods = {
+    "frappe.core.doctype.data_export.exporter.export_data": "sriaas_clinic.api.crm_lead.privacy_outputs.export_data",
+    "frappe.desk.reportview.export_query": "sriaas_clinic.api.crm_lead.privacy_outputs.export_query",
+    "frappe.utils.print_format.download_pdf": "sriaas_clinic.api.crm_lead.privacy_outputs.download_pdf",
+    "frappe.www.printview.get_html_and_style": "sriaas_clinic.api.crm_lead.privacy_outputs.get_html_and_style",
+    "frappe.client.insert": "sriaas_clinic.api.crm_lead.privacy.lifecycle_insert",
+    "frappe.client.insert_many": "sriaas_clinic.api.crm_lead.privacy.lifecycle_insert_many",
+    "frappe.client.submit": "sriaas_clinic.api.crm_lead.privacy.lifecycle_submit",
+    "frappe.client.cancel": "sriaas_clinic.api.crm_lead.privacy.lifecycle_cancel",
+    "frappe.client.bulk_update": "sriaas_clinic.api.crm_lead.privacy.lifecycle_bulk_update",
+    "frappe.desk.form.save.cancel": "sriaas_clinic.api.crm_lead.privacy.lifecycle_desk_cancel",
+
+    "crm.api.doc.get_data": "sriaas_clinic.api.crm_lead.privacy_views.get_data",
+    "frappe.desk.reportview.get": "sriaas_clinic.api.crm_lead.privacy.reportview_get",
+    "frappe.desk.reportview.get_list": "sriaas_clinic.api.crm_lead.privacy.reportview_get_list",
+    "frappe.desk.search.search_link": "sriaas_clinic.api.crm_lead.privacy.search_link",
+    "frappe.desk.search.search_widget": "sriaas_clinic.api.crm_lead.privacy.search_widget",
+    "frappe.client.get_list": "sriaas_clinic.api.crm_lead.privacy.client_get_list",
+    "frappe.client.get_value": "sriaas_clinic.api.crm_lead.privacy.client_get_value",
+    "frappe.desk.form.load.getdoc": "sriaas_clinic.api.crm_lead.privacy.desk_getdoc",
+    "frappe.desk.form.save.savedocs": "sriaas_clinic.api.crm_lead.privacy.desk_savedocs",
+    "frappe.client.get": "sriaas_clinic.api.crm_lead.privacy.client_get",
+    "frappe.client.save": "sriaas_clinic.api.crm_lead.privacy.client_save",
+    "frappe.client.set_value": "sriaas_clinic.api.crm_lead.privacy.client_set_value",
+}
+
+
+# Project Lead detail metadata to the same masked keys as its document response.
+override_whitelisted_methods.update({
+    "crm.fcrm.doctype.crm_fields_layout.crm_fields_layout.get_sidepanel_sections":
+        "sriaas_clinic.api.crm_lead.privacy_views.get_sidepanel_sections",
+})

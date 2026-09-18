@@ -66,18 +66,12 @@ def delete_file_from_s3(file_url: str):
         )
 
 
-@frappe.whitelist()
 def delete_s3_by_url(file_url: str):
+    """Retired RPC: a caller-supplied URL does not authorize object deletion.
+
+    Deliberately not whitelisted. Keep an explicit denial for stale server-side
+    callers; authorized document cleanup uses delete_file_from_s3 internally.
     """
-    API to delete S3 file when Attach field is cleared.
-    """
-
-    if not file_url:
-        return {"status": "no_file_url"}
-
-    delete_file_from_s3(file_url)
-
-    return {
-        "status": "deleted",
-        "file_url": file_url
-    }
+    raise frappe.PermissionError(
+        "Direct storage deletion is disabled. Remove attachments through their document."
+    )

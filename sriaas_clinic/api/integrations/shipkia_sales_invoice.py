@@ -382,13 +382,15 @@ def _build_payload_from_so(si) -> Dict[str, Any]:
 # ========================================================
 # Public API: Manual Send Sales Invoice to Shipkia
 # ========================================================
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def send_sales_invoice_to_shipkia(invoice_name: str):
     """
     MANUAL send to Shipkia via n8n webhook
     """
 
     si = frappe.get_doc("Sales Invoice", invoice_name)
+    si.check_permission("read")
+    si.check_permission("write")
 
     # --------------------------------------------------
     # Basic validations

@@ -19,7 +19,7 @@ window.sriaas_intercept_s3_attachments = function (frm) {
 
           frappe.call({
             method: 'sriaas_clinic.api.s3.presign.get_presigned_url',
-            args: { file_url: href },
+            args: { file_url: href, doctype: frm.doctype, docname: frm.doc.name },
             callback(r) {
               if (typeof r.message === 'string') {
                 window.open(r.message, '_blank');

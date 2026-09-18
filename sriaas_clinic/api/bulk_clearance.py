@@ -1,44 +1,24 @@
 # sriaas_clinic/sriaas_clinic/api/bulk_clearance.py
 import frappe
-import csv, os, traceback
+import csv, io, traceback
+from .bulk_clearance_access import authorize, read_rows, checked_invoices
 from frappe.utils import flt, nowdate, getdate
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def process_file_settle_invoices(file_url="/files/sample.csv", submit=0, clearing_account=None):
     """
     Improved: Bulk settle invoices using Payment Entry (Receive) with paid_to = clearing_account.
     Supports multiple trenches: if invoice already has partial payments, will only pay outstanding.
-    - file_url: '/files/sample.csv' or absolute path
+    - file_url: a readable local File URL or File record ID (CSV, at most 5 MB/1000 rows)
     - submit: 0 -> dry run (default), 1 -> create & submit Payment Entries
     - clearing_account: optional override ledger name (default "Clearing account - SR")
     CSV expected header: invoice (or id). optional columns: amount, remittance_date, utr, awb, crf_id, courier
     """
-    submit = bool(int(submit))
+    submit = authorize(submit)
+    rows = read_rows(file_url)
+    clearing_account = clearing_account or "Clearing account - SR"
+    invoices = checked_invoices(rows, submit, clearing_account)
     try:
-        site_path = frappe.get_site_path()
-        # Resolve full path properly for both public & private files
-        if file_url.startswith("/files/"):
-            csv_path = os.path.join(site_path, "public", file_url.lstrip("/"))
-        elif file_url.startswith("/private/files/"):
-            csv_path = os.path.join(site_path, "private", "files", os.path.basename(file_url))
-        else:
-            # fallback (absolute path or unknown)
-            csv_path = file_url
-
-        if not os.path.exists(csv_path):
-            frappe.throw(f"CSV not found: {csv_path}")
-
-        if not clearing_account:
-            clearing_account = "Clearing account - SR"
-
-        # read csv
-        rows = []
-        with open(csv_path, newline='', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            for r in reader:
-                normalized = { (k.strip().lower() if k else k): (v.strip() if isinstance(v, str) else v) for k, v in r.items() }
-                rows.append(normalized)
-
         result = {"processed": [], "skipped": [], "errors": []}
         log_rows = []
 
@@ -50,13 +30,7 @@ def process_file_settle_invoices(file_url="/files/sample.csv", submit=0, clearin
                     log_rows.append([idx, "", "skipped", "missing invoice", ""])
                     continue
 
-                # fetch sales invoice
-                try:
-                    si = frappe.get_doc("Sales Invoice", invoice)
-                except Exception as e:
-                    result["errors"].append({"row": idx, "invoice": invoice, "error": f"invoice not found: {e}"})
-                    log_rows.append([idx, invoice, "error", f"invoice not found: {e}", ""])
-                    continue
+                si = invoices[invoice]
 
                 # current outstanding on invoice at time of run
                 current_outstanding = flt(si.get("outstanding_amount") or 0)
@@ -116,6 +90,8 @@ def process_file_settle_invoices(file_url="/files/sample.csv", submit=0, clearin
                 result["processed"].append({"row": idx, "invoice": invoice, "amount": allocate_amount, "payment_entry": pe_name})
                 log_rows.append([idx, invoice, "created", "", pe_name])
 
+            except frappe.PermissionError:
+                raise
             except Exception as e:
                 tb = traceback.format_exc()
                 frappe.log_error(tb, "bulk_settle_error")
@@ -127,6 +103,8 @@ def process_file_settle_invoices(file_url="/files/sample.csv", submit=0, clearin
         result["log_file"] = log_file
         return result
 
+    except frappe.PermissionError:
+        raise
     except Exception as outer:
         frappe.log_error(traceback.format_exc(), "bulk_settle_outer")
         frappe.throw(str(outer))
@@ -143,6 +121,7 @@ def _create_payment_entry_and_allocate(invoice_name, si_doc, amount, posting_dat
 
     # Refresh invoice doc to get real-time outstanding before creating PE
     si_doc = frappe.get_doc("Sales Invoice", si_doc.name)
+    si_doc.check_permission("read")
 
     # If outstanding changed since earlier check, cap again
     current_outstanding = flt(si_doc.get("outstanding_amount") or 0)
@@ -171,94 +150,31 @@ def _create_payment_entry_and_allocate(invoice_name, si_doc, amount, posting_dat
         "allocated_amount": flt(allocate_amount)
     }])
 
-    pe.insert(ignore_permissions=True)
+    pe.insert()
     pe.submit()
     return pe.name
 
 def _write_log_csv_common(rows):
-    """
-    Write rows to a CSV file inside sites/<site>/public/files and return the web path (/files/...)
-    rows: list of [row, invoice, status, error_or_note, reference_name]
-    """
-    import os
-    site_path = frappe.get_site_path()
-    files_dir = os.path.join(site_path, "public", "files")
-    os.makedirs(files_dir, exist_ok=True)
-    fname = f"bulk_settle_log_{frappe.utils.now_datetime().strftime('%Y%m%d%H%M%S')}.csv"
-    fpath = os.path.join(files_dir, fname)
-    try:
-        with open(fpath, "w", newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerow(["row", "invoice", "status", "error_or_note", "reference"])
-            for r in rows:
-                # ensure row has 5 columns
-                out = list(r) + [""] * (5 - len(r))
-                writer.writerow(out[:5])
-    except Exception as e:
-        frappe.log_error(f"Could not write log CSV: {e}\n{frappe.get_traceback()}", "bulk_settle_log_write_error")
-        # still return intended path so caller can inspect error log
-    return "/files/" + fname
+    """Create an owner-accessible private File, never a public report path."""
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["row", "invoice", "status", "error_or_note", "reference"])
+    for row in rows:
+        cells = (list(row) + [""] * 5)[:5]
+        # Keep user-controlled text from becoming spreadsheet formulas.
+        writer.writerow(["'" + value if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@"))
+                         else value for value in cells])
+    doc = frappe.get_doc({
+        "doctype": "File",
+        "file_name": "bulk_settle_log_" + frappe.generate_hash(length=16) + ".csv",
+        "content": output.getvalue(),
+        "is_private": 1,
+    })
+    doc.insert()
+    return doc.file_url
 
-@frappe.whitelist()
+
+@frappe.whitelist(methods=["POST"])
 def process_file_from_ui(file_value, submit=0, clearing_account=None):
-    """
-    UI wrapper for Bulk Clearance Upload.
-    - file_value: value from Attach field (either '/files/xxx.csv' or File docname)
-    - submit: 0 => dry-run, 1 => actual
-    - clearing_account: optional ledger override
-    Returns: result dict from process_file_settle_invoices
-    """
-    # Resolve file_url:
-    if not file_value:
-        frappe.throw("Please attach a CSV file in the CSV File field.")
-
-    file_url = None
-
-    # If the Attach stores a File docname, fetch the file_url.
-    try:
-        if file_value.startswith("/files/"):
-            file_url = file_value
-        elif frappe.db.exists("File", file_value):
-            file_doc = frappe.get_doc("File", file_value)
-            file_url = file_doc.file_url
-        else:
-            # Sometimes Attach returns the filename only; try /files/<value>
-            if file_value.endswith(".csv"):
-                tentative = "/files/" + os.path.basename(file_value)
-                # check file exists physically
-                site_path = frappe.get_site_path()
-                path = os.path.join(site_path, "public", tentative.lstrip("/"))
-                if os.path.exists(path):
-                    file_url = tentative
-            # fallback to treating as direct URL
-            if not file_url:
-                file_url = file_value
-    except Exception:
-        # fallback safe behavior
-        file_url = file_value
-
-    # Call your main processor. This function must exist in this module:
-    # process_file_settle_invoices(file_url, submit, clearing_account)
-    # convert submit to int
-    submit_flag = int(submit) if submit is not None else 0
-
-    # Security: only allow users with appropriate roles to run actual submission
-    if submit_flag == 1:
-        # server-side role check using frappe.get_roles()
-        try:
-            current_user = frappe.session.user
-        except Exception:
-            current_user = None
-
-        allowed_roles = {"System Manager", "Accounts Manager"}
-
-        user_roles = set(frappe.get_roles(current_user or frappe.session.user))
-        if not (user_roles & allowed_roles):
-            frappe.throw("You are not authorized to perform this action. Ask System Manager or Accounts Manager to run actual process.")
-
-    # call the processor
-    return process_file_settle_invoices(
-        file_url=file_url,
-        submit=submit_flag,
-        clearing_account=clearing_account
-    )
+    """The UI and direct API use the same authorization and File resolution."""
+    return process_file_settle_invoices(file_value, submit, clearing_account)

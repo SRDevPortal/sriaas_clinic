@@ -1,86 +1,34 @@
-# sriaas_clinic/api/s3/presign.py
+"""Permission-checked S3 attachment links; no raw-URL fallback on failure."""
 import frappe
 from botocore.exceptions import ClientError
 from .client import get_s3_client, get_bucket
-from .utils import extract_key
-
-logger = frappe.logger("sriaas_s3")
+from .access import source_key, authorize_source
 
 
 @frappe.whitelist()
-def get_presigned_url(file_url, expires=900):
-    """
-    Generate a presigned URL for S3 file access.
-
-    Features:
-    - Supports s3:// and HTTP URLs
-    - Safe fallback if config missing
-    - Optional expiry control
-    """
-
+def get_presigned_url(file_url, expires=900, doctype=None, docname=None):
     if not file_url:
         return None
-
+    bucket = get_bucket()
+    key = source_key(file_url, bucket, frappe.conf.get("aws_s3_region"))
+    authorize_source(file_url, key, bucket, frappe.conf.get("aws_s3_region"), doctype, docname)
     try:
-        # --------------------------------------------------
-        # Extract S3 key
-        # --------------------------------------------------
-        key = extract_key(file_url)
-
-        if not key:
-            logger.info(f"PRESIGN_SKIPPED | invalid_url={file_url}")
-            return file_url
-
-        # --------------------------------------------------
-        # Get S3 client
-        # --------------------------------------------------
-        s3 = get_s3_client()
-        bucket = get_bucket()
-
-        if not s3 or not bucket:
-            logger.info("S3_DISABLED → returning original URL")
-            return file_url
-        try:
-            s3.head_object(Bucket=bucket, Key=key)
-        except ClientError as e:
-            error_code = (e.response.get("Error") or {}).get("Code")
-            if error_code in ("404", "NoSuchKey", "NotFound"):
-                logger.error(f"PRESIGN_MISSING_KEY | bucket={bucket} | key={key}")
-                frappe.throw(
-                    "This attachment record points to S3, but the file is missing from the bucket. "
-                    "Please re-upload the attachment."
-                )
-            raise
-
-        # --------------------------------------------------
-        # Validate expiry
-        # --------------------------------------------------
-        try:
-            expires = int(expires)
-        except Exception:
-            expires = 900  # default 15 min
-
-        # --------------------------------------------------
-        # Generate presigned URL
-        # --------------------------------------------------
-        url = s3.generate_presigned_url(
-            ClientMethod="get_object",
-            Params={
-                "Bucket": bucket,
-                "Key": key,
-
-                # 🔥 Optional: force download name
-                # "ResponseContentDisposition": f'attachment; filename="{key.split("/")[-1]}"'
-            },
-            ExpiresIn=expires
+        expires = int(expires)
+    except (TypeError, ValueError):
+        raise frappe.ValidationError("Expiry must be between 1 and 900 seconds.")
+    if not 1 <= expires <= 900:
+        raise frappe.ValidationError("Expiry must be between 1 and 900 seconds.")
+    s3 = get_s3_client()
+    if not s3 or not bucket:
+        raise frappe.ValidationError("Attachment storage is unavailable.")
+    try:
+        s3.head_object(Bucket=bucket, Key=key)
+        return s3.generate_presigned_url(
+            ClientMethod="get_object", Params={"Bucket": bucket, "Key": key},
+            ExpiresIn=expires,
         )
-
-        logger.info(f"PRESIGN_SUCCESS | key={key}")
-
-        return url
-
-    except Exception:
-        logger.error(
-            f"PRESIGN_FAILED | url={file_url}\n{frappe.get_traceback()}"
-        )
-        return file_url
+    except ClientError as exc:
+        code = (exc.response.get("Error") or {}).get("Code")
+        if code in ("404", "NoSuchKey", "NotFound"):
+            raise frappe.ValidationError("The attachment is missing from storage.") from None
+        raise frappe.ValidationError("Attachment storage could not provide a download link.") from None

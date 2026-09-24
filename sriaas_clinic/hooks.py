@@ -348,3 +348,17 @@ override_whitelisted_methods.update({
     "crm.fcrm.doctype.crm_fields_layout.crm_fields_layout.get_sidepanel_sections":
         "sriaas_clinic.api.crm_lead.privacy_views.get_sidepanel_sections",
 })
+
+# CRM remains upstream-owned; privacy integration lives in the clinic app.
+override_doctype_class = {
+    "CRM Notification": "sriaas_clinic.api.crm_lead.privacy_notifications.PrivacyCRMNotification",
+}
+
+# Duplicate popup protection stays clinic-owned; dedupe matching is unchanged.
+override_whitelisted_methods.update({
+    "crm_lead_dedupe.api.crm_lead_duplicates.get_duplicates_for_crm_lead":
+        "sriaas_clinic.api.crm_lead.privacy_duplicates.get_duplicates_for_crm_lead",
+})
+
+# Explicit generator selection plus pilot-only configuration; defaults are unchanged.
+pdf_generator = ["sriaas_clinic.pilot_pdf.generate"]

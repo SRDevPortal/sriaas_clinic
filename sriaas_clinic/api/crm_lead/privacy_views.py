@@ -43,6 +43,11 @@ def prepare(args, full, defaults, saved=None):
     if not isinstance(view,dict): raise frappe.ValidationError("Invalid view")
     for value in (args.get("column_field"),args.get("title_field"),view.get("group_by_field")):
         check_selector(value, full)
+    # Redacted labels are display values, not stable grouping keys.
+    if not full:
+        from privacy_shield.display_text import FIELDS
+        if any(v in FIELDS for v in (args.get("column_field"), view.get("group_by_field"))):
+            raise frappe.PermissionError("Grouping by protected display text is unavailable")
     # Grouping of non-phone fields remains supported by CRM.
     validate_query("CRM Lead",args.get("filters"),args.get("default_filters"),None,args.get("order_by"),full)
     for key in ("page_length","page_length_count"):

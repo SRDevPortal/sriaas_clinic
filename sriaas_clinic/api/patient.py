@@ -56,8 +56,11 @@ def normalize_patient_contact_numbers(doc, method=None):
 # ----------------------------------
 # C) Unique mobile / phone validator
 # ----------------------------------
-def validate_unique_contact_mobile(doc, method):
+def validate_unique_contact_mobile(doc, method=None):
     fields = ("mobile", "mobile_no", "phone")
+    trusted_contact = str(
+        doc.flags.get("allow_existing_contact_reuse") or ""
+    ).strip()
 
     numbers = {
         normalize_indian_mobile(doc.get(f))
@@ -68,17 +71,23 @@ def validate_unique_contact_mobile(doc, method):
     numbers.discard(None)
 
     for num in numbers:
-        # Check Patient
+        # A pre-existing Patient is always a conflict.
         if frappe.db.get_value("Patient", {"mobile": num}, "name"):
             frappe.throw(f"Patient already exists with mobile number {num}")
 
-        # Check Contact
-        if frappe.db.sql("""
-            SELECT 1 FROM `tabContact`
+        # Patient creation may reuse one exact, server-authorized Contact.
+        contact_rows = frappe.db.sql("""
+            SELECT DISTINCT name FROM `tabContact`
             WHERE REPLACE(mobile_no, ' ', '') LIKE %s
                OR REPLACE(phone, ' ', '') LIKE %s
-            LIMIT 1
-        """, (f"%{num}", f"%{num}")):
+            LIMIT 5
+        """, (f"%{num}", f"%{num}"), as_dict=True)
+        contact_names = {
+            str(row.name)
+            for row in contact_rows
+            if getattr(row, "name", None)
+        }
+        if contact_names and contact_names != {trusted_contact}:
             frappe.throw(
                 f"Contact already exists with mobile number {num}"
             )

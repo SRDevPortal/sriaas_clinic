@@ -70,7 +70,7 @@ def validate_unique_contact_mobile(doc, method):
     for num in numbers:
         # Check Patient
         if frappe.db.get_value("Patient", {"mobile": num}, "name"):
-            frappe.throw(f"Patient already exists with mobile number {num}")
+            frappe.throw(_duplicate_number_message("Patient", num))
 
         # Check Contact
         if frappe.db.sql("""
@@ -80,7 +80,7 @@ def validate_unique_contact_mobile(doc, method):
             LIMIT 1
         """, (f"%{num}", f"%{num}")):
             frappe.throw(
-                f"Contact already exists with mobile number {num}"
+                _duplicate_number_message("Contact", num)
             )
 
 
@@ -246,3 +246,11 @@ def validate_followup_status(doc, method=None):
 
     if previous_status != status_name:
         frappe.throw(f"Follow-up Status {status_name!r} is inactive.")
+
+
+def _duplicate_number_message(doctype, number):
+    from privacy_shield.desk import enabled
+    from privacy_shield.policy import current_capabilities
+    if enabled("Patient") and not current_capabilities().view_full:
+        return f"A {doctype} already exists with this number. Select the existing Patient or ask your team leader."
+    return f"{doctype} already exists with mobile number {number}"

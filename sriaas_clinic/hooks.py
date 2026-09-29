@@ -20,8 +20,8 @@ app_include_css = [
 ]
 
 app_include_js = [
-    "/assets/sriaas_clinic/js/patient_quick_entry_patch.js",
-    "/assets/privacy_shield/js/desk_privacy.js",
+    "/assets/sriaas_clinic/js/patient_quick_entry_patch.js?v=20260928-intake2",
+    "/assets/privacy_shield/js/desk_privacy.js?v=20260928-fetch1",
 ]
 
 web_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"

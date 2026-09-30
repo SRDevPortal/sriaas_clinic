@@ -20,9 +20,9 @@ app_include_css = [
 ]
 
 app_include_js = [
-    "/assets/sriaas_clinic/js/contact_numbers.js?v=20260929-contacts1",
+    "/assets/sriaas_clinic/js/contact_numbers.js?v=20260930-admin1",
     "/assets/sriaas_clinic/js/patient_quick_entry_patch.js?v=20260929-contacts1",
-    "/assets/privacy_shield/js/desk_privacy.js?v=20260928-fetch1",
+    "/assets/privacy_shield/js/desk_privacy.js?v=20260930-add2",
 ]
 
 web_include_css = "/assets/sriaas_clinic/css/theme_overrides.css"
@@ -79,6 +79,7 @@ doc_events = {
         ],
     },
     "Contact": {
+        "on_update": ["privacy_shield.contact_numbers.sync_inline_contact"],
         "before_save": [
             "sriaas_clinic.api.contact.normalize_phoneish_fields",
         ],

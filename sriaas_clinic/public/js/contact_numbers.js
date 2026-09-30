@@ -10,30 +10,61 @@
     const name = frm.doctype === 'Patient Encounter' ? frm.doc.patient : frm.doc.name;
     if (!name) return;
     const state = (await frappe.call({method: api + 'get_context', args: {doctype, name}})).message;
-    const options = [{label: __('Keep current selection'), value: ''}, ...state.rows.map((row, i) => ({
-      label: `${i + 1}. ${row.number}${row.primary_mobile ? ' (Primary Mobile)' : ''}${row.primary_phone ? ' (Primary Phone)' : ''}`,
-      value: row.id
-    }))];
-    if (state.can_add) options.push({label: __('New customer-provided number'), value: '@new:0'});
-    const dialog = new frappe.ui.Dialog({
-      title: __('Manage Contact Numbers'),
+    const optionsFor = (primary) => {
+      const current = state.rows.find(row => row[primary]);
+      const options = [{label: current ? `${current.number} (${__('current')})` : __('Not set'), value: ''}];
+      if (state.can_add) options.push({label: __('New number'), value: '@new:0'});
+      const counts = {};
+      state.rows.forEach(row => { counts[row.number] = (counts[row.number] || 0) + 1; });
+      state.rows.forEach((row, i) => {
+        if (row !== current) options.push({
+          label: row.number + (counts[row.number] > 1 ? ` (${__('row')} ${i + 1})` : ''), value: row.id
+        });
+      });
+      return options;
+    };
+    let dialog;
+    const exclusiveNew = (field, other) => () => {
+      if (!state.bypass_privacy && dialog && dialog.get_value(field) === '@new:0' && dialog.get_value(other) === '@new:0') {
+        dialog.set_value(other, '');
+      }
+    };
+    dialog = new frappe.ui.Dialog({
+      title: __('Contact Numbers'),
       fields: [
-        {fieldtype: 'HTML', fieldname: 'existing'},
-        {fieldtype: 'Data', fieldname: 'number', label: __('Add customer-provided number'), hidden: !state.can_add,
-          description: __('Previously stored numbers remain masked. The new number is masked after saving.')},
-        {fieldtype: 'Select', fieldname: 'primary_mobile', label: __('Primary Mobile'), options, hidden: !state.can_primary},
-        {fieldtype: 'Select', fieldname: 'primary_phone', label: __('Primary Phone'), options, hidden: !state.can_primary}
+        {fieldtype: 'Data', fieldname: 'number', label: __('New number'), hidden: !state.can_add,
+          placeholder: __('Enter mobile or phone')},
+        {fieldtype: 'Section Break'},
+        {fieldtype: 'Select', fieldname: 'primary_mobile', label: __('Primary mobile'),
+          options: optionsFor('primary_mobile'), default: '', read_only: !state.can_primary,
+          onchange: exclusiveNew('primary_mobile', 'primary_phone')},
+        {fieldtype: 'Column Break'},
+        {fieldtype: 'Select', fieldname: 'primary_phone', label: __('Primary phone'),
+          options: optionsFor('primary_phone'), default: '', read_only: !state.can_primary,
+          onchange: exclusiveNew('primary_phone', 'primary_mobile')},
+        {fieldtype: 'Section Break'},
+        {fieldtype: 'HTML', fieldname: 'privacy_note'}
       ],
-      primary_action_label: __('Save contact numbers'),
+      secondary_action_label: __('Cancel'),
+      secondary_action() { dialog.hide(); },
+      primary_action_label: __('Save'),
       async primary_action(values) {
         if (!values.number && !values.primary_mobile && !values.primary_phone) return;
+        if ((values.primary_mobile === '@new:0' || values.primary_phone === '@new:0') && !values.number) {
+          frappe.msgprint(__('Enter the new customer-provided number first.'));
+          return;
+        }
+        if (!state.bypass_privacy && values.primary_mobile === '@new:0' && values.primary_phone === '@new:0') {
+          frappe.msgprint(__('Choose Primary mobile or Primary phone, not both.'));
+          return;
+        }
         dialog.get_primary_btn().prop('disabled', true);
         try {
           await frappe.call({method: api + 'update_numbers', args: {
             doctype, name, modified: state.modified,
             additions: values.number ? [values.number] : [],
-            primary_mobile: values.primary_mobile || null,
-            primary_phone: values.primary_phone || null
+            ...(values.primary_mobile ? {primary_mobile: values.primary_mobile} : {}),
+            ...(values.primary_phone ? {primary_phone: values.primary_phone} : {})
           }});
           dialog.set_value('number', '');
           dialog.hide();
@@ -41,29 +72,43 @@
             await frm.trigger('patient');
           } else { await frm.reload_doc(); }
           frappe.show_alert({message: __('Contact numbers updated'), indicator: 'green'});
+        } catch (error) {
+          // Frappe displays server messages; keep the dialog open for correction.
+          if (!error?.responseJSON?._server_messages) {
+            frappe.msgprint(__('Could not update contact numbers. Check your selection and try again.'));
+          }
         } finally { dialog.get_primary_btn().prop('disabled', false); }
       }
     });
-    dialog.fields_dict.existing.$wrapper.text(state.rows.map((row, i) =>
-      `${i + 1}. ${row.number}${row.primary_mobile ? ' - Primary Mobile' : ''}${row.primary_phone ? ' - Primary Phone' : ''}`
-    ).join(' | '));
+    dialog.fields_dict.privacy_note.$wrapper.text(state.bypass_privacy ? '' : __('Saved numbers stay masked.'))
+      .css({color: 'var(--text-muted)', fontSize: '12px'});
+    dialog.$wrapper.find('.modal-dialog').css('max-width', '540px');
+    dialog.$wrapper.find('.form-section').css({marginTop: '0', paddingTop: '0', paddingBottom: '0', borderTop: '0'});
     dialog.show();
     if (!state.can_add && !state.can_primary) dialog.get_primary_btn().hide();
   }
-  for (const doctype of ['Patient', 'Contact', 'Patient Encounter']) {
-    frappe.ui.form.on(doctype, {
-      refresh(frm) {
-        if ((doctype === 'Patient Encounter' && frm.doc.patient) || (doctype !== 'Patient Encounter' && !frm.is_new())) {
-          frm.add_custom_button(__('Manage Contact Numbers'), () => manage(frm));
-        }
+  async function refresh_number_button(frm) {
+    const label = __('Update Contact Numbers');
+    frm.remove_custom_button(label);
+    const request = (frm.__number_button_request || 0) + 1;
+    frm.__number_button_request = request;
+    const doctype = frm.doctype === 'Patient Encounter' ? 'Patient' : frm.doctype;
+    const name = frm.doctype === 'Patient Encounter' ? frm.doc.patient : (!frm.is_new() && frm.doc.name);
+    if (!name) return;
+    try {
+      const {message: actions} = await frappe.call({method: api + 'get_actions', args: {doctype, name}});
+      if (request !== frm.__number_button_request) return;
+      if (actions?.can_add || actions?.can_primary) {
+        frm.add_custom_button(label, () => manage(frm));
       }
-    });
-  }
-  frappe.ui.form.on('Patient Encounter', {
-    patient(frm) {
-      if (frm.doc.patient) frm.add_custom_button(__('Manage Contact Numbers'), () => manage(frm));
+    } catch (error) {
+      // Leave the action hidden when permissions cannot be established.
     }
-  });
+  }
+  for (const doctype of ['Patient', 'Contact', 'Patient Encounter']) {
+    frappe.ui.form.on(doctype, {refresh: refresh_number_button});
+  }
+  frappe.ui.form.on('Patient Encounter', {patient: refresh_number_button});
   frappe.ui.form.on('Patient', {
     async refresh(frm) {
       if (!frm.is_new()) return;

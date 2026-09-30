@@ -146,6 +146,14 @@
           default: policy.mask_mobile || '', description: __('The original number will be copied from the source lead when you save.')},
         {fieldname: 'mask_phone', fieldtype: 'Data', label: __('Masked Phone'), read_only: 1,
           default: policy.mask_phone || ''});
+      if (policy.add_contact_numbers) {
+        fields.push({fieldtype: 'Section Break', label: __('Customer-provided numbers')},
+          {fieldname: '__privacy_add_mobile', fieldtype: 'Data', label: __('Add Mobile'),
+            description: __('Existing Lead numbers stay unchanged. The new number is masked after saving.')},
+          {fieldname: '__privacy_primary_mobile', fieldtype: 'Check', label: __('Make new number primary Mobile'), hidden: !policy.change_primary_number},
+          {fieldname: '__privacy_add_phone', fieldtype: 'Data', label: __('Add Phone')},
+          {fieldname: '__privacy_primary_phone', fieldtype: 'Check', label: __('Make new number primary Phone'), hidden: !policy.change_primary_number});
+      }
       return fields;
     };
     const render = QE.prototype.render_dialog;

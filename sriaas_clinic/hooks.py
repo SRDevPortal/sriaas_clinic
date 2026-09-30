@@ -20,7 +20,8 @@ app_include_css = [
 ]
 
 app_include_js = [
-    "/assets/sriaas_clinic/js/patient_quick_entry_patch.js?v=20260928-intake2",
+    "/assets/sriaas_clinic/js/contact_numbers.js?v=20260929-contacts1",
+    "/assets/sriaas_clinic/js/patient_quick_entry_patch.js?v=20260929-contacts1",
     "/assets/privacy_shield/js/desk_privacy.js?v=20260928-fetch1",
 ]
 
@@ -44,10 +45,12 @@ has_permission = {
 
 doc_events = {
     "Patient": {
+        "on_update": ["privacy_shield.patient_intake.apply_contact_additions"],
         "autoname": [
             "sriaas_clinic.api.patient.set_patient_series",
         ],
         "before_insert": [
+            "privacy_shield.patient_intake.capture_contact_additions",
             "sriaas_clinic.api.patient.set_patient_creator",
             # Normalize early
             "sriaas_clinic.api.patient.normalize_patient_contact_numbers",

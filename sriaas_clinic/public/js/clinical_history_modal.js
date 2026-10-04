@@ -100,9 +100,9 @@ function _build_header(patient) {
     <div class="meta"><b>Patient ID:</b> ${_esc(patient.sr_patient_id || patient.patient_id || patient.name)}</div>
     <div class="meta"><b>Gender:</b> ${_esc(patient.sex || patient.gender || "-")}</div>
     <div class="meta">
-      <b>Mobile:</b> ${_esc(patient.mobile || patient.mobile_no || patient.sr_mobile_no || "-")}
+      <b>Mobile:</b> ${_esc(patient.mobile || patient.mask_mobile || "-")}
       &nbsp;&nbsp;
-      <b>Phone:</b> ${_esc(patient.phone || patient.phone_no || patient.sr_phone_no || "-")}
+      <b>Phone:</b> ${_esc(patient.phone || patient.mask_phone || "-")}
     </div>
   </div>`;
 }

@@ -73,4 +73,7 @@ def authorize_source(file_url, key, bucket, region, doctype=None, docname=None):
         doc.apply_fieldlevel_read_permissions()
         if references_attachment(doc, aliases):
             return
+        from .pending_proofs import allows_preview
+        if allows_preview(doc, key, bucket):
+            return
     raise frappe.PermissionError("You cannot access this attachment.")

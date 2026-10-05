@@ -245,6 +245,8 @@ def handle_file_after_insert(doc, method=None):
             if local_path and os.path.exists(local_path):
                 os.remove(local_path)
             _delete_file_doc_only(doc.name)
+            from .pending_proofs import remember_upload
+            remember_upload(doc, key, get_bucket())
             return
 
         # --------------------------------------------------

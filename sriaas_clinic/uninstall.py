@@ -1,6 +1,6 @@
 import frappe
 
-MODULE = "SRIAAS Clinic"
+MODULE = "Sriaas Clinic"
 APP = "sriaas_clinic"
 
 # Doctypes to hard-clean (module-scoped)
@@ -76,4 +76,3 @@ def after_uninstall():
         except Exception:
             pass
     frappe.db.commit()
-

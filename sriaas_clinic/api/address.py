@@ -1,5 +1,62 @@
 # sriaas_clinic/api/address.py
 import frappe
+from frappe import _
+from india_compliance.gst_india.constants import STATE_NUMBERS
+
+
+STATE_ALIASES = {
+    "andaman nicobar": "Andaman and Nicobar Islands",
+    "andaman and nicobar": "Andaman and Nicobar Islands",
+    "andaman & nicobar": "Andaman and Nicobar Islands",
+    "ap": "Andhra Pradesh",
+    "arunachal": "Arunachal Pradesh",
+    "cg": "Chhattisgarh",
+    "chattisgarh": "Chhattisgarh",
+    "dadra and nagar haveli": "Dadra and Nagar Haveli and Daman and Diu",
+    "daman and diu": "Dadra and Nagar Haveli and Daman and Diu",
+    "delhi ncr": "Delhi",
+    "hp": "Himachal Pradesh",
+    "jammu & kashmir": "Jammu and Kashmir",
+    "jammu kashmir": "Jammu and Kashmir",
+    "jk": "Jammu and Kashmir",
+    "ka": "Karnataka",
+    "mp": "Madhya Pradesh",
+    "mh": "Maharashtra",
+    "orissa": "Odisha",
+    "pondicherry": "Puducherry",
+    "pb": "Punjab",
+    "rj": "Rajasthan",
+    "tn": "Tamil Nadu",
+    "tamilnadu": "Tamil Nadu",
+    "ts": "Telangana",
+    "tg": "Telangana",
+    "up": "Uttar Pradesh",
+    "u.p": "Uttar Pradesh",
+    "u.p.": "Uttar Pradesh",
+    "uttaranchal": "Uttarakhand",
+    "uk": "Uttarakhand",
+    "uttrakhand": "Uttarakhand",
+    "wb": "West Bengal",
+}
+
+
+def _state_key(value: str) -> str:
+    return " ".join((value or "").replace(".", " ").replace("-", " ").split()).strip().lower()
+
+
+VALID_STATE_BY_KEY = {_state_key(state): state for state in STATE_NUMBERS}
+
+
+def normalize_indian_state(value: str | None) -> str | None:
+    state = (value or "").strip()
+    if not state:
+        return None
+
+    if state in STATE_NUMBERS:
+        return state
+
+    key = _state_key(state)
+    return STATE_ALIASES.get(key) or VALID_STATE_BY_KEY.get(key)
 
 def _get_title(doctype: str, name: str) -> str:
     meta = frappe.get_meta(doctype)
@@ -89,9 +146,21 @@ def mirror_links_to_customer(doc, method=None):
         _append_customer_link_if_missing(contact_doc, customer, do_save=True)
 
 def validate_state(doc, method=None):
-    """Server-side guarantee: for India, legacy `state` must be present."""
+    """Normalize Indian states before India Compliance validates Address."""
     country = (doc.country or "").strip().lower()
 
-    # If only text provided, keep it. (Optional) You can normalize/clean text here.
-    if country == "india" and not (doc.state or "").strip():
-        frappe.throw("State/Province is required for addresses in India.")
+    if country != "india":
+        return
+
+    raw_state = (doc.state or "").strip()
+    if not raw_state:
+        frappe.throw(_("State/Province is required for addresses in India."))
+
+    normalized_state = normalize_indian_state(raw_state)
+    if not normalized_state:
+        frappe.throw(
+            _("Invalid State {0}. Please select a valid Indian state.").format(frappe.bold(raw_state)),
+            title=_("Invalid State"),
+        )
+
+    doc.state = normalized_state

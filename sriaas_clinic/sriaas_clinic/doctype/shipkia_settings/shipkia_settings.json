@@ -1,7 +1,7 @@
 {
   "doctype": "DocType",
   "name": "Shipkia Settings",
-  "module": "SRIAAS Clinic",
+  "module": "Sriaas Clinic",
   "issingle": 1,
   "autoname": "prompt",
   "engine": "InnoDB",

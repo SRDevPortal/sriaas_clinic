@@ -5,6 +5,7 @@ from .utils import create_cf_with_module, upsert_property_setter, collapse_secti
 DT = "Patient Encounter"
 
 def apply():
+    _remove_deprecated_encounter_fields()
     _make_encounter_fields()
     _setup_clinical_notes_section()
     _setup_diet_chart_field()
@@ -56,8 +57,8 @@ def _make_encounter_fields():
                 "label": "Sales Type",
                 "fieldtype": "Link",
                 "options": "SR Sales Type",
-                "depends_on": 'eval:doc.sr_encounter_type=="Order"',
-                "mandatory_depends_on": 'eval:doc.sr_encounter_type=="Order"',
+                "depends_on": 'eval:["Order", "Appointment"].includes(doc.sr_encounter_type)',
+                "mandatory_depends_on": 'eval:["Order", "Appointment"].includes(doc.sr_encounter_type)',
                 "insert_after": "sr_encounter_place",
             },
 
@@ -69,8 +70,18 @@ def _make_encounter_fields():
                 "depends_on": "eval:doc.patient",
                 "fetch_from": "patient.mobile",
                 "in_list_view": 1,
-                "in_standard_filter": 1,
+                "in_standard_filter": 0,
                 "insert_after": "inpatient_status",
+            },
+
+            {
+                "fieldname": "sr_pe_mobile_norm",
+                "label": "Normalized Patient Mobile",
+                "fieldtype": "Data",
+                "read_only": 1,
+                "hidden": 1,
+                "no_copy": 1,
+                "insert_after": "sr_pe_mobile",
             },
 
             {
@@ -82,7 +93,7 @@ def _make_encounter_fields():
                 "fetch_from": "patient.sr_patient_id",
                 "in_list_view": 1,
                 "in_standard_filter": 1,
-                "insert_after": "sr_pe_mobile",
+                "insert_after": "sr_pe_mobile_norm",
             },
 
             {
@@ -155,6 +166,25 @@ def _make_encounter_fields():
             },
 
             {
+                "fieldname": "sr_source_crm_lead",
+                "label": "Source CRM Lead",
+                "fieldtype": "Link",
+                "options": "CRM Lead",
+                "read_only": 1,
+                "hidden": 0,
+                "insert_after": "sr_encounter_source",
+            },
+
+            {
+                "fieldname": "sr_lead_notes",
+                "label": "Lead Notes",
+                "fieldtype": "Small Text",
+                "read_only": 1,
+                "hidden": 1,
+                "insert_after": "sr_source_crm_lead",
+            },
+
+            {
                 "fieldname": "sr_encounter_status",
                 "label": "Encounter Status",
                 "fieldtype": "Link",
@@ -162,53 +192,8 @@ def _make_encounter_fields():
                 "in_list_view": 1,
                 "in_standard_filter": 1,
                 "allow_on_submit": 1,
-                "insert_after": "sr_encounter_source",
+                "insert_after": "sr_lead_notes",
             },
-
-            # {
-            #     "fieldname": "payment_status",
-            #     "label": "Payment Status",
-            #     "fieldtype": "Select",
-            #     "options": "\nPayment Approved\nPayment Disapproved",
-            #     "insert_after": "sr_encounter_status",
-            # },
-
-            # {
-            #     "fieldname": "payment_hold_reason",
-            #     "label": "Payment Hold Reason",
-            #     "fieldtype": "Small Text",
-            #     "insert_after": "payment_status",
-            # },
-
-            # {
-            #     "fieldname": "prx_status",
-            #     "label": "PRX Status",
-            #     "fieldtype": "Select",
-            #     "options": "\nPRX Ready\nPRX Hold",
-            #     "insert_after": "payment_hold_reason",
-            # },
-
-            # {
-            #     "fieldname": "prx_hold_reason",
-            #     "label": "PRX Hold Reason",
-            #     "fieldtype": "Small Text",
-            #     "insert_after": "prx_status",
-            # },
-
-            # {
-            #     "fieldname": "dispatch_status",
-            #     "label": "Dispatch Status",
-            #     "fieldtype": "Select",
-            #     "options": "\nDispatch\nHold\nDuplicate",
-            #     "insert_after": "prx_hold_reason",
-            # },
-
-            # {
-            #     "fieldname": "dispatch_hold_reason",
-            #     "label": "Dispatch Hold Reason",
-            #     "fieldtype": "Small Text",
-            #     "insert_after": "dispatch_status",
-            # },
         ]
     })
 
@@ -261,22 +246,6 @@ def _setup_clinical_notes_section():
                 "fieldtype":"Small Text",
                 "insert_after":"sr_diagnosis"
             },
-            # Use a child Table for multiple reports (one row per report)
-            # {
-            #     "fieldname": "sr_medical_reports_table",
-            #     "label": "Attach Medical Report",
-            #     "fieldtype": "Table",
-            #     "options": "SR Medical Report",
-            #     "insert_after": "sr_notes",
-            # },
-
-            # HTML preview area for gallery (JS will render here)
-            # {
-            #     "fieldname": "sr_medical_reports_preview",
-            #     "label": "Medical Reports / Attachments",
-            #     "fieldtype": "HTML",
-            #     "insert_after": "sr_medical_reports_table",
-            # },
         ]
     })
 
@@ -632,6 +601,21 @@ def _setup_meta_details_tab():
     })
 
 
+def _remove_deprecated_encounter_fields():
+    deprecated_fields = ("sr_lead_message",)
+
+    for fieldname in deprecated_fields:
+        custom_field = frappe.db.get_value(
+            "Custom Field",
+            {"dt": DT, "fieldname": fieldname},
+            "name",
+        )
+        if custom_field:
+            frappe.delete_doc("Custom Field", custom_field, ignore_permissions=True)
+
+    frappe.clear_cache(doctype=DT)
+
+
 def _apply_encounter_ui_customizations():
     """Apply various UI customizations to Patient Encounter"""
 
@@ -653,13 +637,7 @@ def _apply_encounter_ui_customizations():
     set_label(DT, "section_break_33", "Review")
 
     # Make drug prescription section collapsible
-    upsert_property_setter(
-        DT,
-        "sb_drug_prescription",
-        "collapsible",
-        "0",
-        "Check",
-    )
+    upsert_property_setter(DT, "sb_drug_prescription", "collapsible", "0","Check")
 
     # Rename drug prescription section to Ayurvedic Medications
     set_label(DT, "sb_drug_prescription", "Ayurvedic Medications")
@@ -754,11 +732,5 @@ def _apply_encounter_ui_customizations():
     # - hidden in print
     upsert_property_setter(DT, "created_by_agent", "hidden", "0", "Check")
     upsert_property_setter(DT, "created_by_agent", "in_list_view", "0", "Check")
-    upsert_property_setter(
-        DT,
-        "created_by_agent",
-        "in_standard_filter",
-        "0",
-        "Check",
-    )
+    upsert_property_setter(DT, "created_by_agent", "in_standard_filter", "0", "Check")
     upsert_property_setter(DT, "created_by_agent", "print_hide", "1", "Check")

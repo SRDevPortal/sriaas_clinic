@@ -194,7 +194,19 @@
         <tr>
           <td>{{ loop.index }}</td>
 
-          <td>{{ it.item_name or it.item_code }}</td>
+          <td>
+            {{ it.item_name or it.item_code }}
+            {% set printed_batch = it.sr_compliance_batch_no or it.batch_no or "" %}
+            {% if printed_batch %}
+              <br><small>Batch No. {{ printed_batch }}</small>
+            {% endif %}
+            {% if it.sr_compliance_mfg_date %}
+              <br><small>Mfg. {{ frappe.utils.formatdate(it.sr_compliance_mfg_date) }}</small>
+            {% endif %}
+            {% if it.sr_compliance_expiry_date %}
+              <small> | Exp. {{ frappe.utils.formatdate(it.sr_compliance_expiry_date) }}</small>
+            {% endif %}
+          </td>
 
           <td>{{ it.gst_hsn_code or it.sac or "" }}</td>
 

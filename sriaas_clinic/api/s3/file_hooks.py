@@ -126,6 +126,10 @@ PAYMENT_PROOF_PARENT_DOCTYPE = "Patient Encounter"
 PAYMENT_PROOF_FIELD = "mmp_payment_proof"
 
 
+def _is_remote_file_url(file_url):
+    return str(file_url or "").strip().lower().startswith(("http://", "https://"))
+
+
 def _skip_s3_delete_file_names():
     skip_names = getattr(frappe.flags, "sriaas_skip_s3_delete_file_names", None)
     if skip_names is None:
@@ -207,6 +211,10 @@ def handle_file_after_insert(doc, method=None):
     # --------------------------------------------------
     if doc.file_url and str(doc.file_url).startswith("s3://"):
         return
+
+    # Remote provider URLs, such as Interakt media links, are not local files.
+    if _is_remote_file_url(doc.file_url):
+        return
     
     # --------------------------------------------------
     # ✅ S3 CONFIG CHECK (IMPORTANT)
@@ -237,6 +245,8 @@ def handle_file_after_insert(doc, method=None):
             if local_path and os.path.exists(local_path):
                 os.remove(local_path)
             _delete_file_doc_only(doc.name)
+            from .pending_proofs import remember_upload
+            remember_upload(doc, key, get_bucket())
             return
 
         # --------------------------------------------------
@@ -259,6 +269,10 @@ def handle_file_on_trash(doc, method=None):
 
     if not doc.file_url:
         return
+
+    if _file_url_used_by_another_file(doc):
+        logger.info(f"S3_DELETE_SKIPPED | shared_file_url={doc.file_url} | file={doc.name}")
+        return
     
     key = extract_key(doc.file_url)
     if not key:
@@ -270,6 +284,22 @@ def handle_file_on_trash(doc, method=None):
 
     except Exception:
         frappe.log_error(frappe.get_traceback(), "S3_DELETE_FAILED")
+
+
+def _file_url_used_by_another_file(doc) -> bool:
+    if not doc.file_url:
+        return False
+
+    return bool(
+        frappe.db.exists(
+            "File",
+            {
+                "name": ["!=", doc.name],
+                "file_url": doc.file_url,
+                "is_folder": 0,
+            },
+        )
+    )
 
 
 def cleanup_payment_proof_removals(doc, method=None):

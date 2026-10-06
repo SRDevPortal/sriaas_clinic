@@ -42,7 +42,17 @@ def _make_patient_fields():
              "insert_after":"sr_dpt_disease"},
 
             {"fieldname": "sr_followup_disable_reason","label":"Followup Disable Reason","fieldtype":"Link","options":"SR Patient Disable Reason","insert_after":"status","depends_on":'eval:doc.status=="Disabled"',"mandatory_depends_on":'eval:doc.status=="Disabled"'},
-            {"fieldname": "sr_followup_status","label":"Followup Status","fieldtype":"Select","options":"\nPending\nDone","insert_after":"user_id","in_list_view":1,"in_standard_filter":1},
+            {
+                "fieldname": "sr_followup_status",
+                "label": "Follow-up Status",
+                "fieldtype": "Link",
+                "options": "SR Followup Status",
+                "insert_after": "user_id",
+                "in_list_view": 1,
+                "in_standard_filter": 1,
+                "allow_in_quick_entry": 1,
+                "search_index": 1,
+            },
 
             {"fieldname": "sr_invoices_tab","label":"Invoices","fieldtype":"Tab Break","insert_after":"other_risk_factors"},
             {"fieldname": "sr_sales_invoice_list","label":"Sales Invoices","fieldtype":"Table","options":"SR Patient Invoice View","read_only":1,"insert_after":"sr_invoices_tab"},
@@ -53,9 +63,59 @@ def _make_patient_fields():
             {"fieldname": "sr_pex_tab","label":"PEX","fieldtype":"Tab Break","insert_after":"sr_payment_entry_list"},
             {"fieldname": "sr_pex_launcher_html","label":"PE Launcher","fieldtype":"HTML","read_only":1,"insert_after":"sr_pex_tab"},
 
-            {"fieldname": "sr_followup_marker_tab","label":"Follow-up Marker","fieldtype":"Tab Break","insert_after":"sr_pex_launcher_html"},
-            {"fieldname": "sr_followup_day","label": "Follow-up Day","fieldtype": "Select","options": "\nMon\nTue\nWed\nThu\nFri\nSat\nSun","insert_after": "sr_followup_marker_tab","read_only": 1,"in_list_view": 1,"in_standard_filter": 1},
-            {"fieldname": "sr_followup_id","label": "Follow-up ID","fieldtype": "Select","options": "\n0\n1\n2\n3\n4\n5\n6\n7\n8\n9","insert_after": "sr_followup_day","read_only": 1,"in_list_view": 1,"in_standard_filter": 1},
+            # ---------------- Follow-up Marker ----------------
+            {
+                "fieldname": "sr_followup_marker_tab",
+                "label": "Follow-up Marker",
+                "fieldtype": "Tab Break",
+                "insert_after":"sr_pex_launcher_html"
+            },
+
+            {
+                "fieldname": "sr_followup_day",
+                "label": "Follow-up Day",
+                "fieldtype": "Link",
+                "options": "SR Followup Day",
+                "read_only": 1,
+                "in_list_view": 1,
+                "in_standard_filter": 1,
+                "search_index": 1,
+                "insert_after": "sr_followup_marker_tab",
+            },
+
+            {
+                "fieldname": "sr_followup_id",
+                "label": "Follow-up ID",
+                "fieldtype": "Link",
+                "options": "SR Followup ID",
+                "read_only": 1,
+                "in_list_view": 1,
+                "in_standard_filter": 1,
+                "search_index": 1,
+                "insert_after": "sr_followup_day",
+            },
+
+
+            # {
+            #     "fieldname": "sr_followup_day",
+            #     "label": "Follow-up Day",
+            #     "fieldtype": "Select",
+            #     "options": "\nMon\nTue\nWed\nThu\nFri\nSat\nSun",
+            #     "insert_after": "sr_followup_marker_tab",
+            #     "read_only": 1,
+            #     "in_list_view": 1,
+            #     "in_standard_filter": 1
+            # },
+            # {
+            #     "fieldname": "sr_followup_id",
+            #     "label": "Follow-up ID",
+            #     "fieldtype": "Select",
+            #     "options": "\n0\n1\n2\n3\n4\n5\n6\n7\n8\n9",
+            #     "insert_after": "sr_followup_day",
+            #     "read_only": 1,
+            #     "in_list_view": 1,
+            #     "in_standard_filter": 1
+            # },
 
             {
                 "fieldname": "created_by_agent",

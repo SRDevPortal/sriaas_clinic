@@ -81,6 +81,22 @@ def _get_company_abbr(file_doc):
     return "MISC"
 
 
+def _get_max_upload_bytes():
+    max_mb = frappe.conf.get("aws_s3_max_mb")
+    if not max_mb:
+        return None
+
+    try:
+        max_mb = float(max_mb)
+    except (TypeError, ValueError):
+        return None
+
+    if max_mb <= 0:
+        return None
+
+    return int(max_mb * 1024 * 1024)
+
+
 # --------------------------------------------------
 # Core Upload Function
 # --------------------------------------------------
@@ -119,7 +135,7 @@ def upload_file_to_s3(file_doc):
     # --------------------------------------------------
     # Normalize S3 path
     # --------------------------------------------------
-    raw_prefix = frappe.conf.get("aws_prefix") or _get_company_abbr(file_doc)
+    raw_prefix = frappe.conf.get("aws_s3_prefix") or _get_company_abbr(file_doc)
 
     prefix = normalize_part(raw_prefix)
     doctype = normalize_part(file_doc.attached_to_doctype or "misc")
@@ -138,6 +154,15 @@ def upload_file_to_s3(file_doc):
                 f"FILE_NOT_FOUND | file={file_doc.name} | path={local_path}"
             )
             return None
+
+        max_bytes = _get_max_upload_bytes()
+        if max_bytes:
+            file_size = os.path.getsize(local_path)
+            if file_size > max_bytes:
+                logger.error(
+                    f"S3_UPLOAD_TOO_LARGE | file={file_doc.name} | size={file_size} | max={max_bytes}"
+                )
+                return None
 
         # --------------------------------------------------
         # Content type
@@ -169,6 +194,8 @@ def upload_file_to_s3(file_doc):
                     "uploaded_by": frappe.session.user or "system",
                 }
             )
+
+        s3.head_object(Bucket=bucket, Key=key)
 
         logger.info(
             f"S3_UPLOAD_SUCCESS | file={file_doc.name} | key={key} | type={content_type}"

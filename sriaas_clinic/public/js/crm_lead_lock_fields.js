@@ -15,7 +15,5 @@ frappe.ui.form.on('CRM Lead', {
         (context.lock_after_insert_fields || []).forEach(lock);
       }
     });
-
-    // 'lead_owner' is enforced server-side; TL permissions at permlevel 2 via RPM.
   }
 });

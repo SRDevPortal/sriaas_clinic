@@ -14,7 +14,7 @@ def set_patient_series(doc, method=None):
     # keep if already correct
     if doc.name and doc.name.startswith(prefix):
         return
-    
+
     doc.name = make_autoname(series)
 
 
@@ -73,7 +73,7 @@ def validate_unique_contact_mobile(doc, method=None):
     for num in numbers:
         # A pre-existing Patient is always a conflict.
         if frappe.db.get_value("Patient", {"mobile": num}, "name"):
-            frappe.throw(f"Patient already exists with mobile number {num}")
+            frappe.throw(_duplicate_number_message("Patient", num))
 
         # Patient creation may reuse one exact, server-authorized Contact.
         contact_rows = frappe.db.sql("""
@@ -89,7 +89,7 @@ def validate_unique_contact_mobile(doc, method=None):
         }
         if contact_names and contact_names != {trusted_contact}:
             frappe.throw(
-                f"Contact already exists with mobile number {num}"
+                _duplicate_number_message("Contact", num)
             )
 
 
@@ -106,8 +106,8 @@ def set_patient_id(doc, method=None):
 
     if doc.get("sr_patient_id"):
         return
-    
-    # Patient has NO company field → use default
+
+    # Patient has NO company field -> use default
     company = frappe.defaults.get_global_default("company")
 
     if not company:
@@ -155,26 +155,9 @@ def set_patient_creator(doc, method):
         doc.created_by_agent = frappe.session.user or "Administrator"
 
 
-# -----------------------------------------------------------------
-# F) Follow-up fields: followup id + followup day cycler assignment
-# -----------------------------------------------------------------
-def set_followup_id(doc, method=None):
-    source = doc.get("sr_practo_id") or doc.get("sr_patient_id")
-
-    if not source:
-        return
-
-    source = source.strip()
-
-    last_digit = None
-    for ch in source:
-        if ch.isdigit():
-            last_digit = ch
-
-    if last_digit:
-        doc.sr_followup_id = last_digit
-
-
+# --------------------------------------------------------
+# F) Set Followup Day (Weekday Based)
+# --------------------------------------------------------
 def set_followup_day(doc, method=None):
     # Skip if already set
     if doc.get("sr_followup_day"):
@@ -183,5 +166,100 @@ def set_followup_day(doc, method=None):
     # Safe creation date
     creation_date = getdate(doc.creation) if doc.creation else getdate(nowdate())
 
-    # Assign weekday (Mon, Tue, Wed...)
-    doc.sr_followup_day = creation_date.strftime("%a")
+    # Get short weekday (Mon, Tue, Wed...)
+    weekday_name = creation_date.strftime("%a")
+
+    # Try exact weekday match (cached)
+    record = frappe.get_cached_value(
+        "SR Followup Day",
+        {"day_name": weekday_name, "is_active": 1},
+        "name"
+    )
+
+    if record:
+        doc.sr_followup_day = record
+        return
+
+    # Fallback: first active day
+    fallback = frappe.get_all(
+        "SR Followup Day",
+        filters={"is_active": 1},
+        order_by="sort_order asc",
+        limit=1,
+        pluck="name"
+    )
+
+    if fallback:
+        doc.sr_followup_day = fallback[0]
+
+
+def set_followup_id(doc, method=None):
+    if doc.get("sr_followup_id"):
+        return
+
+    source = (
+        doc.get("sr_practo_id")
+        or doc.get("sr_patient_id")
+        or doc.name
+    )
+
+    if not source:
+        return
+
+    source = str(source).strip()
+
+    digits = [ch for ch in source if ch.isdigit()]
+    if not digits:
+        return
+
+    try:
+        last_digit = int(digits[-1])
+    except (TypeError, ValueError):
+        return
+
+    record = frappe.get_cached_value(
+        "SR Followup ID",
+        {"digit": last_digit, "is_active": 1},
+        "name"
+    )
+
+    if record:
+        doc.sr_followup_id = record
+
+
+def validate_followup_status(doc, method=None):
+    """Allow only active follow-up statuses when the Patient value changes."""
+    status_name = str(doc.get("sr_followup_status") or "").strip()
+    if not status_name:
+        return
+
+    status = frappe.db.get_value(
+        "SR Followup Status",
+        status_name,
+        ["name", "is_active"],
+        as_dict=True,
+    )
+    if not status:
+        frappe.throw(f"Follow-up Status {status_name!r} does not exist.")
+
+    if status.is_active:
+        return
+
+    previous_status = None
+    if doc.name and not doc.is_new():
+        previous_status = frappe.db.get_value(
+            "Patient",
+            doc.name,
+            "sr_followup_status",
+        )
+
+    if previous_status != status_name:
+        frappe.throw(f"Follow-up Status {status_name!r} is inactive.")
+
+
+def _duplicate_number_message(doctype, number):
+    from privacy_shield.desk import enabled
+    from privacy_shield.policy import current_capabilities
+    if enabled("Patient") and not current_capabilities().view_full:
+        return f"A {doctype} already exists with this number. Select the existing Patient or ask your team leader."
+    return f"{doctype} already exists with mobile number {number}"

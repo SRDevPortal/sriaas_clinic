@@ -4,7 +4,7 @@ from . import (
     patient, customer, practitioner, contact,
     encounter, crm_lead, patient_appointment,
     drug_prescription, item_price, item_package,
-    sales_invoice, payment_entry, purchase_order, user, company,
+    sales_invoice, compliance_barcode, payment_entry, purchase_order, user, company,
     print_formats,
 )
 
@@ -33,6 +33,8 @@ def setup_all():
     item_package.apply()
     # Sales Invoice fields/customizations
     sales_invoice.apply()
+    # Compliance-only barcode fields (no ERPNext Batch inventory)
+    compliance_barcode.apply()
     # Payment Entry fields/customizations
     payment_entry.apply()    
     # Purchase Order fields/customizations

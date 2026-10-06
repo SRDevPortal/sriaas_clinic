@@ -27,8 +27,8 @@ def extract_key(file_url: str) -> str | None:
 
 def is_s3_enabled():
     return all([
-        frappe.conf.get("aws_access_key_id"),
-        frappe.conf.get("aws_secret_access_key"),
-        frappe.conf.get("aws_region"),
-        frappe.conf.get("aws_bucket"),
+        frappe.conf.get("aws_s3_access_key_id"),
+        frappe.conf.get("aws_s3_secret_access_key"),
+        frappe.conf.get("aws_s3_region"),
+        frappe.conf.get("aws_s3_bucket"),
     ])

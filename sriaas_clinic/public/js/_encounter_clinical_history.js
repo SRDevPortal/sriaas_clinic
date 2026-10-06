@@ -63,7 +63,7 @@ frappe.ui.form.on("Patient Encounter", {
                 <h2>Patient Clinical History</h2>
                 <div class="meta"><b>Patient Name:</b> ${esc(patient.patient_name || patient.first_name || patient.name)}</div>
                 <div class="meta"><b>Gender:</b> ${esc(patient.sex || patient.gender || "-")}
-                &nbsp;&nbsp; <b>Mobile:</b> ${esc(patient.mobile || patient.mobile_no || patient.sr_mobile_no || "-")}</div>
+                &nbsp;&nbsp; <b>Mobile:</b> ${esc(patient.mobile || patient.mask_mobile || "-")}</div>
                 <div class="meta"><b>Patient ID:</b> ${esc(patient.sr_patient_id || patient.patient_id || patient.name)}</div>
                 <div class="meta muted">Generated on ${esc(frappe.datetime.str_to_user(frappe.datetime.nowdate()))}</div>
             </div>

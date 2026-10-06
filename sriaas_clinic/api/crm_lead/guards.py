@@ -61,20 +61,24 @@ def guard_restricted_fields(doc, method=None):
     is_agent = _has_agent_role(user)
     locked_fields = get_locked_fields()
     lock_after_insert = locked_fields["lock_after_insert"]
+    leaders_can_change = locked_fields["leaders_can_change"]
     agent_always_lock = locked_fields["agent_always_lock"]
 
     blocked: set[str] = set()
 
-    # Three locked fields:
-    # - TL can set on INSERT only
-    # - Later edits blocked for TL/Agent
-    # - Agents blocked even on insert
+    # Locked fields:
+    # - TL can set lock-after-insert fields on insert.
+    # - TL can edit fields explicitly marked Leaders Can Change.
+    # - Agents remain blocked for lock-after-insert fields.
     for f in lock_after_insert:
         if _changed(doc, f):
-            if doc.is_new():
-                if not is_tl:
-                    blocked.add(f)
-            else:
+            if is_tl and (doc.is_new() or f in leaders_can_change):
+                continue
+            blocked.add(f)
+
+    for f in leaders_can_change - lock_after_insert:
+        if _changed(doc, f):
+            if not is_tl:
                 blocked.add(f)
 
     # Agents cannot change lead_owner

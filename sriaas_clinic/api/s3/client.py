@@ -11,9 +11,9 @@ def get_s3_client():
     try:
         return boto3.client(
             "s3",
-            aws_access_key_id=frappe.conf.get("aws_access_key_id"),
-            aws_secret_access_key=frappe.conf.get("aws_secret_access_key"),
-            region_name=frappe.conf.get("aws_region"),
+            aws_access_key_id=frappe.conf.get("aws_s3_access_key_id"),
+            aws_secret_access_key=frappe.conf.get("aws_s3_secret_access_key"),
+            region_name=frappe.conf.get("aws_s3_region"),
         )
     except Exception:
         frappe.log_error(frappe.get_traceback(), "S3_CLIENT_INIT_FAILED")
@@ -24,10 +24,10 @@ def get_bucket():
     if not is_s3_enabled():
         return None
 
-    bucket = frappe.conf.get("aws_bucket")
+    bucket = frappe.conf.get("aws_s3_bucket")
 
     if not bucket:
-        frappe.log_error("Missing aws_bucket", "S3_CONFIG_ERROR")
+        frappe.log_error("Missing aws_s3_bucket", "S3_CONFIG_ERROR")
         return None
 
     return bucket

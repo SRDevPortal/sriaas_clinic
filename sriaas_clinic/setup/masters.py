@@ -15,6 +15,92 @@ JSON_DOCTYPES = [
     # "sr_patient_invoice_view",
 ]
 
+
+FOLLOWUP_STATUS_DEFAULTS = (
+    {
+        "status_name": "Pending",
+        "description": "Patient follow-up is pending.",
+        "is_active": 1,
+        "color": "#f39c12",
+        "sort_order": 1,
+    },
+    {
+        "status_name": "Done",
+        "description": "Patient follow-up is complete.",
+        "is_active": 1,
+        "color": "#27ae60",
+        "sort_order": 2,
+    },
+    {
+        "status_name": "Agent Not Available",
+        "description": "The assigned agent was not available for follow-up.",
+        "is_active": 1,
+        "color": "#7f8c8d",
+        "sort_order": 3,
+    },
+    {
+        "status_name": "Missed",
+        "description": "The planned follow-up was missed.",
+        "is_active": 0,
+        "color": "#e74c3c",
+        "sort_order": 4,
+    },
+    {
+        "status_name": "Rescheduled",
+        "description": "The follow-up was moved to another time.",
+        "is_active": 0,
+        "color": "#3498db",
+        "sort_order": 5,
+    },
+    {
+        "status_name": "Not Interested",
+        "description": "The patient is not interested in further follow-up.",
+        "is_active": 0,
+        "color": "#6c757d",
+        "sort_order": 6,
+    },
+)
+
+FOLLOWUP_STATUS_PERMISSION_FIELDS = (
+    "read",
+    "write",
+    "create",
+    "delete",
+    "submit",
+    "cancel",
+    "amend",
+    "report",
+    "export",
+    "import",
+    "share",
+    "print",
+    "email",
+    "select",
+)
+
+FOLLOWUP_STATUS_PERMISSIONS = (
+    {
+        "role": "System Manager",
+        "read": 1,
+        "write": 1,
+        "create": 1,
+        "delete": 1,
+        "report": 1,
+        "export": 1,
+        "share": 1,
+        "print": 1,
+        "email": 1,
+    },
+    {
+        "role": "Healthcare Administrator",
+        "read": 1,
+        "write": 1,
+        "create": 1,
+    },
+    {"role": "Agent", "read": 1},
+    {"role": "Team Leader", "read": 1},
+)
+
 def apply():
     """
     Apply all master setup steps for SRIAAS Clinic.
@@ -40,6 +126,16 @@ def apply():
     # Core Masters
     # --------------------------------------------------------
     _ensure_sr_patient_disable_reason()
+
+    ensure_followup_status_doctype()
+    seed_followup_statuses()
+
+    create_followup_id_doctype()
+    _seed_followup_ids_data()
+
+    create_followup_day_doctype()
+    _seed_followup_days_data()
+
     _ensure_sr_patient_invoice_view()
     _ensure_sr_patient_payment_view()
     _ensure_sr_multi_mode_payment()
@@ -182,6 +278,325 @@ def _ensure_non_kit_item_group():
     }).insert(ignore_permissions=True)
 
 
+def ensure_followup_status_doctype():
+    """Create the Patient follow-up status master when it is missing."""
+    doctype = "SR Followup Status"
+
+    if frappe.db.exists("DocType", doctype):
+        ensure_followup_status_permissions()
+        return
+
+    frappe.get_doc(
+        {
+            "doctype": "DocType",
+            "name": doctype,
+            "module": MODULE_DEF_NAME,
+            "custom": 1,
+            "autoname": "field:status_name",
+            "title_field": "status_name",
+            "show_title_field_in_link": 1,
+            "search_fields": "status_name",
+            "track_changes": 1,
+            "allow_rename": 0,
+            "fields": [
+                {
+                    "fieldname": "status_name",
+                    "label": "Status Name",
+                    "fieldtype": "Data",
+                    "reqd": 1,
+                    "unique": 1,
+                    "in_list_view": 1,
+                    "in_standard_filter": 1,
+                },
+                {
+                    "fieldname": "description",
+                    "label": "Description",
+                    "fieldtype": "Small Text",
+                },
+                {
+                    "fieldname": "is_active",
+                    "label": "Is Active",
+                    "fieldtype": "Check",
+                    "default": 1,
+                    "in_list_view": 1,
+                },
+                {
+                    "fieldname": "color",
+                    "label": "Color",
+                    "fieldtype": "Color",
+                },
+                {
+                    "fieldname": "sort_order",
+                    "label": "Sort Order",
+                    "fieldtype": "Int",
+                    "default": 0,
+                    "in_list_view": 1,
+                },
+            ],
+            "permissions": [
+                _complete_followup_status_permission(row)
+                for row in FOLLOWUP_STATUS_PERMISSIONS
+            ],
+        }
+    ).insert(ignore_permissions=True)
+
+
+def ensure_followup_status_permissions():
+    """Keep master-management roles explicit; DocPerm CRUD defaults are permissive."""
+    if not frappe.db.exists("DocType", "SR Followup Status"):
+        return
+
+    doc = frappe.get_doc("DocType", "SR Followup Status")
+    expected = [
+        _complete_followup_status_permission(row)
+        for row in FOLLOWUP_STATUS_PERMISSIONS
+    ]
+    current = [
+        {
+            "role": row.role,
+            **{
+                fieldname: int(row.get(fieldname) or 0)
+                for fieldname in FOLLOWUP_STATUS_PERMISSION_FIELDS
+            },
+        }
+        for row in doc.permissions
+    ]
+    if current == expected:
+        return
+
+    doc.set("permissions", expected)
+    doc.save(ignore_permissions=True)
+    frappe.clear_cache(doctype="SR Followup Status")
+
+
+def _complete_followup_status_permission(values):
+    permission = {"role": values["role"]}
+    permission.update(
+        {
+            fieldname: int(values.get(fieldname) or 0)
+            for fieldname in FOLLOWUP_STATUS_PERMISSION_FIELDS
+        }
+    )
+    return permission
+
+
+def seed_followup_statuses():
+    """Insert the canonical statuses without overwriting configured records."""
+    ensure_followup_status_doctype()
+
+    for values in FOLLOWUP_STATUS_DEFAULTS:
+        status_name = values["status_name"]
+        if frappe.db.exists("SR Followup Status", status_name):
+            continue
+
+        frappe.get_doc(
+            {
+                "doctype": "SR Followup Status",
+                **values,
+            }
+        ).insert(ignore_permissions=True)
+
+
+def ensure_legacy_followup_statuses(status_names=None):
+    """Preserve every populated legacy Patient value as a master record."""
+    ensure_followup_status_doctype()
+
+    if status_names is None:
+        status_names = frappe.get_all(
+            "Patient",
+            filters={"sr_followup_status": ["is", "set"]},
+            pluck="sr_followup_status",
+            distinct=True,
+            limit_page_length=0,
+        )
+
+    cleaned_names = []
+    for raw_name in status_names:
+        status_name = str(raw_name or "")
+        if not status_name:
+            continue
+        if status_name != status_name.strip():
+            frappe.throw(
+                f"Patient Follow-up Status has surrounding whitespace: {status_name!r}"
+            )
+        if status_name not in cleaned_names:
+            cleaned_names.append(status_name)
+
+    existing_orders = frappe.get_all(
+        "SR Followup Status",
+        pluck="sort_order",
+    )
+    next_order = max((int(value or 0) for value in existing_orders), default=0) + 1
+
+    inserted = []
+    for status_name in cleaned_names:
+        if frappe.db.exists("SR Followup Status", status_name):
+            continue
+
+        frappe.get_doc(
+            {
+                "doctype": "SR Followup Status",
+                "status_name": status_name,
+                "description": "Preserved from the legacy Patient Follow-up Status field.",
+                "is_active": 1,
+                "sort_order": next_order,
+            }
+        ).insert(ignore_permissions=True)
+        inserted.append(status_name)
+        next_order += 1
+
+    return inserted
+
+
+def create_followup_id_doctype():
+    """Create SR Followup ID Master (0–9)."""
+
+    doctype = "SR Followup ID"
+
+    if not frappe.db.exists("DocType", doctype):
+
+        doc = frappe.get_doc({
+            "doctype": "DocType",
+            "name": doctype,
+            "module": MODULE_DEF_NAME,
+            "custom": 1,
+            "autoname": "field:digit",
+            "title_field": "digit",
+            "show_title_field_in_link": 1,
+            "search_fields": "digit",
+            "track_changes": 1,
+            "allow_rename": 0,
+            "fields": [
+                {
+                    "fieldname": "digit",
+                    "label": "Digit",
+                    "fieldtype": "Int",
+                    "reqd": 1,
+                    "unique": 1,
+                    "in_list_view": 1,
+                    "in_standard_filter": 1,
+                },
+                {
+                    "fieldname": "is_active",
+                    "label": "Is Active",
+                    "fieldtype": "Check",
+                    "default": 1,
+                    "in_list_view": 1,
+                },
+            ],
+            "permissions": [
+                {
+                    "role": "System Manager",
+                    "read": 1,
+                    "write": 1,
+                    "create": 1,
+                    "delete": 1,
+                    "export": 1,
+                },
+                {
+                    "role": "Healthcare Administrator",
+                    "read": 1,
+                },
+            ],
+        })
+        
+        doc.insert(ignore_permissions=True)
+        frappe.db.commit()
+
+
+def _seed_followup_ids_data():
+    """Insert digits 0-9 safely."""
+
+    for i in range(10):
+        if not frappe.db.exists("SR Followup ID", {"digit": i}):
+            frappe.get_doc({
+                "doctype": "SR Followup ID",
+                "digit": i,
+                "is_active": 1,
+            }).insert(ignore_permissions=True)
+
+    frappe.db.commit()
+
+
+def create_followup_day_doctype():
+    """Create SR Followup Day Master."""
+
+    doctype = "SR Followup Day"
+
+    if not frappe.db.exists("DocType", doctype):
+        
+        doc = frappe.get_doc({
+            "doctype": "DocType",
+            "name": doctype,
+            "module": MODULE_DEF_NAME,
+            "custom": 1,
+            "autoname": "field:day_name",
+            "title_field": "day_name",
+            "show_title_field_in_link": 1,
+            "search_fields": "day_name",
+            "track_changes": 1,
+            "allow_rename": 0,
+            "fields": [
+                {
+                    "fieldname": "day_name",
+                    "label": "Day",
+                    "fieldtype": "Data",
+                    "reqd": 1,
+                    "unique": 1,
+                    "in_list_view": 1,
+                    "in_standard_filter": 1,
+                },
+                {
+                    "fieldname": "sort_order",
+                    "label": "Sort Order",
+                    "fieldtype": "Int",
+                    "default": 0,
+                },
+                {
+                    "fieldname": "is_active",
+                    "label": "Is Active",
+                    "fieldtype": "Check",
+                    "default": 1,
+                    "in_list_view": 1,
+                },
+            ],
+            "permissions": [
+                {
+                    "role": "System Manager",
+                    "read": 1,
+                    "write": 1,
+                    "create": 1,
+                    "delete": 1,
+                    "export": 1,
+                },
+                {
+                    "role": "Healthcare Administrator",
+                    "read": 1,
+                },
+            ],
+        })
+        
+        doc.insert(ignore_permissions=True)
+        frappe.db.commit()
+
+
+def _seed_followup_days_data():
+    """Insert Mon-Sat safely."""
+
+    days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+    for idx, day in enumerate(days):
+        if not frappe.db.exists("SR Followup Day", {"day_name": day}):
+            frappe.get_doc({
+                "doctype": "SR Followup Day",
+                "day_name": day,
+                "sort_order": idx,
+                "is_active": 1,
+            }).insert(ignore_permissions=True)
+
+    frappe.db.commit()
+
+
 def _ensure_sr_patient_invoice_view():
     """Create SR Patient Invoice View master."""
     if frappe.db.exists("DocType", "SR Patient Invoice View"):
@@ -316,6 +731,7 @@ def _ensure_sr_patient_payment_view():
 def _ensure_sr_multi_mode_payment():
     """Create SR Multi Mode Payment master."""
     if frappe.db.exists("DocType", "SR Multi Mode Payment"):
+        _ensure_sr_multi_mode_payment_orchestrator_fields()
         return
 
     frappe.get_doc({
@@ -333,6 +749,11 @@ def _ensure_sr_multi_mode_payment():
             "mmp_reference_no",
             "mmp_reference_date",
             "mmp_payment_proof",
+            "mmp_payment_intent",
+            "mmp_provider_payment_id",
+            "mmp_gateway",
+            "mmp_payment_mode",
+            "mmp_orchestrator_status",
         ],
         "fields": [
             {
@@ -386,9 +807,98 @@ def _ensure_sr_multi_mode_payment():
                 "in_list_view": 1,
                 "columns": 3,
             },
+            {
+                "fieldname": "mmp_payment_intent",
+                "label": "Payment Intent",
+                "fieldtype": "Data",
+                "read_only": 1,
+                "hidden": 1,
+            },
+            {
+                "fieldname": "mmp_provider_payment_id",
+                "label": "Provider Payment ID",
+                "fieldtype": "Data",
+                "read_only": 1,
+                "hidden": 1,
+            },
+            {
+                "fieldname": "mmp_gateway",
+                "label": "Gateway",
+                "fieldtype": "Data",
+                "read_only": 1,
+                "hidden": 1,
+            },
+            {
+                "fieldname": "mmp_payment_mode",
+                "label": "Payment Mode",
+                "fieldtype": "Data",
+                "read_only": 1,
+                "hidden": 1,
+            },
+            {
+                "fieldname": "mmp_orchestrator_status",
+                "label": "Orchestrator Status",
+                "fieldtype": "Data",
+                "read_only": 1,
+                "hidden": 1,
+            },
         ],
         "permissions": [],
     }).insert(ignore_permissions=True)
+
+
+def _ensure_sr_multi_mode_payment_orchestrator_fields():
+    """Keep orchestrator trace fields on existing SR Multi Mode Payment tables."""
+    doctype = "SR Multi Mode Payment"
+    doc = frappe.get_doc("DocType", doctype)
+    existing_fields = {field.fieldname for field in doc.fields}
+    fields = [
+        {
+            "fieldname": "mmp_payment_intent",
+            "label": "Payment Intent",
+            "fieldtype": "Data",
+            "read_only": 1,
+            "hidden": 1,
+        },
+        {
+            "fieldname": "mmp_provider_payment_id",
+            "label": "Provider Payment ID",
+            "fieldtype": "Data",
+            "read_only": 1,
+            "hidden": 1,
+        },
+        {
+            "fieldname": "mmp_gateway",
+            "label": "Gateway",
+            "fieldtype": "Data",
+            "read_only": 1,
+            "hidden": 1,
+        },
+        {
+            "fieldname": "mmp_payment_mode",
+            "label": "Payment Mode",
+            "fieldtype": "Data",
+            "read_only": 1,
+            "hidden": 1,
+        },
+        {
+            "fieldname": "mmp_orchestrator_status",
+            "label": "Orchestrator Status",
+            "fieldtype": "Data",
+            "read_only": 1,
+            "hidden": 1,
+        },
+    ]
+
+    changed = False
+    for field in fields:
+        if field["fieldname"] not in existing_fields:
+            doc.append("fields", field)
+            changed = True
+
+    if changed:
+        doc.save(ignore_permissions=True)
+        frappe.clear_cache(doctype=doctype)
 
 
 def _ensure_sr_sales_type():

@@ -561,6 +561,33 @@ limit=1
             </td>
           </tr>
 
+          {% if (doc.sr_encounter_type or "").lower() == "appointment" %}
+            {% set appointment_date = doc.pe_appointment_date %}
+            {% set appointment_time = doc.pe_appointment_time %}
+
+            {% if not appointment_date and doc.appointment %}
+              {% set appt_doc = frappe.get_doc("Patient Appointment", doc.appointment) %}
+              {% set appointment_date = appt_doc.appointment_date %}
+              {% set appointment_time = appt_doc.appointment_time %}
+            {% endif %}
+
+            {% if appointment_date or appointment_time %}
+            <tr>
+              <td class="pt-label">Appointment Date & Time</td>
+            </tr>
+            <tr>
+              <td class="pt-value">
+                {% if appointment_date %}
+                  {{ frappe.format(appointment_date, {"fieldtype":"Date"}) }}
+                {% endif %}
+                {% if appointment_time %}
+                  {{ frappe.format(appointment_time, {"fieldtype":"Time"}) }}
+                {% endif %}
+              </td>
+            </tr>
+            {% endif %}
+          {% endif %}
+
           {% if doc.sr_pe_deptt %}
           <tr>
             <td class="pt-label">Department</td>

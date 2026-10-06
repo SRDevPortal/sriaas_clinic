@@ -12,22 +12,34 @@ def execute():
     )
 
     for p in patients:
-        source = p.sr_practo_id or p.sr_patient_id
-        last_digit = None
+        if p.sr_followup_id:
+            continue
 
+        source = p.sr_practo_id or p.sr_patient_id or p.name
         if source:
-            source = source.strip()
-            for ch in source:
-                if ch.isdigit():
-                    last_digit = ch
+            source = str(source).strip()
 
-        # Update ONLY sr_followup_id
-        if p.sr_followup_id != last_digit:
+        digits = [ch for ch in source if ch.isdigit()] if source else []
+        if not digits:
+            continue
+
+        try:
+            last_digit = int(digits[-1])
+        except (TypeError, ValueError):
+            continue
+
+        record = frappe.get_cached_value(
+            "SR Followup ID",
+            {"digit": last_digit, "is_active": 1},
+            "name",
+        )
+
+        if record:
             frappe.db.set_value(
                 "Patient",
                 p.name,
                 "sr_followup_id",
-                last_digit,
+                record,
                 update_modified=False
             )
 

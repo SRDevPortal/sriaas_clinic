@@ -9,6 +9,7 @@ from frappe.utils.file_manager import get_file_path
 from .utils import extract_key, is_s3_enabled
 from .client import get_s3_client, get_bucket
 from .upload import upload_file_to_s3
+from .practitioner_images import is_practitioner_image, image_url
 from .delete import delete_file_from_s3
 
 
@@ -238,8 +239,12 @@ def handle_file_after_insert(doc, method=None):
         # --------------------------------------------------
         # 3️⃣ Save S3 URL
         # --------------------------------------------------
-        s3_url = f"s3://{key}"
-        doc.db_set("file_url", s3_url, update_modified=False)
+        public_profile = is_practitioner_image(doc)
+        s3_url = image_url(key) if public_profile else f"s3://{key}"
+        values = {"file_url": s3_url}
+        if public_profile:
+            values["is_private"] = 0
+        doc.db_set(values, update_modified=False)
 
         if _is_payment_proof_file(doc):
             if local_path and os.path.exists(local_path):
@@ -279,8 +284,7 @@ def handle_file_on_trash(doc, method=None):
         return
 
     try:
-        s3_url = f"s3://{key}"
-        delete_file_from_s3(s3_url)
+        delete_file_from_s3(doc.file_url)
 
     except Exception:
         frappe.log_error(frappe.get_traceback(), "S3_DELETE_FAILED")

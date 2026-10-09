@@ -8,6 +8,7 @@ import frappe
 from frappe.utils.file_manager import get_file_path
 
 from .client import get_s3_client, get_bucket
+from .practitioner_images import is_practitioner_image, image_bucket, image_region
 
 
 # --------------------------------------------------
@@ -114,8 +115,9 @@ def upload_file_to_s3(file_doc):
     """
 
     logger = get_logger()
-    s3 = get_s3_client()
-    bucket = get_bucket()
+    public_profile = is_practitioner_image(file_doc)
+    s3 = get_s3_client(region=image_region()) if public_profile else get_s3_client()
+    bucket = image_bucket() if public_profile else get_bucket()
 
     # --------------------------------------------------
     # ✅ SAFE CHECK (S3 disabled fallback)
@@ -173,7 +175,8 @@ def upload_file_to_s3(file_doc):
         # --------------------------------------------------
         # Final S3 key
         # --------------------------------------------------
-        key = f"{prefix}/{doctype}/{date}/{file_doc.name}_{filename}"
+        key = (f"doctor/{file_doc.name}_{filename}" if public_profile
+               else f"{prefix}/{doctype}/{date}/{file_doc.name}_{filename}")
 
         # --------------------------------------------------
         # Upload

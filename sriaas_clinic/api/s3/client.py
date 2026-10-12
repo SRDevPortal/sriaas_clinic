@@ -4,7 +4,7 @@ import boto3
 from .utils import is_s3_enabled
 
 
-def get_s3_client():
+def get_s3_client(region=None):
     if not is_s3_enabled():
         return None
 
@@ -13,7 +13,7 @@ def get_s3_client():
             "s3",
             aws_access_key_id=frappe.conf.get("aws_s3_access_key_id"),
             aws_secret_access_key=frappe.conf.get("aws_s3_secret_access_key"),
-            region_name=frappe.conf.get("aws_s3_region"),
+            region_name=region or frappe.conf.get("aws_s3_region"),
         )
     except Exception:
         frappe.log_error(frappe.get_traceback(), "S3_CLIENT_INIT_FAILED")

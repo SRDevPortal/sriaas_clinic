@@ -5,6 +5,7 @@ from urllib.parse import unquote
 
 from .client import get_s3_client, get_bucket
 from .utils import extract_key
+from .practitioner_images import public_image_key, image_bucket, image_region
 
 logger = frappe.logger("sriaas_s3")
 
@@ -26,8 +27,9 @@ def delete_file_from_s3(file_url: str):
         return
 
     try:
-        s3 = get_s3_client()
-        bucket = get_bucket()
+        profile_key = public_image_key(file_url)
+        s3 = get_s3_client(region=image_region()) if profile_key else get_s3_client()
+        bucket = image_bucket() if profile_key else get_bucket()
 
         if not s3 or not bucket:
             logger.info("S3_DISABLED → skipping delete")
@@ -36,7 +38,7 @@ def delete_file_from_s3(file_url: str):
         # --------------------------------------------------
         # Extract key safely
         # --------------------------------------------------
-        key = extract_key(file_url)
+        key = profile_key or extract_key(file_url)
 
         if not key:
             logger.info(f"S3_DELETE_SKIPPED | invalid_url={file_url}")

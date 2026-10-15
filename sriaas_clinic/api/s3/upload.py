@@ -175,7 +175,7 @@ def upload_file_to_s3(file_doc):
         # --------------------------------------------------
         # Final S3 key
         # --------------------------------------------------
-        key = (f"doctor/{file_doc.name}_{filename}" if public_profile
+        key = (f"{prefix}/doctor/{file_doc.name}_{filename}" if public_profile
                else f"{prefix}/{doctype}/{date}/{file_doc.name}_{filename}")
 
         # --------------------------------------------------

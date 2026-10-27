@@ -182,7 +182,6 @@ def apply():
     # --------------------------------------------------------
     # Integration / Shipping Settings
     # --------------------------------------------------------
-    _ensure_shipkia_settings()
 
     # --------------------------------------------------------
     # Disable Quick Entry for Item
@@ -1997,127 +1996,6 @@ def create_bulk_clearance():
 
     frappe.db.commit()
     print(f"Created DocType '{doctype_name}' in module '{MODULE_DEF_NAME}'.")
-
-
-def _ensure_shipkia_settings():
-    """Create Shipkia Settings (Single Doctype)."""
-
-    if frappe.db.exists("DocType", "Shipkia Settings"):
-        return
-
-    frappe.get_doc({
-        "doctype": "DocType",
-        "name": "Shipkia Settings",
-        "module": MODULE_DEF_NAME,
-        "issingle": 1,
-        "custom": 0,
-        "track_changes": 1,
-        "allow_rename": 0,
-        "field_order": [
-            # Flags
-            "enable_sync",
-
-            # Webhook (ERP → n8n)
-            "webhook_url",
-            "webhook_header_key",
-            "webhook_header_token",
-
-            # Shipkia Order API
-            "shipkia_order_url",
-            "shipkia_order_token",
-
-            # Meta
-            "pickup_address",
-            "order_channel",
-            "shipkia_base_url",
-            "shipkia_tracking_url",
-        ],
-        "fields": [
-            {
-                "fieldname": "enable_sync",
-                "label": "Enable Shipkia Sync",
-                "fieldtype": "Check",
-                "default": "0",
-            },
-            # ============================
-            # Webhook (ERP → n8n)
-            # ============================
-            {
-                "fieldname": "webhook_url",
-                "label": "Webhook URL",
-                "fieldtype": "Data",
-                "reqd": 1,
-            },
-            {
-                "fieldname": "webhook_header_key",
-                "label": "Webhook Header Key",
-                "fieldtype": "Data",
-                "default": "x-api-key",
-            },
-            {
-                "fieldname": "webhook_header_token",
-                "label": "Webhook Header Token",
-                "fieldtype": "Password",
-                "reqd": 1,
-            },
-
-            # ============================
-            # Shipkia Order API
-            # ============================
-            {
-                "fieldname": "shipkia_order_url",
-                "label": "Shipkia Order URL",
-                "fieldtype": "Data",
-                "reqd": 1,
-            },
-            {
-                "fieldname": "shipkia_order_token",
-                "label": "Shipkia Order Token",
-                "fieldtype": "Password",
-                "reqd": 1,
-            },
-
-            # ============================
-            # Meta
-            # ============================
-            {
-                "fieldname": "pickup_address",
-                "label": "Pickup Address Code",
-                "fieldtype": "Data",
-                "reqd": 1,
-            },
-            {
-                "fieldname": "order_channel",
-                "label": "Order Channel",
-                "fieldtype": "Data",
-                "default": "erpsriaas",
-                "reqd": 1,
-            },
-            {
-                "fieldname": "shipkia_base_url",
-                "label": "Shipkia Base URL",
-                "fieldtype": "Data",
-            },
-            {
-                "fieldname": "shipkia_tracking_url",
-                "label": "Shipkia Tracking URL",
-                "fieldtype": "Data",
-                "reqd": 1,
-            },
-        ],
-        "permissions": [
-            {
-                "role": "System Manager",
-                "read": 1,
-                "write": 1,
-                "create": 1,
-                "delete": 0,
-            }
-        ],
-    }).insert(ignore_permissions=True)
-
-    frappe.db.commit()
-    frappe.logger().info("Shipkia Settings DocType created successfully.")
 
 
 def _disable_item_quick_entry():

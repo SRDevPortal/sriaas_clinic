@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 from unittest import TestCase
 
@@ -20,14 +19,3 @@ class TestModuleMetadata(TestCase):
             for fieldname, operator, value in fixture.get("filters", []):
                 if fieldname == "module" and operator == "=":
                     self.assertEqual(value, canonical_name)
-
-        shipkia_settings = json.loads(
-            (
-                package_root
-                / "sriaas_clinic"
-                / "doctype"
-                / "shipkia_settings"
-                / "shipkia_settings.json"
-            ).read_text(encoding="utf-8")
-        )
-        self.assertEqual(shipkia_settings["module"], canonical_name)

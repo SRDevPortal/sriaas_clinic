@@ -291,7 +291,6 @@ doctype_js = {
         "public/js/sales_invoice_series.js",
         "public/js/sales_invoice_actions.js",
         "public/js/sales_invoice_barcode.js",
-        # "public/js/shipkia_sales_invoice.js",
     ],
     "Payment Entry": [
         "public/js/payment_entry_outstanding_dialog.js",

@@ -15,7 +15,7 @@ window.sriaas_intercept_s3_attachments = function (frm) {
 
         // Public practitioner portraits already have a direct browser URL.
         if (frm.doctype === 'Healthcare Practitioner' && href === frm.doc.image &&
-            href.startsWith('https://') && new URL(href).pathname.startsWith('/doctor/')) {
+            href.startsWith('https://') && /^\/(?:[^/]+\/)?doctor\/.+/.test(new URL(href).pathname)) {
           return;
         }
 

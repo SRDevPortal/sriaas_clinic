@@ -187,26 +187,10 @@ async function _fetch_patient(patient_name) {
 
 async function _fetch_encounters(patient_name) {
   const { message: rows = [] } = await frappe.call({
-    method: "frappe.client.get_list",
-    args: {
-      doctype: "Patient Encounter",
-      filters: { patient: patient_name },
-      fields: ["name", "encounter_date"],
-      order_by: "encounter_date desc, creation desc",
-      limit_page_length: 100
-    }
+    method: "sriaas_clinic.api.clinical_history.get_encounters",
+    args: { patient: patient_name }
   });
-
-  const full = await Promise.all(
-    rows.map(r =>
-      frappe.call({
-        method: "frappe.client.get",
-        args: { doctype: "Patient Encounter", name: r.name }
-      }).then(res => res.message)
-    )
-  );
-
-  return full.filter(_has_notes);
+  return rows.filter(_has_notes);
 }
 
 // =====================================================

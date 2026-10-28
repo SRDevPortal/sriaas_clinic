@@ -1,29 +1,12 @@
 # sriaas_clinic/setup/practitioner.py
 import frappe
-from .utils import create_cf_with_module, ensure_field_after, upsert_property_setter
+from .utils import create_cf_with_module, upsert_property_setter
 
 DT = "Healthcare Practitioner"
 
 def apply():
     make_practitioner_fields()
-    make_practitioner_disease_field()
     set_practitioner_autoname()
-
-def make_practitioner_disease_field():
-    """Allow each practitioner to select multiple entries from the disease master."""
-    frappe.reload_doc("sriaas_clinic", "doctype", "sr_practitioner_disease")
-    create_cf_with_module({
-        DT: [{
-            "fieldname": "sr_diseases",
-            "label": "Diseases",
-            "fieldtype": "Table MultiSelect",
-            "options": "SR Practitioner Disease",
-            "insert_after": "gender",
-            "description": "Select the diseases this practitioner treats.",
-        }]
-    })
-    ensure_field_after(DT, "sr_diseases", "gender")
-
 
 def make_practitioner_fields():
     """Add custom fields to Healthcare Practitioner"""

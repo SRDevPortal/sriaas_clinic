@@ -9,7 +9,7 @@
 
       const originalSave = frm.save.bind(frm);
 
-      frm.save = function (action) {
+      frm.save = function (action, ...args) {
         // Only swallow framework's autosave, never swallow user Submit
         if (frm._skipNextSaveDueToProof && (!action || action === 'Save')) {
           // clear the flag immediately so subsequent saves work
@@ -17,7 +17,7 @@
           // Return a resolved promise so any callers don't break
           return Promise.resolve(frm);
         }
-        return originalSave(action);
+        return originalSave(action, ...args);
       };
 
       frm._savePatchedForProof = true;

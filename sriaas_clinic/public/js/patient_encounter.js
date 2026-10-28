@@ -45,7 +45,7 @@ function apply_encounter_submission_rule(frm) {
         const can_submit = frm.toolbar.can_submit;
         frm.toolbar.can_submit = function () {
             const type = (frm.doc.sr_encounter_type || '').trim().toLowerCase();
-            return type !== 'appointment' && can_submit.call(this);
+            return (type !== 'appointment' || frappe.session.user === 'Administrator') && can_submit.call(this);
         };
         frm.toolbar._sr_appointment_submit_guard = true;
     }
@@ -214,48 +214,75 @@ function apply_active_master_filters(frm) {
 function setup_appointment_autosave(frm) {
     if (frm._appointment_autosave) return;
     const state = frm._appointment_autosave = { timer: null, saving: false };
-    const status = $('<span class="text-muted small" role="status" aria-live="polite"></span>')
-        .appendTo(frm.page.page_actions);
+    // Only notify when attention is needed; never add status text to the toolbar.
+    const notify = (message, indicator) => {
+        const key = frm.doc.name + ':' + message;
+        if (state.notice === key) return;
+        state.notice = key;
+        frappe.show_alert({ message, indicator }, 5);
+    };
     const eligible = () => window.cur_frm === frm &&
         frappe.get_route()[0] === 'Form' && frappe.get_route()[2] === frm.doc.name &&
         !frm.is_new() && frm.doc.docstatus === 0 && !frm.save_disabled &&
         (frm.doc.sr_encounter_type || '').trim().toLowerCase() === 'appointment';
+    // A deliberate Save must reach the server even if autosave already saved
+    // all edits, so the doctor can approve that version for checkout.
+    const originalSave = frm.save.bind(frm);
+    frm.save = function (action, ...args) {
+        if ((!action || action === 'Save') && !state.saving && eligible() && !frm.is_dirty()) {
+            frm.dirty();
+        }
+        const savedDoc = frm.doc.name;
+        return Promise.resolve(originalSave(action, ...args)).then(result => {
+            // Reset notifications only after this encounter is successfully saved.
+            if (frm.doc.name === savedDoc && !frm.is_dirty()) {
+                clearTimeout(state.timer);
+                state.notice = null;
+            }
+            return result;
+        });
+    };
     const schedule = () => {
         clearTimeout(state.timer);
-        if (!eligible()) { status.text(''); return; }
+        if (!eligible()) { state.notice = null; return; }
         if (state.saving) return;
-        status.text(__('Unsaved changes'));
         const name = frm.doc.name;
-        state.timer = setTimeout(() => save(name), 2000);
+        state.timer = setTimeout(() => save(name), 1000);
     };
     const save = async (name) => {
-        if (!eligible() || frm.doc.name !== name || !frm.is_dirty()) return;
+        if (!eligible() || frm.doc.name !== name) return;
+        if (!frm.is_dirty()) {
+            state.notice = null;
+            return;
+        }
         // Let link lookups, manual saves and attachment saves finish first.
         if (frappe.ui.form.is_saving || frappe.request.ajax_count || frm._skipNextSaveDueToProof) {
             schedule();
             return;
         }
         if (!appointment_autosave_complete(frm)) {
-            status.text(__('Complete required fields to autosave'));
+            notify(__('Autosave is waiting for required fields. Click Save to see which fields are missing.'), 'orange');
             return;
         }
         state.saving = true;
-        status.text(__('Saving...'));
         try {
             // Normal AJAX draft save preserves all validation and permissions.
             // Frappe briefly freezes editing while the request is in flight.
+            if (!eligible() || frm.doc.name !== name || !frm.is_dirty()) return;
+            frm.doc.__opd_autosave = 1;
             await frm.save('Save', null, null, () => {});
             if (frm.doc.name === name && eligible()) {
                 if (frm.is_dirty()) {
-                    status.text(__('Save failed - use Save to retry'));
+                    notify(__('Save failed - use Save to retry'), 'red');
                 } else {
-                    status.text('');
+                    state.notice = null;
                     // The standard savedocs response already shows the Saved notification.
                 }
             }
         } catch (error) {
-            if (frm.doc.name === name) status.text(__('Save failed - use Save to retry'));
+            if (frm.doc.name === name) notify(__('Save failed - use Save to retry'), 'red');
         } finally {
+            delete frm.doc.__opd_autosave;
             state.saving = false;
         }
     };
@@ -266,7 +293,7 @@ function setup_appointment_autosave(frm) {
         'input, textarea, select, [contenteditable]', schedule);
     frappe.router.on('change', () => {
         clearTimeout(state.timer);
-        status.text('');
+        state.notice = null;
     });
 }
 

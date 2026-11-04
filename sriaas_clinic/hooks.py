@@ -366,3 +366,6 @@ override_whitelisted_methods.update({
 
 # Explicit generator selection plus pilot-only configuration; defaults are unchanged.
 pdf_generator = ["sriaas_clinic.pilot_pdf.generate"]
+
+# Exactly one clinic adapter is registered on each site.
+privacy_shield_clinic_adapter = "sriaas_clinic.privacy_adapter"
